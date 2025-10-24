@@ -371,40 +371,75 @@ function handleCSVUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   
+  showNotification('Parsing CSV file...', 'info');
+  
   Papa.parse(file, {
     header: true,
     skipEmptyLines: true,
     complete: async (results) => {
-      const events = results.data.map(row => ({
-        event_date: parseDate(row['Date'] || row['date'] || row['EVENT DATE']),
-        program: row['Program'] || row['program'] || row['Program/Event'] || '',
-        venue: row['Venue'] || row['venue'] || '',
-        team: row['Team'] || row['team'] || '',
-        sound_requirements: row['Sound Requirements'] || row['sound_requirements'] || '',
-        call_time: row['Call Time'] || row['call_time'] || '',
-        crew: row['Crew'] || row['crew'] || ''
-      })).filter(event => event.event_date && event.program && event.venue);
+      console.log('CSV parsed, total rows:', results.data.length);
+      console.log('CSV headers:', Object.keys(results.data[0] || {}));
+      console.log('First row sample:', results.data[0]);
       
-      if (events.length === 0) {
-        showNotification('No valid events found in CSV', 'error');
+      const allParsed = results.data.map((row, index) => {
+        const parsed = {
+          row: index + 1,
+          event_date: parseDate(row['Date'] || row['date'] || row['EVENT DATE'] || row['Event Date']),
+          original_date: row['Date'] || row['date'] || row['EVENT DATE'] || row['Event Date'],
+          program: row['Program'] || row['program'] || row['Program/Event'] || row['Event'] || '',
+          venue: row['Venue'] || row['venue'] || '',
+          team: row['Team'] || row['team'] || row['Curator'] || '',
+          sound_requirements: row['Sound Requirements'] || row['sound_requirements'] || row['Sound Requirement'] || row['sound_requirement'] || '',
+          call_time: row['Call Time'] || row['call_time'] || row['CallTime'] || '',
+          crew: row['Crew'] || row['crew'] || row['Sound Crew'] || ''
+        };
+        return parsed;
+      });
+      
+      const validEvents = allParsed.filter(event => event.event_date && event.program && event.venue);
+      const invalidEvents = allParsed.filter(event => !event.event_date || !event.program || !event.venue);
+      
+      console.log('Valid events:', validEvents.length);
+      console.log('Invalid/skipped events:', invalidEvents.length);
+      
+      if (invalidEvents.length > 0) {
+        console.log('Invalid events details:', invalidEvents);
+      }
+      
+      if (validEvents.length === 0) {
+        showNotification(`No valid events found. ${results.data.length} rows in CSV, but all missing required fields (Date, Program, or Venue)`, 'error');
         return;
       }
       
+      // Remove the metadata fields before sending
+      const eventsToUpload = validEvents.map(e => ({
+        event_date: e.event_date,
+        program: e.program,
+        venue: e.venue,
+        team: e.team,
+        sound_requirements: e.sound_requirements,
+        call_time: e.call_time,
+        crew: e.crew
+      }));
+      
       try {
-        const response = await axios.post(`${API_BASE}/events/bulk`, { events });
+        showNotification(`Uploading ${eventsToUpload.length} events...`, 'info');
+        const response = await axios.post(`${API_BASE}/events/bulk`, { events: eventsToUpload });
         
         if (response.data.success) {
-          showNotification(`${events.length} events uploaded successfully`, 'success');
+          showNotification(`✓ Successfully uploaded ${eventsToUpload.length} events! ${invalidEvents.length > 0 ? `(Skipped ${invalidEvents.length} invalid rows)` : ''}`, 'success');
           await loadEvents();
+        } else {
+          showNotification(`Upload failed: ${response.data.error || 'Unknown error'}`, 'error');
         }
       } catch (error) {
         console.error('Error uploading CSV:', error);
-        showNotification('Failed to upload CSV', 'error');
+        showNotification(`Failed to upload CSV: ${error.response?.data?.error || error.message}`, 'error');
       }
     },
     error: (error) => {
       console.error('Error parsing CSV:', error);
-      showNotification('Failed to parse CSV file', 'error');
+      showNotification(`Failed to parse CSV file: ${error.message}`, 'error');
     }
   });
   
@@ -487,12 +522,50 @@ function formatDateTime(dateString) {
 function parseDate(dateStr) {
   if (!dateStr) return null;
   
+  // Remove any whitespace
+  dateStr = dateStr.trim();
+  
   // Try ISO format first (YYYY-MM-DD)
   if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     return dateStr;
   }
   
-  // Try parsing as Date and converting to ISO
+  // Try DD/MM/YYYY format (common in Google Sheets exported CSV)
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const day = ddmmyyyyMatch[1].padStart(2, '0');
+    const month = ddmmyyyyMatch[2].padStart(2, '0');
+    const year = ddmmyyyyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Try DD-MM-YYYY format (with dashes)
+  const ddmmyyyyDashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (ddmmyyyyDashMatch) {
+    let day = ddmmyyyyDashMatch[1].padStart(2, '0');
+    let month = ddmmyyyyDashMatch[2].padStart(2, '0');
+    let year = ddmmyyyyDashMatch[3];
+    
+    // Handle 2-digit year (25 -> 2025)
+    if (year.length === 2) {
+      year = '20' + year;
+    }
+    
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Try MM/DD/YYYY format (US format)
+  const mmddyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyyMatch) {
+    const month = mmddyyyyMatch[1].padStart(2, '0');
+    const day = mmddyyyyMatch[2].padStart(2, '0');
+    const year = mmddyyyyMatch[3];
+    // For ambiguous dates, we'll treat first number as day (DD/MM format)
+    // since that's more common internationally
+    return `${year}-${month}-${day}`;
+  }
+  
+  // Try parsing as Date and converting to ISO (last resort)
   const date = new Date(dateStr);
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0];

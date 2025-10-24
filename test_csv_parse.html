@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV Parse Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>CSV Parsing Test</h1>
+    <input type="file" id="csvFile" accept=".csv">
+    <button onclick="testParse()">Parse CSV</button>
+    <div id="output"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script>
+        function parseDate(dateStr) {
+          if (!dateStr) return null;
+          
+          dateStr = dateStr.trim();
+          
+          // Try ISO format first (YYYY-MM-DD)
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+            return dateStr;
+          }
+          
+          // Try DD/MM/YYYY format
+          const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+          if (ddmmyyyyMatch) {
+            const day = ddmmyyyyMatch[1].padStart(2, '0');
+            const month = ddmmyyyyMatch[2].padStart(2, '0');
+            const year = ddmmyyyyMatch[3];
+            return `${year}-${month}-${day}`;
+          }
+          
+          // Try DD-MM-YYYY format
+          const ddmmyyyyDashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+          if (ddmmyyyyDashMatch) {
+            let day = ddmmyyyyDashMatch[1].padStart(2, '0');
+            let month = ddmmyyyyDashMatch[2].padStart(2, '0');
+            let year = ddmmyyyyDashMatch[3];
+            
+            if (year.length === 2) {
+              year = '20' + year;
+            }
+            
+            return `${year}-${month}-${day}`;
+          }
+          
+          const date = new Date(dateStr);
+          if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+          }
+          
+          return null;
+        }
+
+        function testParse() {
+            const file = document.getElementById('csvFile').files[0];
+            if (!file) {
+                alert('Please select a CSV file');
+                return;
+            }
+
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: (results) => {
+                    const output = document.getElementById('output');
+                    let html = '<h2>Parsing Results</h2>';
+                    
+                    html += `<p class="info">Total rows in CSV: ${results.data.length}</p>`;
+                    html += `<p class="info">Headers detected: ${Object.keys(results.data[0] || {}).join(', ')}</p>`;
+                    
+                    const events = results.data.map((row, index) => {
+                        const event = {
+                            row: index + 1,
+                            original_date: row['Date'] || row['date'] || row['EVENT DATE'] || row['Event Date'],
+                            parsed_date: parseDate(row['Date'] || row['date'] || row['EVENT DATE'] || row['Event Date']),
+                            program: row['Program'] || row['program'] || row['Program/Event'] || row['Event'] || '',
+                            venue: row['Venue'] || row['venue'] || '',
+                            team: row['Team'] || row['team'] || row['Curator'] || '',
+                            sound_requirements: row['Sound Requirements'] || row['sound_requirements'] || row['Sound Requirement'] || row['sound_requirement'] || '',
+                            call_time: row['Call Time'] || row['call_time'] || row['CallTime'] || '',
+                            crew: row['Crew'] || row['crew'] || row['Sound Crew'] || ''
+                        };
+                        return event;
+                    });
+                    
+                    const validEvents = events.filter(e => e.parsed_date && e.program && e.venue);
+                    const invalidEvents = events.filter(e => !e.parsed_date || !e.program || !e.venue);
+                    
+                    html += `<p class="success">Valid events: ${validEvents.length}</p>`;
+                    html += `<p class="error">Invalid/skipped events: ${invalidEvents.length}</p>`;
+                    
+                    html += '<h3>First 5 Valid Events:</h3>';
+                    html += '<pre>' + JSON.stringify(validEvents.slice(0, 5), null, 2) + '</pre>';
+                    
+                    if (invalidEvents.length > 0) {
+                        html += '<h3>Invalid/Skipped Events:</h3>';
+                        html += '<pre>' + JSON.stringify(invalidEvents, null, 2) + '</pre>';
+                    }
+                    
+                    output.innerHTML = html;
+                },
+                error: (error) => {
+                    document.getElementById('output').innerHTML = 
+                        `<p class="error">Error: ${error.message}</p>`;
+                }
+            });
+        }
+    </script>
+</body>
+</html>

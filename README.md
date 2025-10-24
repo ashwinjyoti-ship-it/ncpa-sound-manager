@@ -224,18 +224,27 @@ Real-time UI Update
 
 ### CSV File Format
 
+**📘 See detailed guide: [CSV_UPLOAD_GUIDE.md](CSV_UPLOAD_GUIDE.md)**
+
 Your CSV file should have these columns (headers can vary):
 
 ```csv
-Date,Program,Venue,Team,Sound Requirements,Call Time,Crew
-2025-11-01,Dance Performance,JBT 8pm,Dr.Swapno/Team,"4 DPA mics, 6 microphones",Setup 7am,John
-2025-11-02,Classical Concert,TT 6.30pm,Farahnaz & Team,NCPA Audio Recording,Piano 12.45pm,Sarah
+Date,Program,Venue,Team,Sound Requirement,Call Time,Crew
+01/11/2025,Dance Performance,JBT 8pm,Dr.Swapno/Team,4 DPA mics; 6 microphones,Setup 7am,John
+02/11/2025,Classical Concert,TT 6.30pm,Farahnaz & Team,NCPA Audio Recording,Piano 12.45pm,Sarah
 ```
 
+**Supported date formats:**
+- `01/11/2025` (DD/MM/YYYY) ✅ From Google Sheets
+- `01-11-25` (DD-MM-YY) ✅
+- `2025-11-01` (YYYY-MM-DD) ✅
+- And more (see CSV guide)
+
 **Supported column name variations:**
-- Date: `Date`, `date`, `EVENT DATE`
-- Program: `Program`, `program`, `Program/Event`
+- Date: `Date`, `date`, `EVENT DATE`, `Event Date`
+- Program: `Program`, `program`, `Program/Event`, `Event`
 - Venue: `Venue`, `venue`
+- Sound Requirements: `Sound Requirements`, `Sound Requirement` (both work!)
 - Others: Case-insensitive
 
 ### Color Coding

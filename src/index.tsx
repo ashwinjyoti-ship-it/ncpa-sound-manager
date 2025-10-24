@@ -53,6 +53,34 @@ app.get('/api/events/range', async (c) => {
   }
 })
 
+// Search events (MUST be before /:id route)
+app.get('/api/events/search', async (c) => {
+  try {
+    const query = c.req.query('q')
+    
+    if (!query) {
+      return c.json({ success: false, error: 'Search query required' }, 400)
+    }
+    
+    const searchTerm = `%${query}%`
+    
+    const { results } = await c.env.DB.prepare(`
+      SELECT * FROM events 
+      WHERE program LIKE ? 
+         OR venue LIKE ? 
+         OR team LIKE ?
+         OR crew LIKE ?
+         OR sound_requirements LIKE ?
+      ORDER BY event_date DESC
+      LIMIT 50
+    `).bind(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm).all()
+    
+    return c.json({ success: true, data: results })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // Get single event
 app.get('/api/events/:id', async (c) => {
   try {
@@ -215,34 +243,6 @@ app.post('/api/events/bulk', async (c) => {
       message: `${results.length} events uploaded successfully`,
       data: results
     }, 201)
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
-
-// Search events
-app.get('/api/events/search', async (c) => {
-  try {
-    const query = c.req.query('q')
-    
-    if (!query) {
-      return c.json({ success: false, error: 'Search query required' }, 400)
-    }
-    
-    const searchTerm = `%${query}%`
-    
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM events 
-      WHERE program LIKE ? 
-         OR venue LIKE ? 
-         OR team LIKE ?
-         OR crew LIKE ?
-         OR sound_requirements LIKE ?
-      ORDER BY event_date DESC
-      LIMIT 50
-    `).bind(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm).all()
-    
-    return c.json({ success: true, data: results })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }

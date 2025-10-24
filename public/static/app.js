@@ -530,21 +530,24 @@ function parseDate(dateStr) {
     return dateStr;
   }
   
-  // Try DD/MM/YYYY format (common in Google Sheets exported CSV)
-  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (ddmmyyyyMatch) {
-    const day = ddmmyyyyMatch[1].padStart(2, '0');
-    const month = ddmmyyyyMatch[2].padStart(2, '0');
-    const year = ddmmyyyyMatch[3];
+  // Try DD/MM/YYYY format with SLASH (international standard - most common from Google Sheets)
+  // This MUST come before any JavaScript Date parsing to avoid MM/DD confusion
+  const slashMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (slashMatch) {
+    const day = slashMatch[1].padStart(2, '0');
+    const month = slashMatch[2].padStart(2, '0');
+    const year = slashMatch[3];
+    
+    // Always treat slash format as DD/MM/YYYY (international standard)
     return `${year}-${month}-${day}`;
   }
   
   // Try DD-MM-YYYY format (with dashes)
-  const ddmmyyyyDashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
-  if (ddmmyyyyDashMatch) {
-    let day = ddmmyyyyDashMatch[1].padStart(2, '0');
-    let month = ddmmyyyyDashMatch[2].padStart(2, '0');
-    let year = ddmmyyyyDashMatch[3];
+  const dashMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{2,4})$/);
+  if (dashMatch) {
+    let day = dashMatch[1].padStart(2, '0');
+    let month = dashMatch[2].padStart(2, '0');
+    let year = dashMatch[3];
     
     // Handle 2-digit year (25 -> 2025)
     if (year.length === 2) {
@@ -554,18 +557,17 @@ function parseDate(dateStr) {
     return `${year}-${month}-${day}`;
   }
   
-  // Try MM/DD/YYYY format (US format)
-  const mmddyyyyMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (mmddyyyyMatch) {
-    const month = mmddyyyyMatch[1].padStart(2, '0');
-    const day = mmddyyyyMatch[2].padStart(2, '0');
-    const year = mmddyyyyMatch[3];
-    // For ambiguous dates, we'll treat first number as day (DD/MM format)
-    // since that's more common internationally
+  // Try YYYY/MM/DD format (already in correct order)
+  const isoSlashMatch = dateStr.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (isoSlashMatch) {
+    const year = isoSlashMatch[1];
+    const month = isoSlashMatch[2].padStart(2, '0');
+    const day = isoSlashMatch[3].padStart(2, '0');
     return `${year}-${month}-${day}`;
   }
   
-  // Try parsing as Date and converting to ISO (last resort)
+  // Last resort: Try parsing as Date (but this often gets DD/MM wrong)
+  // We only reach here if none of the explicit patterns matched
   const date = new Date(dateStr);
   if (!isNaN(date.getTime())) {
     return date.toISOString().split('T')[0];

@@ -578,7 +578,7 @@ app.get('/', (c) => {
 
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-        <script src="/static/app.js"></script>
+        <script src="/static/app.js?v=1.1.0"></script>
     </body>
     </html>
   `)

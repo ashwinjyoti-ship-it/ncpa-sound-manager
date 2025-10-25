@@ -455,7 +455,7 @@ async function handleWordUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   
-  showNotification('📄 Parsing Word document...', 'info');
+  showNotification('📄 Parsing Word document with AI...', 'info');
   
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -464,54 +464,63 @@ async function handleWordUpload(e) {
     const result = await mammoth.extractRawText({ arrayBuffer });
     const text = result.value;
     
-    console.log('Word document extracted text (first 2000 chars):', text.substring(0, 2000));
-    console.log('Full text length:', text.length);
+    console.log('Word document extracted, sending to AI for parsing...');
+    console.log('Text length:', text.length, 'characters');
     
-    // Parse the text into events
-    const events = parseWordDocumentText(text, file.name);
+    // Use AI to parse the document intelligently
+    showNotification('🤖 AI is analyzing the document...', 'info');
+    
+    const response = await axios.post(`${API_BASE}/ai/parse-word`, {
+      text: text,
+      filename: file.name
+    });
+    
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'AI parsing failed');
+    }
+    
+    const events = response.data.events;
     
     if (events.length === 0) {
-      showNotification('❌ No valid events found in Word document. Please check the format.', 'error');
+      showNotification('❌ No events found in document. AI could not identify any event entries.', 'error');
       return;
     }
     
-    console.log(`✓ Parsed ${events.length} events from Word document:`, events.slice(0, 3));
+    console.log(`✅ AI parsed ${events.length} events:`, events.slice(0, 3));
     
     // Upload events
-    try {
-      showNotification(`⬆️ Uploading ${events.length} events...`, 'info');
-      const response = await axios.post(`${API_BASE}/events/bulk`, { events });
+    showNotification(`⬆️ Uploading ${events.length} events...`, 'info');
+    const uploadResponse = await axios.post(`${API_BASE}/events/bulk`, { events });
+    
+    if (uploadResponse.data.success) {
+      const uploaded = uploadResponse.data.data.length;
+      const duplicates = uploadResponse.data.skipped ? uploadResponse.data.skipped.length : 0;
       
-      if (response.data.success) {
-        const uploaded = response.data.data.length;
-        const duplicates = response.data.skipped ? response.data.skipped.length : 0;
-        
-        let message = `✅ Successfully uploaded ${uploaded} events from Word document!`;
-        if (duplicates > 0) {
-          message += ` (${duplicates} duplicates skipped)`;
-          console.log('Skipped duplicates:', response.data.skipped);
-        }
-        
-        showNotification(message, 'success');
-        await loadEvents();
-      } else {
-        showNotification(`❌ Upload failed: ${response.data.error || 'Unknown error'}`, 'error');
+      let message = `✅ Successfully uploaded ${uploaded} events from Word document!`;
+      if (duplicates > 0) {
+        message += ` (${duplicates} duplicates skipped)`;
       }
-    } catch (error) {
-      console.error('Error uploading events:', error);
-      showNotification(`❌ Failed to upload events: ${error.response?.data?.error || error.message}`, 'error');
+      
+      showNotification(message, 'success');
+      await loadEvents();
+    } else {
+      showNotification(`❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
     }
     
   } catch (error) {
     console.error('Error parsing Word document:', error);
-    showNotification(`❌ Failed to parse Word document: ${error.message}`, 'error');
+    showNotification(`❌ Failed to parse Word document: ${error.response?.data?.error || error.message}`, 'error');
   } finally {
     // Always reset file input so user can try again
     e.target.value = '';
   }
 }
 
-function parseWordDocumentText(text, filename) {
+// ============================================
+// SEARCH
+// ============================================
+
+async function handleSearch(query) {
   const events = [];
   
   // Extract month and year from filename or text

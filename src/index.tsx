@@ -392,6 +392,143 @@ SQL Query:`
   }
 })
 
+// AI-powered Word document parser
+app.post('/api/ai/parse-word', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { text, filename } = body
+    
+    if (!text) {
+      return c.json({ success: false, error: 'Document text is required' }, 400)
+    }
+    
+    // Get API key from environment
+    const apiKey = c.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return c.json({ success: false, error: 'AI service not configured' }, 500)
+    }
+    
+    // Extract month/year context from filename if available
+    let contextHint = ''
+    if (filename) {
+      const monthMatch = filename.match(/(january|february|march|april|may|june|july|august|september|october|november|december)/i)
+      const yearMatch = filename.match(/20\d{2}/)
+      if (monthMatch || yearMatch) {
+        contextHint = `\n\nContext from filename: ${monthMatch?.[0] || ''} ${yearMatch?.[0] || ''}`
+      }
+    }
+    
+    const prompt = `You are parsing an NCPA Sound Crew event schedule document. Extract ALL events from this document and return them as a JSON array.
+
+Document text:
+${text}${contextHint}
+
+Parse ALL events and extract the following fields for EACH event:
+- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
+- program: Full program/event name (from "Programme" or "Event" column)
+- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre")
+- team: Curator/team name if mentioned
+- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
+- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "AC/Lights" > any utility times)
+- crew: Crew member names assigned to the event
+
+IMPORTANT INSTRUCTIONS:
+1. Extract ALL events from the document - don't skip any
+2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (1, 2, 3, etc.) - combine them with month/year context
+3. For call_time: Prioritize in this order:
+   - Times explicitly labeled "Sound" or "Sound Call"
+   - Times labeled "Tech" or "Technical"
+   - Times labeled as utility work like "AC", "Lights", "Setup"
+   - General call times
+4. For sound_requirements: Extract ANY technical information related to audio/sound
+5. If a field is not found or unclear, use empty string ""
+6. Handle various document formats - don't rely on specific headers
+7. Parse tables, lists, or any structured format
+
+Return ONLY a JSON array of events, nothing else. Format:
+[
+  {
+    "event_date": "2025-01-15",
+    "program": "Classical Music Concert",
+    "venue": "Tata Theatre",
+    "team": "Indian Music",
+    "sound_requirements": "4 mics, playback system",
+    "call_time": "16:00",
+    "crew": "Ashwin, Rohan"
+  }
+]
+
+If no events are found or parsing fails, return an empty array: []`
+    
+    console.log('Sending Word document to Claude for parsing...')
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-haiku-20240307',
+        max_tokens: 4096,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+    })
+    
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Anthropic API error:', error)
+      return c.json({ success: false, error: 'AI parsing service failed' }, 500)
+    }
+    
+    const aiResult = await response.json()
+    const aiResponse = aiResult.content[0].text.trim()
+    
+    console.log('AI Response:', aiResponse)
+    
+    // Parse JSON response from Claude
+    let events = []
+    try {
+      // Extract JSON array from response (in case there's extra text)
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        events = JSON.parse(jsonMatch[0])
+      } else {
+        // Try parsing the whole response
+        events = JSON.parse(aiResponse)
+      }
+      
+      // Validate and clean events
+      events = events.filter(event => {
+        return event.event_date && event.program && event.venue
+      })
+      
+      console.log(`Successfully parsed ${events.length} events`)
+      
+    } catch (parseError: any) {
+      console.error('Failed to parse AI response as JSON:', parseError)
+      return c.json({ 
+        success: false, 
+        error: 'AI returned invalid format. Please try again or use CSV upload.' 
+      }, 500)
+    }
+    
+    return c.json({ 
+      success: true,
+      events: events,
+      message: `Found ${events.length} events in document`
+    })
+    
+  } catch (error: any) {
+    console.error('Word parsing error:', error)
+    return c.json({ success: false, error: error.message || 'Failed to parse document' }, 500)
+  }
+})
+
 // ============================================
 // FRONTEND ROUTES
 // ============================================

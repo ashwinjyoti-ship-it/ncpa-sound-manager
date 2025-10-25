@@ -43,6 +43,15 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
    - Validates data before import
    - Supports common CSV formats
 
+3b. **📄 Word Document Upload (AI-Powered)**
+   - Upload .docx files with event schedules
+   - **Claude AI parsing**: Intelligently extracts events from any document format
+   - No strict formatting requirements - works with tables, lists, or any structure
+   - Automatically detects: dates, programs, venues, sound requirements, call times, crew
+   - Smart call time prioritization: Sound > Tech > Utility times
+   - Handles variations in document layouts
+   - Fallback: Use CSV upload if Word parsing encounters issues
+
 4. **➕ Manual Event Entry**
    - "Add Show" button on both views
    - Form with all fields:
@@ -60,8 +69,26 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
    - Searches: Program, Venue, Team, Crew, Sound Requirements
    - Debounced (500ms) for performance
    - Shows results immediately
+   - Empty result feedback
 
-6. **📈 Analytics API**
+6. **💬 WhatsApp Export**
+   - Export events for WhatsApp messaging
+   - Time ranges: Tomorrow, This Week, Next Week, Custom Date
+   - **Bold headers** for clear formatting (*Program:*, *Venue:*, etc.)
+   - Concise program names (removes organizer info, limits to 60 chars)
+   - **Sound-focused requirements** extraction
+   - Team field excluded from export (kept in database/table/calendar)
+   - One-click copy to clipboard
+
+7. **🤖 AI Assistant**
+   - Natural language queries using Claude Haiku
+   - Ask about events: "Show all events tomorrow", "Events at Tata Theatre"
+   - Find missing data: "Events with missing sound requirements"
+   - Crew analysis: "Events assigned to Ashwin"
+   - SQL generation from plain English
+   - Results displayed in formatted table
+
+8. **📈 Analytics API**
    - `/api/analytics/stats` endpoint ready for AI queries
    - Provides:
      - Total events count (last 6 months default)
@@ -71,32 +98,23 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 
 ### 🚧 Features Not Yet Implemented (Version 2)
 
-1. **📄 Word Document Parsing**
-   - Upload .docx files instead of CSV
-   - Extract structured event data from Word tables
-   - Integration with mammoth.js or similar
+1. **🔔 Smart Notifications**
+   - Email reminders for upcoming events
+   - Slack integration
+   - Crew assignment notifications
+   - Missing requirements alerts
 
-2. **🤖 AI-Powered Search & Analytics**
-   - Natural language queries:
-     - "How many shows in last 6 months?"
-     - "Which venue has most shows?"
-     - "When was [show name] last held?"
-     - "Show me crew analysis"
-   - Integration with OpenAI/Anthropic API
-   - Crew workload analysis
-   - Venue utilization reports
-   - Historical data insights
-
-3. **📊 Advanced Reporting**
+2. **📊 Advanced Reporting**
    - Export data to Excel/PDF
    - Generate crew schedules
    - Venue booking calendars
    - Sound equipment usage reports
 
-4. **🔔 Notifications**
-   - Email reminders for upcoming events
-   - Slack/WhatsApp integration
-   - Crew assignment notifications
+3. **🎛️ Equipment Tracking**
+   - Sound equipment inventory management
+   - Equipment assignment to events
+   - Maintenance schedules
+   - Usage analytics
 
 ---
 
@@ -174,7 +192,19 @@ Real-time UI Update
 - `PUT /api/events/:id` - Update event
 - `DELETE /api/events/:id` - Delete event
 
-### Analytics (Ready for AI Integration)
+### AI Services
+
+- `POST /api/ai/query` - Natural language to SQL conversion
+  - Input: `{ query: "your question" }`
+  - Output: SQL query + results + explanation
+  - Example: "Show all events tomorrow" → generates SQL → returns matching events
+
+- `POST /api/ai/parse-word` - AI-powered Word document parsing
+  - Input: `{ text: "document text", filename: "optional.docx" }`
+  - Output: Structured events array extracted from document
+  - Uses Claude to intelligently parse any document format
+
+### Analytics
 
 - `GET /api/analytics/stats?start=YYYY-MM-DD&end=YYYY-MM-DD` - Get statistics
   - Total events count
@@ -264,7 +294,10 @@ Date,Program,Venue,Team,Sound Requirement,Call Time,Crew
 - **Libraries:**
   - Axios - HTTP client
   - PapaParse - CSV parsing
+  - Mammoth.js - Word document extraction
   - Font Awesome - Icons
+- **AI Integration:**
+  - Anthropic Claude (claude-3-haiku-20240307) - Natural language processing & document parsing
 
 ---
 
@@ -488,19 +521,28 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 1.0 (Current - October 24, 2025)
+### Version 1.6 (Current - October 25, 2025)
 
-**Features:**
+**Major Features:**
 - ✅ Calendar view with monthly navigation
 - ✅ Editable table view with frozen headers
-- ✅ CSV bulk upload
+- ✅ CSV bulk upload (working perfectly)
+- ✅ **AI-powered Word document parsing** with Claude
 - ✅ Manual event entry form
-- ✅ Real-time search
-- ✅ Event detail modal
+- ✅ Real-time search with empty result feedback
+- ✅ **WhatsApp export** with bold headers and sound-focused requirements
+- ✅ **AI Assistant** for natural language queries
+- ✅ Event detail modal with clickable links
 - ✅ Color-coded status (requirements filled/pending)
 - ✅ Analytics API endpoint
 - ✅ D1 database with full schema
 - ✅ RESTful API with CRUD operations
+
+**AI Integrations:**
+- ✅ Anthropic Claude (claude-3-haiku-20240307)
+- ✅ Natural language to SQL conversion
+- ✅ Intelligent Word document parsing (replaces fragile pattern matching)
+- ✅ Environment variable configuration (.dev.vars)
 
 **Database:**
 - ✅ Events table with all required fields
@@ -535,5 +577,5 @@ Developed for: **NCPA Sound Crew**
 
 ---
 
-**Last Updated:** October 24, 2025
-**Status:** ✅ Version 1.0 Active - Ready for Production Deployment
+**Last Updated:** October 25, 2025
+**Status:** ✅ Version 1.6 Active - AI-Powered, Ready for Production Deployment

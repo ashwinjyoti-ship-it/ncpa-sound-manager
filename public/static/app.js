@@ -581,6 +581,27 @@ function truncateText(text, maxLength) {
   return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 }
 
+function formatLinksInText(text) {
+  if (!text) return '';
+  
+  // Pattern to match URLs (http, https, www, drive.google.com, etc.)
+  const urlPattern = /(https?:\/\/[^\s]+|www\.[^\s]+|drive\.google\.com[^\s]+)/gi;
+  
+  // Replace URLs with clickable links
+  return text.replace(urlPattern, (url) => {
+    // Ensure the URL has a protocol
+    let href = url;
+    if (!url.match(/^https?:\/\//i)) {
+      href = 'https://' + url;
+    }
+    
+    // Create a shortened display text for long URLs
+    const displayText = url.length > 50 ? url.substring(0, 47) + '...' : url;
+    
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline hover:text-blue-800" title="${url}"><i class="fas fa-link"></i> ${displayText}</a>`;
+  });
+}
+
 function showNotification(message, type = 'info') {
   // Simple notification using alert for now
   // Can be enhanced with a toast library later
@@ -622,6 +643,149 @@ window.onclick = function(event) {
   }
   if (event.target === aiModal) {
     closeAIAssistant();
+  }
+}
+
+// ============================================
+// WHATSAPP EXPORT
+// ============================================
+
+function openWhatsAppExportModal() {
+  document.getElementById('whatsappExportModal').classList.add('active');
+  document.getElementById('exportPreview').style.display = 'none';
+  document.getElementById('customDatePicker').style.display = 'none';
+}
+
+function closeWhatsAppExportModal() {
+  document.getElementById('whatsappExportModal').classList.remove('active');
+}
+
+function exportTomorrow() {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const dateStr = tomorrow.toISOString().split('T')[0];
+  
+  generateWhatsAppExport(dateStr, dateStr, `Tomorrow (${formatDate(dateStr)})`);
+}
+
+function exportThisWeek() {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 = Sunday, 6 = Saturday
+  
+  // Calculate start of week (Sunday)
+  const startOfWeek = new Date(today);
+  startOfWeek.setDate(today.getDate() - dayOfWeek);
+  
+  // Calculate end of week (Saturday)
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + (6 - dayOfWeek));
+  
+  const startStr = startOfWeek.toISOString().split('T')[0];
+  const endStr = endOfWeek.toISOString().split('T')[0];
+  
+  generateWhatsAppExport(startStr, endStr, `This Week (${formatDate(startStr)} - ${formatDate(endStr)})`);
+}
+
+function exportNextWeek() {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  
+  // Calculate start of next week (next Sunday)
+  const startOfNextWeek = new Date(today);
+  startOfNextWeek.setDate(today.getDate() + (7 - dayOfWeek));
+  
+  // Calculate end of next week (next Saturday)
+  const endOfNextWeek = new Date(startOfNextWeek);
+  endOfNextWeek.setDate(startOfNextWeek.getDate() + 6);
+  
+  const startStr = startOfNextWeek.toISOString().split('T')[0];
+  const endStr = endOfNextWeek.toISOString().split('T')[0];
+  
+  generateWhatsAppExport(startStr, endStr, `Next Week (${formatDate(startStr)} - ${formatDate(endStr)})`);
+}
+
+function exportCustomDate() {
+  document.getElementById('customDatePicker').style.display = 'block';
+  document.getElementById('exportPreview').style.display = 'none';
+  
+  // Set default to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  document.getElementById('customDateInput').value = tomorrow.toISOString().split('T')[0];
+}
+
+function exportSelectedDate() {
+  const dateInput = document.getElementById('customDateInput').value;
+  if (!dateInput) {
+    showNotification('Please select a date', 'error');
+    return;
+  }
+  
+  generateWhatsAppExport(dateInput, dateInput, formatDate(dateInput));
+}
+
+function generateWhatsAppExport(startDate, endDate, title) {
+  // Filter events for the date range
+  const filteredEvents = allEvents.filter(event => 
+    event.event_date >= startDate && event.event_date <= endDate
+  ).sort((a, b) => a.event_date.localeCompare(b.event_date));
+  
+  if (filteredEvents.length === 0) {
+    showNotification('No events found for the selected date range', 'error');
+    return;
+  }
+  
+  // Generate WhatsApp message format
+  let message = `📅 *Events for ${title}*\n\n`;
+  
+  filteredEvents.forEach((event, index) => {
+    message += `🎭 *Event ${index + 1}*\n`;
+    message += `Program: ${event.program}\n`;
+    message += `Venue: ${event.venue}\n`;
+    
+    if (event.call_time) {
+      message += `Call Time: ${event.call_time}\n`;
+    }
+    
+    if (event.crew && event.crew.trim() !== '') {
+      message += `Crew: ${event.crew}\n`;
+    }
+    
+    if (event.sound_requirements && event.sound_requirements.trim() !== '') {
+      // Extract plain URLs without HTML formatting
+      const plainReqs = event.sound_requirements.replace(/<[^>]*>/g, '');
+      message += `Requirements: ${plainReqs}\n`;
+    }
+    
+    message += `\n`;
+  });
+  
+  message += `---\n`;
+  message += `Total: ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}\n`;
+  message += `\n_Generated from NCPA Sound Crew Dashboard_`;
+  
+  // Show preview
+  document.getElementById('exportText').value = message;
+  document.getElementById('exportPreview').style.display = 'block';
+  document.getElementById('customDatePicker').style.display = 'none';
+}
+
+function copyToClipboard() {
+  const textarea = document.getElementById('exportText');
+  textarea.select();
+  textarea.setSelectionRange(0, 99999); // For mobile devices
+  
+  try {
+    document.execCommand('copy');
+    showNotification('Copied to clipboard! Paste in WhatsApp.', 'success');
+    
+    // Close modal after short delay
+    setTimeout(() => {
+      closeWhatsAppExportModal();
+    }, 1500);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+    showNotification('Failed to copy. Please copy manually.', 'error');
   }
 }
 

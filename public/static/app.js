@@ -455,7 +455,8 @@ async function handleWordUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   
-  showNotification('📄 Extracting text from Word document...', 'info');
+  // Show persistent progress notification
+  const progressNotification = showPersistentNotification('📄 Extracting text from Word document...', 'info');
   
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -466,14 +467,26 @@ async function handleWordUpload(e) {
     
     console.log('Word document extracted:', text.length, 'characters');
     
+    // Extract month/year from filename for navigation
+    const monthMatch = file.name.match(/(january|february|march|april|may|june|july|august|september|october|november|december)/i);
+    const yearMatch = file.name.match(/20\d{2}/);
+    let uploadedMonth = null;
+    let uploadedYear = null;
+    
+    if (monthMatch && yearMatch) {
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+      uploadedMonth = monthNames.indexOf(monthMatch[0].toLowerCase());
+      uploadedYear = parseInt(yearMatch[0]);
+    }
+    
     // Estimate processing time based on document size
     const estimatedChunks = Math.ceil(text.length / 12000);
     const estimatedTime = estimatedChunks * 15; // ~15 seconds per chunk
     
     if (estimatedChunks > 1) {
-      showNotification(`🤖 AI is analyzing document in ${estimatedChunks} chunks... (this may take ~${estimatedTime}s)`, 'info');
+      updatePersistentNotification(progressNotification, `🤖 AI is analyzing document in ${estimatedChunks} chunks... (this may take ~${estimatedTime}s)`, 'info');
     } else {
-      showNotification('🤖 AI is analyzing the document...', 'info');
+      updatePersistentNotification(progressNotification, '🤖 AI is analyzing the document...', 'info');
     }
     
     // Use AI to parse the document intelligently with chunked processing
@@ -494,19 +507,16 @@ async function handleWordUpload(e) {
     const uniqueEvents = response.data.uniqueEvents || events.length;
     
     if (events.length === 0) {
-      showNotification('❌ No events found in document. AI could not identify any event entries.', 'error');
+      updatePersistentNotification(progressNotification, '❌ No events found in document. AI could not identify any event entries.', 'error');
+      setTimeout(() => removePersistentNotification(progressNotification), 8000);
       return;
     }
     
     console.log(`✅ AI parsed ${uniqueEvents} unique events from ${chunks} chunks (${totalEvents} total found)`);
     console.log('Sample events:', events.slice(0, 3));
     
-    // Show success message with chunk info
-    if (chunks > 1) {
-      showNotification(`✅ AI analyzed ${chunks} chunks and found ${uniqueEvents} events! Now uploading...`, 'success');
-    } else {
-      showNotification(`✅ AI found ${uniqueEvents} events! Now uploading...`, 'success');
-    }
+    // Update progress
+    updatePersistentNotification(progressNotification, `⬆️ Uploading ${uniqueEvents} events to database...`, 'info');
     
     // Upload events
     const uploadResponse = await axios.post(`${API_BASE}/events/bulk`, { events });
@@ -515,15 +525,27 @@ async function handleWordUpload(e) {
       const uploaded = uploadResponse.data.data.length;
       const duplicates = uploadResponse.data.skipped ? uploadResponse.data.skipped.length : 0;
       
-      let message = `✅ Successfully uploaded ${uploaded} events from Word document!`;
+      // Reload events first
+      await loadEvents();
+      
+      // Navigate to the uploaded month if we could detect it
+      if (uploadedMonth !== null && uploadedYear !== null) {
+        currentDate = new Date(uploadedYear, uploadedMonth, 1);
+        renderCalendar();
+      }
+      
+      // Show final success message
+      let message = `✅ Upload complete! ${uploaded} events added`;
       if (duplicates > 0) {
         message += ` (${duplicates} duplicates skipped)`;
       }
       
-      showNotification(message, 'success');
-      await loadEvents();
+      updatePersistentNotification(progressNotification, message, 'success');
+      setTimeout(() => removePersistentNotification(progressNotification), 5000);
+      
     } else {
-      showNotification(`❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
+      updatePersistentNotification(progressNotification, `❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
+      setTimeout(() => removePersistentNotification(progressNotification), 8000);
     }
     
   } catch (error) {
@@ -539,7 +561,8 @@ async function handleWordUpload(e) {
       errorMessage = error.message;
     }
     
-    showNotification(`❌ ${errorMessage}`, 'error');
+    updatePersistentNotification(progressNotification, `❌ ${errorMessage}`, 'error');
+    setTimeout(() => removePersistentNotification(progressNotification), 8000);
   } finally {
     // Always reset file input so user can try again
     e.target.value = '';
@@ -973,6 +996,42 @@ function showNotification(message, type = 'info') {
   setTimeout(() => {
     toast.remove();
   }, duration);
+}
+
+// Persistent notification for long-running operations
+function showPersistentNotification(message, type = 'info') {
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+  console.log(`${icon} ${message}`);
+  
+  const toast = document.createElement('div');
+  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
+    type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+  }`;
+  toast.textContent = message;
+  toast.setAttribute('data-persistent', 'true');
+  document.body.appendChild(toast);
+  
+  return toast; // Return reference so it can be updated
+}
+
+// Update an existing persistent notification
+function updatePersistentNotification(toast, message, type = 'info') {
+  if (!toast) return;
+  
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+  console.log(`${icon} ${message}`);
+  
+  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
+    type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+  }`;
+  toast.textContent = message;
+}
+
+// Remove a persistent notification
+function removePersistentNotification(toast) {
+  if (toast && toast.parentNode) {
+    toast.remove();
+  }
 }
 
 // Close modals when clicking outside

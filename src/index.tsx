@@ -924,7 +924,7 @@ app.get('/', (c) => {
                         
                         <!-- Word Upload -->
                         <button onclick="document.getElementById('wordInput').click()" 
-                                class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                                class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
                             <i class="fas fa-file-word mr-1.5"></i>Upload Word
                         </button>
                         <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">

@@ -394,13 +394,13 @@ SQL Query:`
 
 // Helper function: Parse a chunk of text with Claude
 async function parseChunkWithClaude(chunk: string, contextHint: string, apiKey: string, chunkNumber: number, totalChunks: number): Promise<any[]> {
-  const prompt = `You are parsing section ${chunkNumber} of ${totalChunks} from an NCPA Sound Crew event schedule document. Extract ALL events from this section and return them as a JSON array.
+  const prompt = `You are parsing section ${chunkNumber} of ${totalChunks} from an NCPA Sound Crew event schedule document. Extract ALL events from this section and return them as a JSON array.${contextHint}
 
 Document section:
-${chunk}${contextHint}
+${chunk}
 
 Parse ALL events and extract the following fields for EACH event:
-- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
+- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information. USE THE MONTH AND YEAR FROM THE CONTEXT ABOVE if provided in filename)
 - program: Full program/event name (from "Programme" or "Event" column)
 - venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib")
 - team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
@@ -408,9 +408,13 @@ Parse ALL events and extract the following fields for EACH event:
 - call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "Technical setup" > "AC/Lights" > any utility times)
 - crew: Crew member names assigned to the event
 
-IMPORTANT INSTRUCTIONS:
+CRITICAL INSTRUCTIONS:
 1. Extract ALL events from this section - don't skip any
-2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (Thu 4th, Fri 5th, etc.) - combine them with month/year context
+2. For dates: 
+   - Look for day names (Monday, Tuesday, Wed, Thu, Fri, etc.) and dates (Thu 4th, Fri 5th, Wed 1st, etc.)
+   - USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
+   - If context says "October 2025", then "Wed 1st" becomes "2025-10-01", "Thu 2nd" becomes "2025-10-02", etc.
+   - ALWAYS use the context month/year, not September or any other month
 3. For call_time: Prioritize in this order:
    - Times explicitly labeled "Sound" or "Sound Call" or "Sound Requirements:"
    - Times labeled "Tech" or "Technical" or "Technical setup:"
@@ -422,10 +426,19 @@ IMPORTANT INSTRUCTIONS:
 7. Parse tables, lists, or any structured format
 8. If an event is partially cut off at the end of this section, still include it - we'll deduplicate later
 
-Return ONLY a JSON array of events, nothing else. Format:
+Return ONLY a valid JSON array, nothing else. No explanations, no markdown, just the JSON array.
+
+CRITICAL JSON REQUIREMENTS:
+- Use double quotes for all strings
+- Escape any quotes inside strings with backslash
+- No trailing commas
+- No newlines inside string values (replace with spaces)
+- If a field contains special characters, escape them properly
+
+Example format:
 [
   {
-    "event_date": "2025-09-04",
+    "event_date": "2025-10-04",
     "program": "Classical Music Concert",
     "venue": "Tata Theatre",
     "team": "Indian Music",
@@ -435,7 +448,7 @@ Return ONLY a JSON array of events, nothing else. Format:
   }
 ]
 
-If no events are found in this section, return an empty array: []`
+If no events found, return: []`
   
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -461,18 +474,33 @@ If no events are found in this section, return an empty array: []`
   }
   
   const aiResult = await response.json()
-  const aiResponse = aiResult.content[0].text.trim()
+  let aiResponse = aiResult.content[0].text.trim()
   
-  // Parse JSON response
+  // Remove markdown code blocks if present
+  aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '')
+  
+  // Parse JSON response with better error handling
   try {
+    // Try to find JSON array in response
     const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+      const jsonStr = jsonMatch[0]
+      
+      // Clean up common JSON issues
+      let cleanedJson = jsonStr
+        // Remove trailing commas before ] or }
+        .replace(/,(\s*[\]}])/g, '$1')
+        // Fix unescaped newlines in strings (replace with space)
+        .replace(/("[^"]*)\n([^"]*")/g, '$1 $2')
+      
+      return JSON.parse(cleanedJson)
     } else {
+      // Try parsing directly
       return JSON.parse(aiResponse)
     }
-  } catch (parseError) {
-    console.error(`Failed to parse chunk ${chunkNumber} response:`, parseError)
+  } catch (parseError: any) {
+    console.error(`Failed to parse chunk ${chunkNumber} response:`, parseError.message)
+    console.error(`Response preview:`, aiResponse.substring(0, 200))
     return []
   }
 }
@@ -524,14 +552,35 @@ app.post('/api/ai/parse-word', async (c) => {
     console.log(`📄 Processing Word document: ${text.length} characters`)
     
     // CHUNKED PROCESSING: Split document into manageable chunks
-    const CHUNK_SIZE = 12000 // Characters per chunk (leaves room for prompt overhead)
+    // Using larger chunks (18K) and smarter splitting to avoid cutting events
+    const CHUNK_SIZE = 18000 // Characters per chunk (increased for better event capture)
     const chunks: string[] = []
     
-    for (let i = 0; i < text.length; i += CHUNK_SIZE) {
-      chunks.push(text.substring(i, i + CHUNK_SIZE))
+    if (text.length <= CHUNK_SIZE) {
+      // Small document - process in one chunk
+      chunks.push(text)
+    } else {
+      // Large document - split intelligently at event boundaries
+      for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+        let chunkEnd = Math.min(i + CHUNK_SIZE, text.length)
+        
+        // If not at end of document, try to find a good split point
+        if (chunkEnd < text.length) {
+          // Look for a day pattern (Mon/Tue/Wed etc) in the next 500 chars
+          const searchArea = text.substring(chunkEnd, Math.min(chunkEnd + 500, text.length))
+          const dayMatch = searchArea.match(/\n(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d{1,2}(st|nd|rd|th)/i)
+          
+          if (dayMatch && dayMatch.index !== undefined) {
+            // Split at the start of the next event
+            chunkEnd += dayMatch.index
+          }
+        }
+        
+        chunks.push(text.substring(i, chunkEnd))
+      }
     }
     
-    console.log(`📊 Split into ${chunks.length} chunks for processing`)
+    console.log(`📊 Split into ${chunks.length} chunks for processing (avg ${Math.round(text.length / chunks.length)} chars each)`)
     
     // Process each chunk with Claude
     const allEvents: any[] = []

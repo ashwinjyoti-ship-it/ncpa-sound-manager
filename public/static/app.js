@@ -943,6 +943,55 @@ async function deleteEvent(id) {
   }
 }
 
+// Bulk delete events by month
+async function bulkDeleteEvents() {
+  const month = document.getElementById('bulkDeleteMonth').value;
+  const year = document.getElementById('bulkDeleteYear').value;
+  
+  if (!month || !year) {
+    showNotification('Please select both month and year', 'error');
+    return;
+  }
+  
+  const monthNames = ['', 'January', 'February', 'March', 'April', 'May', 'June', 
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthName = monthNames[parseInt(month)];
+  
+  if (!confirm(`Are you sure you want to delete ALL events from ${monthName} ${year}?\n\nThis action cannot be undone.`)) {
+    return;
+  }
+  
+  const statusDiv = document.getElementById('bulkDeleteStatus');
+  statusDiv.textContent = 'Deleting...';
+  statusDiv.className = 'text-sm text-blue-600';
+  
+  try {
+    const response = await axios.post(`${API_BASE}/events/bulk-delete`, {
+      month: parseInt(month),
+      year: parseInt(year)
+    });
+    
+    if (response.data.success) {
+      const deleted = response.data.deleted;
+      showNotification(`✅ Deleted ${deleted} events from ${monthName} ${year}`, 'success');
+      statusDiv.textContent = `Last action: Deleted ${deleted} events`;
+      statusDiv.className = 'text-sm text-green-600';
+      
+      // Reload events
+      await loadEvents();
+      
+      // Reset dropdowns
+      document.getElementById('bulkDeleteMonth').value = '';
+      document.getElementById('bulkDeleteYear').value = '';
+    }
+  } catch (error) {
+    console.error('Error bulk deleting events:', error);
+    showNotification('Failed to delete events', 'error');
+    statusDiv.textContent = 'Error deleting events';
+    statusDiv.className = 'text-sm text-red-600';
+  }
+}
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================

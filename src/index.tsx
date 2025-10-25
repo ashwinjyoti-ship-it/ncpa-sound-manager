@@ -201,6 +201,49 @@ app.delete('/api/events/:id', async (c) => {
   }
 })
 
+// Bulk delete events by date range
+app.post('/api/events/bulk-delete', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { month, year } = body
+    
+    if (!month || !year) {
+      return c.json({ success: false, error: 'Month and year are required' }, 400)
+    }
+    
+    // Calculate date range for the month
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+    const lastDay = new Date(year, month, 0).getDate() // Last day of month
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    
+    // Count events first
+    const countResult = await c.env.DB.prepare(`
+      SELECT COUNT(*) as count FROM events 
+      WHERE event_date >= ? AND event_date <= ?
+    `).bind(startDate, endDate).first()
+    
+    const count = countResult?.count || 0
+    
+    if (count === 0) {
+      return c.json({ success: true, deleted: 0, message: 'No events found for this month' })
+    }
+    
+    // Delete events
+    await c.env.DB.prepare(`
+      DELETE FROM events 
+      WHERE event_date >= ? AND event_date <= ?
+    `).bind(startDate, endDate).run()
+    
+    return c.json({ 
+      success: true, 
+      deleted: count,
+      message: `Deleted ${count} events from ${startDate} to ${endDate}` 
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // Bulk upload events (for CSV import)
 app.post('/api/events/bulk', async (c) => {
   try {
@@ -844,6 +887,37 @@ app.get('/', (c) => {
 
                 <!-- Table View -->
                 <div id="tableView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
+                    <!-- Bulk Actions Bar -->
+                    <div class="mb-4 flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <select id="bulkDeleteMonth" class="px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Select Month</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                            <select id="bulkDeleteYear" class="px-3 py-2 border border-gray-300 rounded-lg">
+                                <option value="">Select Year</option>
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                            <button onclick="bulkDeleteEvents()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
+                                <i class="fas fa-trash mr-2"></i>Delete Month
+                            </button>
+                        </div>
+                        <div id="bulkDeleteStatus" class="text-sm text-gray-600"></div>
+                    </div>
+                    
                     <div class="overflow-auto" style="max-height: 70vh;">
                         <table class="w-full border-collapse table-fixed">
                             <colgroup>

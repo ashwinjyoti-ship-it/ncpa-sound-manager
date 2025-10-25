@@ -455,7 +455,7 @@ async function handleWordUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
   
-  showNotification('📄 Parsing Word document with AI...', 'info');
+  showNotification('📄 Extracting text from Word document...', 'info');
   
   try {
     const arrayBuffer = await file.arrayBuffer();
@@ -464,15 +464,24 @@ async function handleWordUpload(e) {
     const result = await mammoth.extractRawText({ arrayBuffer });
     const text = result.value;
     
-    console.log('Word document extracted, sending to AI for parsing...');
-    console.log('Text length:', text.length, 'characters');
+    console.log('Word document extracted:', text.length, 'characters');
     
-    // Use AI to parse the document intelligently
-    showNotification('🤖 AI is analyzing the document...', 'info');
+    // Estimate processing time based on document size
+    const estimatedChunks = Math.ceil(text.length / 12000);
+    const estimatedTime = estimatedChunks * 15; // ~15 seconds per chunk
     
+    if (estimatedChunks > 1) {
+      showNotification(`🤖 AI is analyzing document in ${estimatedChunks} chunks... (this may take ~${estimatedTime}s)`, 'info');
+    } else {
+      showNotification('🤖 AI is analyzing the document...', 'info');
+    }
+    
+    // Use AI to parse the document intelligently with chunked processing
     const response = await axios.post(`${API_BASE}/ai/parse-word`, {
       text: text,
       filename: file.name
+    }, {
+      timeout: 180000 // 3 minutes timeout for large documents
     });
     
     if (!response.data.success) {
@@ -480,16 +489,26 @@ async function handleWordUpload(e) {
     }
     
     const events = response.data.events;
+    const chunks = response.data.chunks || 1;
+    const totalEvents = response.data.totalEvents || events.length;
+    const uniqueEvents = response.data.uniqueEvents || events.length;
     
     if (events.length === 0) {
       showNotification('❌ No events found in document. AI could not identify any event entries.', 'error');
       return;
     }
     
-    console.log(`✅ AI parsed ${events.length} events:`, events.slice(0, 3));
+    console.log(`✅ AI parsed ${uniqueEvents} unique events from ${chunks} chunks (${totalEvents} total found)`);
+    console.log('Sample events:', events.slice(0, 3));
+    
+    // Show success message with chunk info
+    if (chunks > 1) {
+      showNotification(`✅ AI analyzed ${chunks} chunks and found ${uniqueEvents} events! Now uploading...`, 'success');
+    } else {
+      showNotification(`✅ AI found ${uniqueEvents} events! Now uploading...`, 'success');
+    }
     
     // Upload events
-    showNotification(`⬆️ Uploading ${events.length} events...`, 'info');
     const uploadResponse = await axios.post(`${API_BASE}/events/bulk`, { events });
     
     if (uploadResponse.data.success) {
@@ -509,7 +528,18 @@ async function handleWordUpload(e) {
     
   } catch (error) {
     console.error('Error parsing Word document:', error);
-    showNotification(`❌ Failed to parse Word document: ${error.response?.data?.error || error.message}`, 'error');
+    
+    // Better error messages
+    let errorMessage = 'Failed to parse Word document';
+    if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      errorMessage = 'Document is very large and processing timed out. Please try CSV upload instead.';
+    } else if (error.response?.data?.error) {
+      errorMessage = error.response.data.error;
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    showNotification(`❌ ${errorMessage}`, 'error');
   } finally {
     // Always reset file input so user can try again
     e.target.value = '';

@@ -392,7 +392,110 @@ SQL Query:`
   }
 })
 
-// AI-powered Word document parser
+// Helper function: Parse a chunk of text with Claude
+async function parseChunkWithClaude(chunk: string, contextHint: string, apiKey: string, chunkNumber: number, totalChunks: number): Promise<any[]> {
+  const prompt = `You are parsing section ${chunkNumber} of ${totalChunks} from an NCPA Sound Crew event schedule document. Extract ALL events from this section and return them as a JSON array.
+
+Document section:
+${chunk}${contextHint}
+
+Parse ALL events and extract the following fields for EACH event:
+- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
+- program: Full program/event name (from "Programme" or "Event" column)
+- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib")
+- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
+- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
+- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "Technical setup" > "AC/Lights" > any utility times)
+- crew: Crew member names assigned to the event
+
+IMPORTANT INSTRUCTIONS:
+1. Extract ALL events from this section - don't skip any
+2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (Thu 4th, Fri 5th, etc.) - combine them with month/year context
+3. For call_time: Prioritize in this order:
+   - Times explicitly labeled "Sound" or "Sound Call" or "Sound Requirements:"
+   - Times labeled "Tech" or "Technical" or "Technical setup:"
+   - Times labeled as utility work like "AC", "Lights", "Setup"
+   - General call times
+4. For sound_requirements: Extract ANY technical information related to audio/sound (mics, speakers, recording, playback, etc.)
+5. If a field is not found or unclear, use empty string ""
+6. Handle various document formats - don't rely on specific headers
+7. Parse tables, lists, or any structured format
+8. If an event is partially cut off at the end of this section, still include it - we'll deduplicate later
+
+Return ONLY a JSON array of events, nothing else. Format:
+[
+  {
+    "event_date": "2025-09-04",
+    "program": "Classical Music Concert",
+    "venue": "Tata Theatre",
+    "team": "Indian Music",
+    "sound_requirements": "4 mics, playback system",
+    "call_time": "16:00",
+    "crew": "Ashwin, Rohan"
+  }
+]
+
+If no events are found in this section, return an empty array: []`
+  
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-3-haiku-20240307',
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: prompt
+      }]
+    })
+  })
+  
+  if (!response.ok) {
+    const error = await response.text()
+    console.error(`Chunk ${chunkNumber} AI error:`, error)
+    throw new Error(`AI parsing failed for chunk ${chunkNumber}`)
+  }
+  
+  const aiResult = await response.json()
+  const aiResponse = aiResult.content[0].text.trim()
+  
+  // Parse JSON response
+  try {
+    const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    } else {
+      return JSON.parse(aiResponse)
+    }
+  } catch (parseError) {
+    console.error(`Failed to parse chunk ${chunkNumber} response:`, parseError)
+    return []
+  }
+}
+
+// Helper function: Remove duplicate events
+function deduplicateEvents(events: any[]): any[] {
+  const seen = new Set()
+  const unique = []
+  
+  for (const event of events) {
+    // Create unique key from date + program + venue
+    const key = `${event.event_date}|${event.program}|${event.venue}`.toLowerCase()
+    
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(event)
+    }
+  }
+  
+  return unique
+}
+
+// AI-powered Word document parser with chunked processing
 app.post('/api/ai/parse-word', async (c) => {
   try {
     const body = await c.req.json()
@@ -418,171 +521,64 @@ app.post('/api/ai/parse-word', async (c) => {
       }
     }
     
-    const prompt = `You are parsing an NCPA Sound Crew event schedule document. Extract ALL events from this document and return them as a JSON array.
-
-Document text:
-${text}${contextHint}
-
-Parse ALL events and extract the following fields for EACH event:
-- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
-- program: Full program/event name (from "Programme" or "Event" column)
-- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre")
-- team: Curator/team name if mentioned
-- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
-- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "AC/Lights" > any utility times)
-- crew: Crew member names assigned to the event
-
-IMPORTANT INSTRUCTIONS:
-1. Extract ALL events from the document - don't skip any
-2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (1, 2, 3, etc.) - combine them with month/year context
-3. For call_time: Prioritize in this order:
-   - Times explicitly labeled "Sound" or "Sound Call"
-   - Times labeled "Tech" or "Technical"
-   - Times labeled as utility work like "AC", "Lights", "Setup"
-   - General call times
-4. For sound_requirements: Extract ANY technical information related to audio/sound
-5. If a field is not found or unclear, use empty string ""
-6. Handle various document formats - don't rely on specific headers
-7. Parse tables, lists, or any structured format
-
-Return ONLY a JSON array of events, nothing else. Format:
-[
-  {
-    "event_date": "2025-01-15",
-    "program": "Classical Music Concert",
-    "venue": "Tata Theatre",
-    "team": "Indian Music",
-    "sound_requirements": "4 mics, playback system",
-    "call_time": "16:00",
-    "crew": "Ashwin, Rohan"
-  }
-]
-
-If no events are found or parsing fails, return an empty array: []`
+    console.log(`📄 Processing Word document: ${text.length} characters`)
     
-    console.log('Sending Word document to Claude for parsing...')
+    // CHUNKED PROCESSING: Split document into manageable chunks
+    const CHUNK_SIZE = 12000 // Characters per chunk (leaves room for prompt overhead)
+    const chunks: string[] = []
     
-    // For large documents, we need to handle them carefully
-    console.log(`Processing document: ${text.length} characters`)
-    
-    // If document is too large (>15k chars), truncate with warning
-    // Anthropic has input limits, and we want fast responses
-    let processedText = text
-    let truncated = false
-    if (text.length > 15000) {
-      processedText = text.substring(0, 15000)
-      truncated = true
-      console.warn(`Document truncated from ${text.length} to 15000 characters`)
+    for (let i = 0; i < text.length; i += CHUNK_SIZE) {
+      chunks.push(text.substring(i, i + CHUNK_SIZE))
     }
     
-    // Rebuild prompt with processed text
-    const finalPrompt = `You are parsing an NCPA Sound Crew event schedule document. Extract ALL events from this document and return them as a JSON array.
-
-Document text:
-${processedText}${contextHint}
-
-Parse ALL events and extract the following fields for EACH event:
-- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
-- program: Full program/event name (from "Programme" or "Event" column)
-- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre")
-- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
-- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
-- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "Technical setup" > "AC/Lights" > any utility times)
-- crew: Crew member names assigned to the event
-
-IMPORTANT INSTRUCTIONS:
-1. Extract ALL events from the document - don't skip any
-2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (Thu 4th, Fri 5th, etc.) - combine them with month/year context
-3. For call_time: Prioritize in this order:
-   - Times explicitly labeled "Sound" or "Sound Call" or "Sound Requirements:"
-   - Times labeled "Tech" or "Technical" or "Technical setup:"
-   - Times labeled as utility work like "AC", "Lights", "Setup"
-   - General call times
-4. For sound_requirements: Extract ANY technical information related to audio/sound (mics, speakers, recording, playback, etc.)
-5. If a field is not found or unclear, use empty string ""
-6. Handle various document formats - don't rely on specific headers
-7. Parse tables, lists, or any structured format
-
-Return ONLY a JSON array of events, nothing else. Format:
-[
-  {
-    "event_date": "2025-09-04",
-    "program": "Classical Music Concert",
-    "venue": "Tata Theatre",
-    "team": "Indian Music",
-    "sound_requirements": "4 mics, playback system",
-    "call_time": "16:00",
-    "crew": "Ashwin, Rohan"
-  }
-]
-
-If no events are found or parsing fails, return an empty array: []`
+    console.log(`📊 Split into ${chunks.length} chunks for processing`)
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 4096, // Maximum for Haiku model
-        messages: [{
-          role: 'user',
-          content: finalPrompt
-        }]
-      })
+    // Process each chunk with Claude
+    const allEvents: any[] = []
+    
+    for (let i = 0; i < chunks.length; i++) {
+      console.log(`🤖 Processing chunk ${i + 1}/${chunks.length}...`)
+      
+      try {
+        const chunkEvents = await parseChunkWithClaude(
+          chunks[i],
+          contextHint,
+          apiKey,
+          i + 1,
+          chunks.length
+        )
+        
+        console.log(`✅ Chunk ${i + 1}: Found ${chunkEvents.length} events`)
+        allEvents.push(...chunkEvents)
+        
+      } catch (chunkError: any) {
+        console.error(`❌ Chunk ${i + 1} failed:`, chunkError.message)
+        // Continue processing other chunks even if one fails
+      }
+    }
+    
+    // Validate and clean events
+    let validEvents = allEvents.filter(event => {
+      return event.event_date && event.program && event.venue
     })
     
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Anthropic API error:', error)
-      return c.json({ success: false, error: 'AI parsing service failed' }, 500)
-    }
+    // Remove duplicates (events that appear in multiple chunks)
+    validEvents = deduplicateEvents(validEvents)
     
-    const aiResult = await response.json()
-    const aiResponse = aiResult.content[0].text.trim()
+    // Sort by date
+    validEvents.sort((a, b) => {
+      return a.event_date.localeCompare(b.event_date)
+    })
     
-    console.log('AI Response:', aiResponse)
-    
-    // Parse JSON response from Claude
-    let events = []
-    try {
-      // Extract JSON array from response (in case there's extra text)
-      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
-      if (jsonMatch) {
-        events = JSON.parse(jsonMatch[0])
-      } else {
-        // Try parsing the whole response
-        events = JSON.parse(aiResponse)
-      }
-      
-      // Validate and clean events
-      events = events.filter(event => {
-        return event.event_date && event.program && event.venue
-      })
-      
-      console.log(`Successfully parsed ${events.length} events`)
-      
-    } catch (parseError: any) {
-      console.error('Failed to parse AI response as JSON:', parseError)
-      return c.json({ 
-        success: false, 
-        error: 'AI returned invalid format. Please try again or use CSV upload.' 
-      }, 500)
-    }
-    
-    let message = `Found ${events.length} events in document`
-    if (truncated) {
-      message += ` (document was truncated - some events may be missing, consider using CSV upload for large files)`
-    }
+    console.log(`✅ Successfully parsed ${validEvents.length} unique events from ${chunks.length} chunks`)
     
     return c.json({ 
       success: true,
-      events: events,
-      message: message,
-      truncated: truncated
+      events: validEvents,
+      message: `Found ${validEvents.length} events in document (processed in ${chunks.length} chunks)`,
+      chunks: chunks.length,
+      totalEvents: allEvents.length,
+      uniqueEvents: validEvents.length
     })
     
   } catch (error: any) {

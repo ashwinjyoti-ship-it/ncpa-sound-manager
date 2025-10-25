@@ -9,8 +9,15 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
-// Enable CORS for all API routes
-app.use('/api/*', cors())
+// Enable CORS for all routes (Safari compatibility)
+app.use('*', cors({
+  origin: '*',
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  exposeHeaders: ['Content-Length', 'X-Request-Id'],
+  maxAge: 86400,
+  credentials: false
+}))
 
 // Serve static files
 app.use('/static/*', serveStatic({ root: './public' }))

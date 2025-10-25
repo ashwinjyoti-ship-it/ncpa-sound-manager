@@ -14,7 +14,9 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 - API Base: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai/api
 
 **GitHub Repository:**
-- To be pushed to GitHub
+- 📦 **https://github.com/ashwinjyoti-ship-it/ncpa-sound-manager**
+- Complete source code with full git history
+- All documentation included
 
 ---
 

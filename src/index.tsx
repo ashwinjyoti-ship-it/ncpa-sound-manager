@@ -690,7 +690,79 @@ app.post('/api/ai/parse-word', async (c) => {
 // FRONTEND ROUTES
 // ============================================
 
+// Minimal Safari test page with NO external dependencies
+app.get('/safari-test', (c) => {
+  return c.html(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Safari Test</title>
+        <style>
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: 40px; 
+            background: #f0f0f0;
+          }
+          .box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          }
+          .success { color: green; font-weight: bold; }
+          .error { color: red; font-weight: bold; }
+        </style>
+        <script>
+          console.log('✅ TEST 1: JavaScript is executing');
+          
+          function runTests() {
+            console.log('✅ TEST 2: Functions work');
+            
+            var result = document.getElementById('result');
+            result.innerHTML = '<p class="success">✅ JavaScript is working!</p>';
+            result.innerHTML += '<p>✅ DOM manipulation works</p>';
+            result.innerHTML += '<p>✅ Browser: ' + navigator.userAgent + '</p>';
+            
+            console.log('✅ TEST 3: DOM manipulation successful');
+          }
+          
+          window.onload = function() {
+            console.log('✅ TEST 4: Window.onload fired');
+            runTests();
+          };
+        </script>
+    </head>
+    <body>
+        <div class="box">
+            <h1>🦁 Safari Test Page</h1>
+            <p>This page has NO external scripts, NO CDN, NO dependencies.</p>
+            <p>If you see green checkmarks below, JavaScript is working:</p>
+            <div id="result">
+                <p class="error">❌ JavaScript not running (if you see this red message)</p>
+            </div>
+            <hr>
+            <p><strong>Check Safari Console:</strong></p>
+            <p>Right-click → Inspect Element → Console tab</p>
+            <p>You should see messages starting with "✅ TEST"</p>
+        </div>
+    </body>
+    </html>
+  `)
+})
+
 app.get('/', (c) => {
+  // Set Content Security Policy for Safari compatibility
+  c.header('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://api.anthropic.com; " +
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; " +
+    "font-src 'self' https://cdn.jsdelivr.net data:; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://api.anthropic.com; " +
+    "worker-src 'self' blob:;"
+  )
+  
   return c.html(`
     <!DOCTYPE html>
     <html lang="en">
@@ -698,6 +770,13 @@ app.get('/', (c) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>NCPA Sound Crew - Event Schedule & Technical Dashboard</title>
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: https:; connect-src 'self' https://api.anthropic.com;">
+        <script>
+          // Safari compatibility test
+          console.log('🦁 Safari: Page loaded at ' + new Date().toISOString());
+          console.log('🦁 Safari: User Agent:', navigator.userAgent);
+          console.log('🦁 Safari: Testing JavaScript execution...');
+        </script>
         <script src="https://cdn.tailwindcss.com"></script>
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
@@ -1151,10 +1230,21 @@ app.get('/', (c) => {
             </div>
         </div>
 
-        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-        <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-        <script src="/static/app.js?v=1.6.2"></script>
+        <script>
+          // Early Safari test - runs before any libraries load
+          console.log('🔍 Early test: JavaScript is running!');
+          console.log('🔍 Browser:', navigator.userAgent.includes('Safari') ? 'Safari' : 'Other');
+          
+          // Test if we can access basic DOM
+          document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ DOMContentLoaded fired successfully');
+            console.log('✅ Body element:', document.body ? 'Found' : 'Not found');
+          });
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
+        <script src="/static/app.js?v=1.6.3"></script>
     </body>
     </html>
   `)

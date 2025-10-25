@@ -1,4 +1,18 @@
 // NCPA Sound Crew - Frontend Application
+
+// Browser compatibility check
+(function() {
+  try {
+    // Test optional chaining
+    const test = {}?.test;
+    // Test nullish coalescing  
+    const test2 = null ?? 'default';
+  } catch (error) {
+    alert('⚠️ Browser Not Supported\n\nThis app requires a modern browser.\n\nPlease update Safari to version 14+ or use:\n• Chrome\n• Firefox\n• Edge\n• GenSpark Browser');
+    throw new Error('Browser not supported');
+  }
+})();
+
 // State management
 let currentView = 'calendar';
 let currentDate = new Date();

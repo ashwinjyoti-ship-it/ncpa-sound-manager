@@ -931,15 +931,18 @@ function showNotification(message, type = 'info') {
   
   // Create a simple toast
   const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 ${
+  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
     type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
   }`;
   toast.textContent = message;
   document.body.appendChild(toast);
   
+  // Error messages stay longer (8 seconds) so users can read them
+  const duration = type === 'error' ? 8000 : 3000;
+  
   setTimeout(() => {
     toast.remove();
-  }, 3000);
+  }, duration);
 }
 
 // Close modals when clicking outside

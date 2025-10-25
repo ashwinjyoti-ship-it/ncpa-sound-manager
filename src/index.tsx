@@ -462,6 +462,62 @@ If no events are found or parsing fails, return an empty array: []`
     
     console.log('Sending Word document to Claude for parsing...')
     
+    // For large documents, we need to handle them carefully
+    console.log(`Processing document: ${text.length} characters`)
+    
+    // If document is too large (>15k chars), truncate with warning
+    // Anthropic has input limits, and we want fast responses
+    let processedText = text
+    let truncated = false
+    if (text.length > 15000) {
+      processedText = text.substring(0, 15000)
+      truncated = true
+      console.warn(`Document truncated from ${text.length} to 15000 characters`)
+    }
+    
+    // Rebuild prompt with processed text
+    const finalPrompt = `You are parsing an NCPA Sound Crew event schedule document. Extract ALL events from this document and return them as a JSON array.
+
+Document text:
+${processedText}${contextHint}
+
+Parse ALL events and extract the following fields for EACH event:
+- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information)
+- program: Full program/event name (from "Programme" or "Event" column)
+- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre")
+- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
+- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
+- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "Technical setup" > "AC/Lights" > any utility times)
+- crew: Crew member names assigned to the event
+
+IMPORTANT INSTRUCTIONS:
+1. Extract ALL events from the document - don't skip any
+2. For dates: Look for day names (Monday, Tuesday, etc.) and dates (Thu 4th, Fri 5th, etc.) - combine them with month/year context
+3. For call_time: Prioritize in this order:
+   - Times explicitly labeled "Sound" or "Sound Call" or "Sound Requirements:"
+   - Times labeled "Tech" or "Technical" or "Technical setup:"
+   - Times labeled as utility work like "AC", "Lights", "Setup"
+   - General call times
+4. For sound_requirements: Extract ANY technical information related to audio/sound (mics, speakers, recording, playback, etc.)
+5. If a field is not found or unclear, use empty string ""
+6. Handle various document formats - don't rely on specific headers
+7. Parse tables, lists, or any structured format
+
+Return ONLY a JSON array of events, nothing else. Format:
+[
+  {
+    "event_date": "2025-09-04",
+    "program": "Classical Music Concert",
+    "venue": "Tata Theatre",
+    "team": "Indian Music",
+    "sound_requirements": "4 mics, playback system",
+    "call_time": "16:00",
+    "crew": "Ashwin, Rohan"
+  }
+]
+
+If no events are found or parsing fails, return an empty array: []`
+    
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -471,10 +527,10 @@ If no events are found or parsing fails, return an empty array: []`
       },
       body: JSON.stringify({
         model: 'claude-3-haiku-20240307',
-        max_tokens: 4096,
+        max_tokens: 4096, // Maximum for Haiku model
         messages: [{
           role: 'user',
-          content: prompt
+          content: finalPrompt
         }]
       })
     })
@@ -517,10 +573,16 @@ If no events are found or parsing fails, return an empty array: []`
       }, 500)
     }
     
+    let message = `Found ${events.length} events in document`
+    if (truncated) {
+      message += ` (document was truncated - some events may be missing, consider using CSV upload for large files)`
+    }
+    
     return c.json({ 
       success: true,
       events: events,
-      message: `Found ${events.length} events in document`
+      message: message,
+      truncated: truncated
     })
     
   } catch (error: any) {

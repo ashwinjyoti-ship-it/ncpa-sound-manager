@@ -535,10 +535,23 @@ app.get('/', (c) => {
                             <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                         </div>
                         
+                        <!-- WhatsApp Export -->
+                        <button onclick="openWhatsAppExportModal()" 
+                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                            <i class="fab fa-whatsapp mr-2"></i>Export
+                        </button>
+                        
+                        <!-- Word Upload -->
+                        <button onclick="document.getElementById('wordInput').click()" 
+                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-file-word mr-2"></i>Upload Word
+                        </button>
+                        <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
+                        
                         <!-- CSV Upload -->
                         <button onclick="document.getElementById('csvInput').click()" 
-                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
-                            <i class="fas fa-file-upload mr-2"></i>Upload CSV
+                                class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
+                            <i class="fas fa-file-csv mr-2"></i>Upload CSV
                         </button>
                         <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
                         
@@ -673,6 +686,72 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteConfirmModal" class="modal">
+            <div class="modal-content" style="max-width: 400px;">
+                <h2 class="text-xl font-bold mb-4" style="color: #8B4513;">Delete Event</h2>
+                <p class="text-gray-700 mb-6" id="deleteConfirmMessage">Are you sure you want to delete this event?</p>
+                <div class="flex justify-end space-x-3">
+                    <button onclick="closeDeleteConfirm()" 
+                            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                        Cancel
+                    </button>
+                    <button id="deleteConfirmBtn" 
+                            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp Export Modal -->
+        <div id="whatsappExportModal" class="modal">
+            <div class="modal-content" style="max-width: 600px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                        <i class="fab fa-whatsapp mr-2"></i>Export for WhatsApp
+                    </h2>
+                    <button onclick="closeWhatsAppExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div class="space-y-4 mb-6">
+                    <p class="text-gray-600">Select a time range to export events:</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="exportTomorrow()" class="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                            <i class="fas fa-calendar-day mr-2"></i>Tomorrow
+                        </button>
+                        <button onclick="exportThisWeek()" class="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-calendar-week mr-2"></i>This Week
+                        </button>
+                        <button onclick="exportNextWeek()" class="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                            <i class="fas fa-calendar-plus mr-2"></i>Next Week
+                        </button>
+                        <button onclick="exportCustomDate()" class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all">
+                            <i class="fas fa-calendar-alt mr-2"></i>Custom Date
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="customDatePicker" style="display: none;" class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Select Date:</label>
+                    <input type="date" id="customDateInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    <button onclick="exportSelectedDate()" class="mt-3 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                        Generate Export
+                    </button>
+                </div>
+                
+                <div id="exportPreview" style="display: none;">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-semibold text-gray-700">Preview:</h3>
+                        <button onclick="copyToClipboard()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                            <i class="fas fa-copy mr-2"></i>Copy to Clipboard
+                        </button>
+                    </div>
+                    <textarea id="exportText" readonly class="w-full h-64 p-4 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"></textarea>
+                </div>
+            </div>
+        </div>
+
         <!-- AI Assistant Floating Button -->
         <button id="aiAssistantBtn" onclick="toggleAIAssistant()" 
                 class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40">
@@ -732,7 +811,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-        <script src="/static/app.js?v=1.6.0"></script>
+        <script src="/static/app.js?v=1.6.2"></script>
     </body>
     </html>
   `)

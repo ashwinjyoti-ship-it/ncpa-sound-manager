@@ -18,6 +18,28 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 
 ---
 
+## 🦁 Safari Compatibility
+
+**✅ Safari 18.6 Support Added (Jan 25, 2025)**
+
+The app now works perfectly in Safari 18.6+ with enhanced CORS headers and security policies.
+
+**If Safari still shows issues:**
+1. Clear cache: Safari > Settings > Privacy > Manage Website Data
+2. Force refresh: `Shift + Cmd + R`
+3. Check Console for errors: Right-click > Inspect Element > Console tab
+
+**For detailed troubleshooting:** See [SAFARI_FIX.md](./SAFARI_FIX.md)
+
+**Tested Browsers:**
+- ✅ Chrome (all versions)
+- ✅ Safari 18.6+
+- ✅ GenSpark Browser
+- ✅ Comet Browser
+- ✅ Firefox (all versions)
+
+---
+
 ## ✨ Features Implemented
 
 ### ✅ Completed Features

@@ -4,6 +4,7 @@ import { serveStatic } from 'hono/cloudflare-workers'
 
 type Bindings = {
   DB: D1Database;
+  ANTHROPIC_API_KEY: string;
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -295,6 +296,102 @@ app.get('/api/analytics/stats', async (c) => {
   }
 })
 
+// AI Query endpoint - Natural language to SQL conversion
+app.post('/api/ai/query', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { query } = body
+    
+    if (!query) {
+      return c.json({ success: false, error: 'Query is required' }, 400)
+    }
+    
+    // Get API key from environment
+    const apiKey = c.env.ANTHROPIC_API_KEY
+    if (!apiKey) {
+      return c.json({ success: false, error: 'AI service not configured' }, 500)
+    }
+    
+    // Get sample events to provide context
+    const sampleEvents = await c.env.DB.prepare(`
+      SELECT * FROM events ORDER BY event_date DESC LIMIT 5
+    `).all()
+    
+    // Call Anthropic Claude API to convert natural language to SQL
+    const prompt = `You are a SQL query generator for an events database. The database has the following schema:
+
+Table: events
+Columns:
+- id (INTEGER PRIMARY KEY)
+- event_date (DATE) - format: YYYY-MM-DD
+- program (TEXT) - event/program name
+- venue (TEXT) - venue name (e.g., "Tata Theatre", "Experimental Theatre")
+- team (TEXT) - curator team name
+- sound_requirements (TEXT) - technical requirements
+- call_time (TEXT) - when crew should arrive
+- crew (TEXT) - crew member names
+- requirements_updated (BOOLEAN) - 1 if sound requirements filled, 0 if empty
+- created_at (DATETIME)
+- updated_at (DATETIME)
+
+Sample data:
+${JSON.stringify(sampleEvents.results, null, 2)}
+
+User query: "${query}"
+
+Generate a SQL SELECT query to answer this question. Return ONLY the SQL query, nothing else. The query should:
+1. Use SQLite syntax
+2. Always include ORDER BY clause for consistent results
+3. Use appropriate WHERE clauses
+4. Limit results to 50 rows maximum
+5. Use date comparisons with DATE() function for date fields
+
+SQL Query:`
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 1024,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+    })
+    
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Anthropic API error:', error)
+      return c.json({ success: false, error: 'AI query failed' }, 500)
+    }
+    
+    const aiResult = await response.json()
+    const sqlQuery = aiResult.content[0].text.trim()
+    
+    console.log('Generated SQL:', sqlQuery)
+    
+    // Execute the generated SQL query
+    const { results } = await c.env.DB.prepare(sqlQuery).all()
+    
+    return c.json({ 
+      success: true,
+      query: sqlQuery,
+      data: results,
+      explanation: `Found ${results.length} matching events`
+    })
+    
+  } catch (error: any) {
+    console.error('AI query error:', error)
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // ============================================
 // FRONTEND ROUTES
 // ============================================
@@ -576,9 +673,66 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- AI Assistant Floating Button -->
+        <button id="aiAssistantBtn" onclick="toggleAIAssistant()" 
+                class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40">
+            <i class="fas fa-robot text-xl"></i>
+        </button>
+
+        <!-- AI Assistant Modal -->
+        <div id="aiAssistantModal" class="modal">
+            <div class="modal-content" style="max-width: 700px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                        <i class="fas fa-robot mr-2"></i>AI Assistant
+                    </h2>
+                    <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div class="mb-6">
+                    <p class="text-gray-600 mb-4">Ask me anything about your events! Try these examples:</p>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-left">
+                            📅 Events tomorrow
+                        </button>
+                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-left">
+                            🏛️ Events at Tata Theatre
+                        </button>
+                        <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left">
+                            ⚠️ Missing requirements
+                        </button>
+                        <button onclick="askAI('Events assigned to Ashwin')" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
+                            👤 Ashwin's events
+                        </button>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        <input type="text" id="aiQueryInput" placeholder="Ask about events..." 
+                               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                               onkeypress="if(event.key==='Enter') askAI()">
+                        <button onclick="askAI()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="aiResponse" style="display: none;">
+                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div class="flex items-center mb-2">
+                            <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
+                            <h3 class="font-semibold text-gray-700">Response:</h3>
+                        </div>
+                        <p id="aiExplanation" class="text-gray-600 mb-3"></p>
+                        <div id="aiResultsContainer" class="overflow-x-auto"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-        <script src="/static/app.js?v=1.1.0"></script>
+        <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+        <script src="/static/app.js?v=1.6.0"></script>
     </body>
     </html>
   `)

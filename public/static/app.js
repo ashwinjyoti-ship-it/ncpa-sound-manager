@@ -604,11 +604,137 @@ function showNotification(message, type = 'info') {
 window.onclick = function(event) {
   const eventModal = document.getElementById('eventModal');
   const addShowModal = document.getElementById('addShowModal');
+  const deleteConfirmModal = document.getElementById('deleteConfirmModal');
+  const whatsappModal = document.getElementById('whatsappExportModal');
+  const aiModal = document.getElementById('aiAssistantModal');
   
   if (event.target === eventModal) {
     closeEventModal();
   }
   if (event.target === addShowModal) {
     closeAddShowModal();
+  }
+  if (event.target === deleteConfirmModal) {
+    closeDeleteConfirm();
+  }
+  if (event.target === whatsappModal) {
+    closeWhatsAppExportModal();
+  }
+  if (event.target === aiModal) {
+    closeAIAssistant();
+  }
+}
+
+// ============================================
+// AI ASSISTANT
+// ============================================
+
+function toggleAIAssistant() {
+  const modal = document.getElementById('aiAssistantModal');
+  if (modal.classList.contains('active')) {
+    closeAIAssistant();
+  } else {
+    openAIAssistant();
+  }
+}
+
+function openAIAssistant() {
+  document.getElementById('aiAssistantModal').classList.add('active');
+  document.getElementById('aiQueryInput').focus();
+}
+
+function closeAIAssistant() {
+  document.getElementById('aiAssistantModal').classList.remove('active');
+}
+
+async function askAI(predefinedQuery) {
+  const input = document.getElementById('aiQueryInput');
+  const query = predefinedQuery || input.value.trim();
+  
+  if (!query) {
+    showNotification('Please enter a question', 'error');
+    return;
+  }
+  
+  // Show loading
+  document.getElementById('aiResponse').style.display = 'block';
+  document.getElementById('aiLoading').style.display = 'inline-block';
+  document.getElementById('aiExplanation').textContent = 'Thinking...';
+  document.getElementById('aiResultsContainer').innerHTML = '';
+  
+  try {
+    const response = await axios.post(`${API_BASE}/ai/query`, { query });
+    
+    if (response.data.success) {
+      const { data, explanation, query: sqlQuery } = response.data;
+      
+      // Hide loading
+      document.getElementById('aiLoading').style.display = 'none';
+      
+      // Show explanation
+      document.getElementById('aiExplanation').textContent = explanation || `Found ${data.length} results`;
+      
+      // Display results
+      if (data.length === 0) {
+        document.getElementById('aiResultsContainer').innerHTML = '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
+      } else {
+        // Render as table
+        let tableHTML = '<table class="w-full text-sm border-collapse"><thead><tr style="background-color: #8B4513;">';
+        
+        // Get column names from first result
+        const columns = Object.keys(data[0]);
+        columns.forEach(col => {
+          tableHTML += `<th class="px-3 py-2 text-left text-white font-semibold">${col}</th>`;
+        });
+        tableHTML += '</tr></thead><tbody>';
+        
+        // Add data rows
+        data.forEach((row, index) => {
+          tableHTML += `<tr class="border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
+          columns.forEach(col => {
+            let value = row[col];
+            
+            // Format dates
+            if (col === 'event_date' && value) {
+              value = formatDate(value).replace(/,\s*\d{4}/, '');
+            }
+            
+            // Format sound requirements with links
+            if (col === 'sound_requirements' && value) {
+              value = formatLinksInText(value);
+            }
+            
+            // Truncate long text
+            if (typeof value === 'string' && value.length > 100) {
+              value = value.substring(0, 97) + '...';
+            }
+            
+            tableHTML += `<td class="px-3 py-2">${value || ''}</td>`;
+          });
+          tableHTML += '</tr>';
+        });
+        tableHTML += '</tbody></table>';
+        
+        document.getElementById('aiResultsContainer').innerHTML = tableHTML;
+        
+        // Show SQL query in console for debugging
+        console.log('Generated SQL:', sqlQuery);
+      }
+      
+      // Clear input if it was a predefined query
+      if (predefinedQuery) {
+        input.value = '';
+      }
+      
+    } else {
+      throw new Error(response.data.error || 'AI query failed');
+    }
+    
+  } catch (error) {
+    console.error('AI query error:', error);
+    document.getElementById('aiLoading').style.display = 'none';
+    document.getElementById('aiExplanation').textContent = 'Sorry, I encountered an error processing your question.';
+    document.getElementById('aiResultsContainer').innerHTML = `<p class="text-red-600 text-sm">${error.response?.data?.error || error.message}</p>`;
+    showNotification('AI query failed', 'error');
   }
 }

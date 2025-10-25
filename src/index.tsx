@@ -832,29 +832,29 @@ app.get('/', (c) => {
                         
                         <!-- WhatsApp Export -->
                         <button onclick="openWhatsAppExportModal()" 
-                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
-                            <i class="fab fa-whatsapp mr-2"></i>Export
+                                class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                            <i class="fab fa-whatsapp mr-1.5"></i>Export
                         </button>
                         
                         <!-- Word Upload -->
                         <button onclick="document.getElementById('wordInput').click()" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
-                            <i class="fas fa-file-word mr-2"></i>Upload Word
+                                class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-file-word mr-1.5"></i>Upload Word
                         </button>
                         <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
                         
                         <!-- CSV Upload -->
                         <button onclick="document.getElementById('csvInput').click()" 
-                                class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
-                            <i class="fas fa-file-csv mr-2"></i>Upload CSV
+                                class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
+                            <i class="fas fa-file-csv mr-1.5"></i>Upload CSV
                         </button>
                         <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
                         
                         <!-- Add Show -->
                         <button onclick="openAddShowModal()" 
-                                class="px-4 py-2 text-white rounded-lg hover:opacity-90 transition-all" 
+                                class="px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
                                 style="background-color: #8B4513;">
-                            <i class="fas fa-plus mr-2"></i>Add Show
+                            <i class="fas fa-plus mr-1.5"></i>Add Show
                         </button>
                     </div>
                 </div>
@@ -863,11 +863,11 @@ app.get('/', (c) => {
                 <div id="calendarView" class="bg-white rounded-lg shadow-lg p-6">
                     <!-- Calendar controls -->
                     <div class="flex justify-between items-center mb-6">
-                        <button onclick="changeMonth(-1)" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <button onclick="changeMonth(-1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
                             <i class="fas fa-chevron-left"></i> Previous
                         </button>
                         <h2 id="currentMonthYear" class="text-2xl font-bold" style="color: #8B4513;"></h2>
-                        <button onclick="changeMonth(1)" class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <button onclick="changeMonth(1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
                             Next <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
@@ -890,7 +890,7 @@ app.get('/', (c) => {
                     <!-- Bulk Actions Bar -->
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
-                            <select id="bulkDeleteMonth" class="px-3 py-2 border border-gray-300 rounded-lg">
+                            <select id="bulkDeleteMonth" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
                                 <option value="">Select Month</option>
                                 <option value="1">January</option>
                                 <option value="2">February</option>
@@ -905,14 +905,14 @@ app.get('/', (c) => {
                                 <option value="11">November</option>
                                 <option value="12">December</option>
                             </select>
-                            <select id="bulkDeleteYear" class="px-3 py-2 border border-gray-300 rounded-lg">
+                            <select id="bulkDeleteYear" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg">
                                 <option value="">Select Year</option>
                                 <option value="2024">2024</option>
                                 <option value="2025">2025</option>
                                 <option value="2026">2026</option>
                             </select>
-                            <button onclick="bulkDeleteEvents()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
-                                <i class="fas fa-trash mr-2"></i>Delete Month
+                            <button onclick="bulkDeleteEvents()" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
+                                <i class="fas fa-trash mr-1.5"></i>Delete Month
                             </button>
                         </div>
                         <div id="bulkDeleteStatus" class="text-sm text-gray-600"></div>

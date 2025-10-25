@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "webapp",
+  "name": "ncpa-sound",
   "compatibility_date": "2025-10-24",
   "pages_build_output_dir": "./dist",
   "compatibility_flags": [
@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "ncpa-sound-crew-db",
-      "database_id": "placeholder-will-be-created-on-deployment"
+      "database_id": "8dd5bac9-26b7-45d7-94b3-7a013ec3e880"
     }
   ]
 }

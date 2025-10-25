@@ -118,16 +118,22 @@ function renderCalendar() {
   }
   
   // Add cells for each day
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  
   for (let day = 1; day <= daysInMonth; day++) {
     const cell = document.createElement('div');
-    cell.className = 'calendar-day bg-white p-2';
-    
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const isToday = dateStr === todayStr;
+    
+    // Highlight today's date with a special background
+    cell.className = isToday ? 'calendar-day p-2 bg-blue-50 border-2 border-blue-500' : 'calendar-day bg-white p-2';
+    
     const dayEvents = eventsByDate[dateStr] || [];
     
     // Day number
     const dayNumber = document.createElement('div');
-    dayNumber.className = 'font-bold text-gray-700 mb-2';
+    dayNumber.className = isToday ? 'font-bold text-blue-600 mb-2' : 'font-bold text-gray-700 mb-2';
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     

@@ -176,14 +176,14 @@ function renderTable() {
     row.className = 'border-b hover:bg-gray-50 transition-colors duration-200';
     
     row.innerHTML = `
-      <td class="px-4 py-3">${formatDate(event.event_date)}</td>
-      <td class="px-4 py-3 editable-cell" data-field="program" data-id="${event.id}">${event.program || ''}</td>
-      <td class="px-4 py-3 editable-cell" data-field="venue" data-id="${event.id}">${event.venue || ''}</td>
-      <td class="px-4 py-3 editable-cell" data-field="team" data-id="${event.id}">${event.team || ''}</td>
-      <td class="px-4 py-3 editable-cell" data-field="sound_requirements" data-id="${event.id}">${event.sound_requirements || ''}</td>
-      <td class="px-4 py-3 editable-cell" data-field="call_time" data-id="${event.id}">${event.call_time || ''}</td>
-      <td class="px-4 py-3 editable-cell" data-field="crew" data-id="${event.id}">${event.crew || ''}</td>
-      <td class="px-4 py-3">
+      <td class="px-2 py-2 text-sm">${formatDate(event.event_date)}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="program" data-id="${event.id}">${event.program || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="venue" data-id="${event.id}">${event.venue || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="team" data-id="${event.id}">${event.team || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="sound_requirements" data-id="${event.id}">${event.sound_requirements || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="call_time" data-id="${event.id}">${event.call_time || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="crew" data-id="${event.id}">${event.crew || ''}</td>
+      <td class="px-2 py-2 text-center">
         <button onclick="deleteEvent(${event.id})" class="text-red-600 hover:text-red-800">
           <i class="fas fa-trash"></i>
         </button>
@@ -376,7 +376,7 @@ async function deleteEventFromModal(eventId) {
   closeEventModal();
   
   // Show confirmation
-  if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+  if (!confirm('Are you sure you want to delete?')) {
     return;
   }
   
@@ -420,6 +420,13 @@ async function handleAddShow(e) {
       showNotification('Show added successfully', 'success');
       closeAddShowModal();
       await loadEvents();
+      
+      // Navigate to the month of the added show
+      if (data.event_date) {
+        const eventDate = new Date(data.event_date);
+        currentDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), 1);
+        renderCalendar();
+      }
     }
   } catch (error) {
     console.error('Error adding show:', error);
@@ -913,7 +920,7 @@ async function handleSearch(query) {
 // ============================================
 
 async function deleteEvent(id) {
-  if (!confirm('Are you sure you want to delete this event?')) {
+  if (!confirm('Are you sure you want to delete?')) {
     return;
   }
   

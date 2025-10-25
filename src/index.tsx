@@ -666,11 +666,19 @@ app.get('/', (c) => {
           
           .editable-cell {
             cursor: text;
-            min-width: 100px;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
           }
           
           .editable-cell:hover {
             background-color: #f0f0f0;
+          }
+          
+          /* Make table cells wrap text instead of expanding */
+          table.table-fixed td {
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: normal;
           }
           
           .editable-cell input,
@@ -788,17 +796,27 @@ app.get('/', (c) => {
                 <!-- Table View -->
                 <div id="tableView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
                     <div class="overflow-auto" style="max-height: 70vh;">
-                        <table class="w-full border-collapse">
+                        <table class="w-full border-collapse table-fixed">
+                            <colgroup>
+                                <col style="width: 10%;">  <!-- Date -->
+                                <col style="width: 25%;">  <!-- Program -->
+                                <col style="width: 10%;">  <!-- Venue -->
+                                <col style="width: 10%;">  <!-- Team -->
+                                <col style="width: 20%;">  <!-- Sound Requirements -->
+                                <col style="width: 8%;">   <!-- Call Time -->
+                                <col style="width: 10%;">  <!-- Crew -->
+                                <col style="width: 7%;">   <!-- Actions -->
+                            </colgroup>
                             <thead>
                                 <tr style="background-color: #8B4513;">
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Date</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Program/Event</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Venue</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Team</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Sound Requirements</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Call Time</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Crew</th>
-                                    <th class="px-4 py-3 text-left text-white font-semibold">Actions</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Date</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Program/Event</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Venue</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Team</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Sound Req</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Call</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Crew</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="tableBody">

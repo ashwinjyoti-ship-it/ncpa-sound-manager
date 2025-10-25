@@ -505,10 +505,10 @@ async function handleWordUpload(e) {
   } catch (error) {
     console.error('Error parsing Word document:', error);
     showNotification(`❌ Failed to parse Word document: ${error.message}`, 'error');
+  } finally {
+    // Always reset file input so user can try again
+    e.target.value = '';
   }
-  
-  // Reset file input
-  e.target.value = '';
 }
 
 function parseWordDocumentText(text, filename) {
@@ -545,22 +545,27 @@ function parseWordDocumentText(text, filename) {
   // Split text into lines
   const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
-  // Find the header row
+  // Find the header row - be flexible with matching
   let headerIndex = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (lines[i].includes('Day') && lines[i].includes('Date') && lines[i].includes('Programme')) {
+    const line = lines[i].toLowerCase();
+    // Look for key header indicators
+    if ((line.includes('day') || line.includes('date')) && 
+        (line.includes('programme') || line.includes('program') || line.includes('event'))) {
       headerIndex = i;
+      console.log(`✓ Found potential header at line ${i}: "${lines[i].substring(0, 100)}"`);
       break;
     }
   }
   
   if (headerIndex === -1) {
     console.error('Could not find table header row');
-    showNotification('❌ Could not find table header. Document should have columns: Day & Date, Programme, Venue & Time, Requirements', 'error');
+    console.log('First 10 lines of document:', lines.slice(0, 10));
+    showNotification('❌ Could not find table header. Document should have columns with "Day/Date" and "Programme/Event"', 'error');
     return [];
   }
   
-  console.log(`✓ Found header at line ${headerIndex}`);
+  console.log(`✓ Using header at line ${headerIndex}`);
   
   // Parse rows after header
   for (let i = headerIndex + 1; i < lines.length; i++) {
@@ -603,7 +608,14 @@ function parseWordDocumentText(text, filename) {
     }
   }
   
-  console.log(`✓ Parsed ${events.length} events successfully`);
+  if (events.length === 0) {
+    console.warn('⚠️ No valid events parsed. Possible reasons:');
+    console.warn('  - No lines matched day pattern (Mon/Tue/etc + number + st/nd/rd/th)');
+    console.warn('  - Parsed events missing program or venue');
+    console.log('Sample lines after header:', lines.slice(headerIndex + 1, Math.min(headerIndex + 6, lines.length)));
+  } else {
+    console.log(`✓ Parsed ${events.length} events successfully`);
+  }
   return events;
 }
 
@@ -1093,8 +1105,7 @@ function generateWhatsAppExport(startDate, endDate, title) {
   });
   
   message += `---\n`;
-  message += `Total: ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}\n`;
-  message += `\n_Generated from NCPA Sound Crew Dashboard_`;
+  message += `Total: ${filteredEvents.length} event${filteredEvents.length !== 1 ? 's' : ''}`;
   
   // Show preview
   document.getElementById('exportText').value = message;

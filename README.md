@@ -4,12 +4,14 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 
 ## 🌐 URLs
 
+**Production (Live):**
+- 🚀 **Web App: https://ncpa-sound.pages.dev**
+- API Base: https://ncpa-sound.pages.dev/api
+- Short, memorable URL for easy access!
+
 **Development (Sandbox):**
 - Web App: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai
 - API Base: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai/api
-
-**Production:** 
-- To be deployed to Cloudflare Pages
 
 **GitHub Repository:**
 - To be pushed to GitHub
@@ -22,6 +24,7 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 
 1. **📅 Calendar View**
    - Monthly navigation (previous/next month)
+   - **Today's date highlighted**: Blue border and background for current day
    - Event cards color-coded by status:
      - 🟢 Green: Sound requirements filled
      - 🟡 Peach: Sound requirements pending
@@ -532,20 +535,24 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 1.8 (Current - October 25, 2025)
+### Version 2.0 (Current - October 25, 2025) 🚀
+
+**🆕 New in Version 2.0:**
+- ✅ **Today's date indicator** - Blue highlight for current day in calendar
+- ✅ **Production deployment** - Live on https://ncpa-sound.pages.dev
 
 **Major Features:**
-- ✅ Calendar view with monthly navigation
-- ✅ Editable table view with frozen headers
+- ✅ Calendar view with monthly navigation and today indicator
+- ✅ Editable table view with fixed columns (no horizontal scroll)
 - ✅ CSV bulk upload (working perfectly)
 - ✅ **Multi-chunk AI Word parsing** - processes entire documents (100% data capture!)
 - ✅ **Persistent progress notifications** - shows real-time processing status
-- ✅ **Auto-navigation to uploaded month** - jumps to correct month after upload
-- ✅ Manual event entry form
+- ✅ **Auto-navigation to uploaded month** - jumps to correct month after upload/add
+- ✅ Manual event entry form with auto-navigation
 - ✅ Real-time search with empty result feedback
 - ✅ **WhatsApp export** with bold headers and sound-focused requirements
 - ✅ **AI Assistant** for natural language queries
-- ✅ Event detail modal with clickable links
+- ✅ Event detail modal with Edit and Delete buttons
 - ✅ Color-coded status (requirements filled/pending)
 - ✅ Analytics API endpoint
 - ✅ D1 database with full schema
@@ -572,6 +579,8 @@ WHERE program LIKE '%Dance%';
 - ✅ Requirements tracking
 
 **Deployment:**
+- ✅ **Production: https://ncpa-sound.pages.dev** 🌍
+- ✅ Cloudflare Pages with D1 database
 - ✅ Local development environment
 - ✅ PM2 process management
 - ✅ Sandbox deployment active
@@ -599,4 +608,4 @@ Developed for: **NCPA Sound Crew**
 ---
 
 **Last Updated:** October 25, 2025
-**Status:** ✅ Version 1.8 Active - Multi-Chunk AI Processing, Production Ready
+**Status:** ✅ Version 2.0 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀

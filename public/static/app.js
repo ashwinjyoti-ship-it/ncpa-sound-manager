@@ -1455,10 +1455,8 @@ async function askAI(predefinedQuery) {
         console.log('Generated SQL:', sqlQuery);
       }
       
-      // Clear input if it was a predefined query
-      if (predefinedQuery) {
-        input.value = '';
-      }
+      // Clear input after successful query
+      input.value = '';
       
     } else {
       throw new Error(response.data.error || 'AI query failed');

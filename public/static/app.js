@@ -172,7 +172,8 @@ function renderTable() {
   
   allEvents.forEach(event => {
     const row = document.createElement('tr');
-    row.className = 'border-b hover:bg-gray-50';
+    row.id = `event-row-${event.id}`; // Add ID for scrolling
+    row.className = 'border-b hover:bg-gray-50 transition-colors duration-200';
     
     row.innerHTML = `
       <td class="px-4 py-3">${formatDate(event.event_date)}</td>
@@ -286,6 +287,11 @@ function openEventModal(event) {
   const modal = document.getElementById('eventModal');
   const content = document.getElementById('eventModalContent');
   
+  // Format sound requirements with clickable links
+  const soundReqsFormatted = event.sound_requirements 
+    ? formatLinksInText(event.sound_requirements) 
+    : 'Not specified';
+  
   content.innerHTML = `
     <div class="space-y-4">
       <div>
@@ -306,7 +312,7 @@ function openEventModal(event) {
       </div>
       <div>
         <label class="font-semibold text-gray-700">Sound Requirements:</label>
-        <p class="text-gray-900 whitespace-pre-wrap">${event.sound_requirements || 'Not specified'}</p>
+        <p class="text-gray-900 whitespace-pre-wrap">${soundReqsFormatted}</p>
       </div>
       <div>
         <label class="font-semibold text-gray-700">Call Time:</label>
@@ -320,6 +326,18 @@ function openEventModal(event) {
         <label class="font-semibold text-gray-700">Created:</label>
         <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
       </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+        <button onclick="editEventFromModal(${event.id})" 
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center">
+          <i class="fas fa-edit mr-2"></i>Edit
+        </button>
+        <button onclick="deleteEventFromModal(${event.id})" 
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
+          <i class="fas fa-trash mr-2"></i>Delete
+        </button>
+      </div>
     </div>
   `;
   
@@ -328,6 +346,52 @@ function openEventModal(event) {
 
 function closeEventModal() {
   document.getElementById('eventModal').classList.remove('active');
+}
+
+// Edit event from modal - switches to table view and scrolls to row
+function editEventFromModal(eventId) {
+  // Close modal
+  closeEventModal();
+  
+  // Switch to table view
+  showTab('table');
+  
+  // Wait for table to render, then scroll to the row
+  setTimeout(() => {
+    const row = document.getElementById(`event-row-${eventId}`);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Highlight the row briefly
+      row.style.backgroundColor = '#fef3c7'; // Yellow highlight
+      setTimeout(() => {
+        row.style.backgroundColor = '';
+      }, 2000);
+    }
+  }, 100);
+}
+
+// Delete event from modal with confirmation
+async function deleteEventFromModal(eventId) {
+  // Close modal first
+  closeEventModal();
+  
+  // Show confirmation
+  if (!confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
+    return;
+  }
+  
+  try {
+    const response = await axios.delete(`${API_BASE}/events/${eventId}`);
+    
+    if (response.data.success) {
+      showNotification('✅ Event deleted successfully', 'success');
+      await loadEvents();
+      renderCalendar(); // Refresh calendar view
+    }
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    showNotification('❌ Failed to delete event', 'error');
+  }
 }
 
 // ============================================

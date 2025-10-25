@@ -448,6 +448,300 @@ function handleCSVUpload(e) {
 }
 
 // ============================================
+// WORD DOCUMENT UPLOAD
+// ============================================
+
+async function handleWordUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  showNotification('📄 Parsing Word document...', 'info');
+  
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Extract raw text from Word document
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value;
+    
+    console.log('Word document extracted text (first 2000 chars):', text.substring(0, 2000));
+    console.log('Full text length:', text.length);
+    
+    // Parse the text into events
+    const events = parseWordDocumentText(text, file.name);
+    
+    if (events.length === 0) {
+      showNotification('❌ No valid events found in Word document. Please check the format.', 'error');
+      return;
+    }
+    
+    console.log(`✓ Parsed ${events.length} events from Word document:`, events.slice(0, 3));
+    
+    // Upload events
+    try {
+      showNotification(`⬆️ Uploading ${events.length} events...`, 'info');
+      const response = await axios.post(`${API_BASE}/events/bulk`, { events });
+      
+      if (response.data.success) {
+        const uploaded = response.data.data.length;
+        const duplicates = response.data.skipped ? response.data.skipped.length : 0;
+        
+        let message = `✅ Successfully uploaded ${uploaded} events from Word document!`;
+        if (duplicates > 0) {
+          message += ` (${duplicates} duplicates skipped)`;
+          console.log('Skipped duplicates:', response.data.skipped);
+        }
+        
+        showNotification(message, 'success');
+        await loadEvents();
+      } else {
+        showNotification(`❌ Upload failed: ${response.data.error || 'Unknown error'}`, 'error');
+      }
+    } catch (error) {
+      console.error('Error uploading events:', error);
+      showNotification(`❌ Failed to upload events: ${error.response?.data?.error || error.message}`, 'error');
+    }
+    
+  } catch (error) {
+    console.error('Error parsing Word document:', error);
+    showNotification(`❌ Failed to parse Word document: ${error.message}`, 'error');
+  }
+  
+  // Reset file input
+  e.target.value = '';
+}
+
+function parseWordDocumentText(text, filename) {
+  const events = [];
+  
+  // Extract month and year from filename or text
+  let month = null;
+  let year = null;
+  
+  // Try to extract from filename
+  const filenameMatch = filename.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{4})/i);
+  if (filenameMatch) {
+    month = parseMonthName(filenameMatch[1]);
+    year = parseInt(filenameMatch[2]);
+  }
+  
+  // Try to extract from text if not found in filename
+  if (!month || !year) {
+    const textMatch = text.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{4})/i);
+    if (textMatch) {
+      month = parseMonthName(textMatch[1]);
+      year = parseInt(textMatch[2]);
+    }
+  }
+  
+  if (!month || !year) {
+    console.error('Could not extract month/year from document');
+    showNotification('❌ Could not detect month/year in document. Filename should contain month and year (e.g., "Feb 2025.docx")', 'error');
+    return [];
+  }
+  
+  console.log(`✓ Detected month: ${month}, year: ${year}`);
+  
+  // Split text into lines
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+  
+  // Find the header row
+  let headerIndex = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].includes('Day') && lines[i].includes('Date') && lines[i].includes('Programme')) {
+      headerIndex = i;
+      break;
+    }
+  }
+  
+  if (headerIndex === -1) {
+    console.error('Could not find table header row');
+    showNotification('❌ Could not find table header. Document should have columns: Day & Date, Programme, Venue & Time, Requirements', 'error');
+    return [];
+  }
+  
+  console.log(`✓ Found header at line ${headerIndex}`);
+  
+  // Parse rows after header
+  for (let i = headerIndex + 1; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Check if line starts with a day pattern
+    const dayMatch = line.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2})(st|nd|rd|th)/i);
+    if (dayMatch) {
+      const dayNumber = parseInt(dayMatch[2]);
+      const event_date = `${year}-${String(month).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
+      
+      // Gather all text for this event
+      let fullText = line.substring(dayMatch[0].length).trim();
+      let j = i + 1;
+      while (j < lines.length) {
+        const nextLine = lines[j];
+        if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(st|nd|rd|th)/i.test(nextLine) || 
+            (nextLine.includes('Day') && nextLine.includes('Date'))) {
+          break;
+        }
+        fullText += ' ' + nextLine;
+        j++;
+      }
+      
+      const parsed = parseEventLine(fullText);
+      
+      if (parsed.program && parsed.venue) {
+        events.push({
+          event_date,
+          program: parsed.program,
+          venue: parsed.venue,
+          team: '',
+          sound_requirements: parsed.sound_requirements || '',
+          call_time: parsed.call_time || '',
+          crew: parsed.crew || ''
+        });
+      }
+      
+      i = j - 1;
+    }
+  }
+  
+  console.log(`✓ Parsed ${events.length} events successfully`);
+  return events;
+}
+
+function parseEventLine(text) {
+  let program = '';
+  let venue = '';
+  let sound_requirements = '';
+  let call_time = '';
+  let crew = '';
+  
+  // Extract venue
+  if (text.includes('TET')) venue = 'Tata Theatre';
+  else if (text.includes('Experimental')) venue = 'Experimental Theatre';
+  else if (text.includes('Jamshed')) venue = 'Jamshed Bhabha Theatre';
+  else if (text.includes('Little')) venue = 'Little Theatre';
+  
+  // Extract program (text before venue or before requirements keywords)
+  const venueIndex = venue ? text.indexOf(venue) : -1;
+  if (venueIndex > 0) {
+    program = text.substring(0, venueIndex).trim();
+  } else {
+    const reqIndex = text.search(/(?:Stage|Sound|Light|AC|Projector|requirement|setup)/i);
+    if (reqIndex > 0) {
+      program = text.substring(0, reqIndex).trim();
+    } else {
+      program = text.substring(0, Math.min(150, text.length)).trim();
+    }
+  }
+  
+  // Remove curator team from program (in square brackets)
+  program = program.replace(/\[.*?\]/g, '').trim();
+  
+  // Extract sound requirements
+  const reqStartIndex = text.search(/(?:Stage|Sound|Light|AC|Projector|requirement|setup|technician)/i);
+  if (reqStartIndex > 0) {
+    sound_requirements = text.substring(reqStartIndex).trim();
+  } else if (venueIndex > 0) {
+    const afterVenue = text.substring(venueIndex + venue.length).trim();
+    sound_requirements = afterVenue;
+  }
+  
+  // Extract call time
+  call_time = extractCallTime(sound_requirements);
+  
+  // Extract crew names
+  const crewMatch = sound_requirements.match(/(?:Ashwin|Raj|Amit|Gawde|crew)/gi);
+  if (crewMatch) {
+    crew = [...new Set(crewMatch)].join(', ');
+  }
+  
+  return { program, venue, sound_requirements, call_time, crew };
+}
+
+function extractCallTime(requirementsText) {
+  if (!requirementsText) return '';
+  
+  // Priority 1: Sound-specific times
+  const soundPatterns = [
+    /sound\s+(?:at|by|from|setup|check|ready)\s+(?:by\s+)?(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi,
+    /sound\s+requirements?.*?(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi,
+    /(?:ashwin|crew|sound team).*?(?:at|by|from)\s+(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi
+  ];
+  
+  for (const pattern of soundPatterns) {
+    const match = requirementsText.match(pattern);
+    if (match) {
+      const timeMatch = match[0].match(/(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/i);
+      if (timeMatch) {
+        return normalizeTime(timeMatch[1]) + ' (Sound)';
+      }
+    }
+  }
+  
+  // Priority 2: General technical times
+  const techPatterns = [
+    /(?:ready|setup|technicians?)\s+(?:at|by|from)\s+(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi,
+    /(?:technical|tech).*?(?:at|by|from)\s+(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi
+  ];
+  
+  for (const pattern of techPatterns) {
+    const match = requirementsText.match(pattern);
+    if (match) {
+      const timeMatch = match[0].match(/(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/i);
+      if (timeMatch) {
+        return normalizeTime(timeMatch[1]) + ' (Tech)';
+      }
+    }
+  }
+  
+  // Priority 3: Utility times
+  const utilityPatterns = [
+    /AC\s+(?:at|by|from)\s+(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi,
+    /light(?:s|ing)?\s+(?:at|by|from)\s+(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/gi
+  ];
+  
+  for (const pattern of utilityPatterns) {
+    const match = requirementsText.match(pattern);
+    if (match) {
+      const timeMatch = match[0].match(/(\d{1,2}(?::\d{2})?\.?\d{0,2}\s*(?:am|pm))/i);
+      if (timeMatch) {
+        const timeValue = normalizeTime(timeMatch[1]);
+        if (/AC/i.test(match[0])) return timeValue + ' (AC)';
+        else if (/light/i.test(match[0])) return timeValue + ' (Lights)';
+      }
+    }
+  }
+  
+  return '';
+}
+
+function normalizeTime(timeStr) {
+  timeStr = timeStr.trim();
+  timeStr = timeStr.replace(/\./g, ':');
+  timeStr = timeStr.replace(/(\d)([ap]m)/i, '$1 $2');
+  timeStr = timeStr.replace(/am/i, 'AM').replace(/pm/i, 'PM');
+  return timeStr;
+}
+
+function parseMonthName(monthStr) {
+  const months = {
+    'jan': 1, 'january': 1,
+    'feb': 2, 'february': 2,
+    'mar': 3, 'march': 3,
+    'apr': 4, 'april': 4,
+    'may': 5,
+    'jun': 6, 'june': 6,
+    'jul': 7, 'july': 7,
+    'aug': 8, 'august': 8,
+    'sep': 9, 'september': 9,
+    'oct': 10, 'october': 10,
+    'nov': 11, 'november': 11,
+    'dec': 12, 'december': 12
+  };
+  
+  return months[monthStr.toLowerCase()] || null;
+}
+
+// ============================================
 // SEARCH
 // ============================================
 
@@ -462,6 +756,12 @@ async function handleSearch(query) {
     
     if (response.data.success) {
       allEvents = response.data.data;
+      
+      // Show notification if no results found
+      if (allEvents.length === 0) {
+        showNotification(`No events found for "${query}". Clear search to see all events.`, 'info');
+      }
+      
       renderCurrentView();
     }
   } catch (error) {
@@ -735,26 +1035,58 @@ function generateWhatsAppExport(startDate, endDate, title) {
     return;
   }
   
-  // Generate WhatsApp message format
+  // Generate WhatsApp message format - crisp and bold headers
   let message = `📅 *Events for ${title}*\n\n`;
   
   filteredEvents.forEach((event, index) => {
     message += `🎭 *Event ${index + 1}*\n`;
-    message += `Program: ${event.program}\n`;
-    message += `Venue: ${event.venue}\n`;
+    
+    // Program name - extract main name only (before NCPA, before organizer, first 60 chars)
+    let programName = event.program;
+    // Remove organizer info in brackets/square brackets
+    programName = programName.replace(/\[.*?\]/g, '').replace(/\(.*?\)/g, '');
+    // Remove "NCPA &" or "NCPA and" prefix
+    programName = programName.replace(/NCPA\s+(&|and)\s+/gi, '');
+    // Trim and limit to 60 characters for WhatsApp
+    programName = programName.trim().substring(0, 60);
+    if (event.program.length > 60) programName += '...';
+    
+    message += `*Program:* ${programName}\n`;
+    message += `*Venue:* ${event.venue}\n`;
     
     if (event.call_time) {
-      message += `Call Time: ${event.call_time}\n`;
+      message += `*Call Time:* ${event.call_time}\n`;
     }
     
     if (event.crew && event.crew.trim() !== '') {
-      message += `Crew: ${event.crew}\n`;
+      message += `*Crew:* ${event.crew}\n`;
     }
     
     if (event.sound_requirements && event.sound_requirements.trim() !== '') {
-      // Extract plain URLs without HTML formatting
-      const plainReqs = event.sound_requirements.replace(/<[^>]*>/g, '');
-      message += `Requirements: ${plainReqs}\n`;
+      // Extract sound-specific requirements only
+      let soundReqs = event.sound_requirements;
+      
+      // Remove HTML tags
+      soundReqs = soundReqs.replace(/<[^>]*>/g, '');
+      
+      // Try to extract sound-related info only
+      const soundKeywords = /sound|audio|mic|speaker|amp|mixer|stage|setup|rider|crew/gi;
+      const sentences = soundReqs.split(/[.!]\s+/);
+      const soundSentences = sentences.filter(s => soundKeywords.test(s));
+      
+      if (soundSentences.length > 0) {
+        soundReqs = soundSentences.join('. ').trim();
+        // Limit to 150 chars for WhatsApp
+        if (soundReqs.length > 150) {
+          soundReqs = soundReqs.substring(0, 147) + '...';
+        }
+      } else {
+        // No sound-specific info, use first 150 chars of full requirements
+        soundReqs = soundReqs.substring(0, 150);
+        if (event.sound_requirements.length > 150) soundReqs += '...';
+      }
+      
+      message += `*Sound:* ${soundReqs}\n`;
     }
     
     message += `\n`;

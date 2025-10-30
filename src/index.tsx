@@ -379,7 +379,7 @@ CURRENT CONTEXT:
 - Today's date: ${today.toISOString().split('T')[0]}
 - Current month: ${currentMonth} ${currentYear}
 
-COMPLETE EVENT DATABASE:
+COMPLETE EVENT DATABASE (all events in system):
 ${JSON.stringify(allEvents.results, null, 2)}
 
 USER QUESTION: "${query}"
@@ -387,23 +387,52 @@ USER QUESTION: "${query}"
 INSTRUCTIONS:
 Analyze the complete event data above and answer the user's question intelligently.
 
-For "no events" or "free dates" or "available dates" questions:
-1. Look at ALL dates in the relevant month (Nov 1-30, 2025)
-2. Check which dates have events at the specified venue
-3. Return dates that DON'T have events (free dates for maintenance)
-4. Format as JSON array with structure: [{"event_date": "YYYY-MM-DD", "program": "No event scheduled", "venue": "Venue Name"}]
+VENUE NAME MATCHING:
+- "Tata" / "Tata Theatre" / "TT" → Match any venue containing "Tata"
+- "JBT" / "Jamshed Bhabha" / "Bhabha" → Match "Jamshed Bhabha Theatre"
+- "Experimental" / "Exp" / "ET" → Match "Experimental Theatre"
+- Be flexible with venue names (case-insensitive, partial matches)
 
-For regular queries:
+FOR SINGLE VENUE "FREE DATES" QUESTIONS:
+Example: "Which dates no events at Tata?"
+1. List ALL dates in November 2025 (Nov 1-30)
+2. Check which dates have events at Tata Theatre
+3. Return dates that DON'T have Tata events
+4. Format: [{"event_date": "2025-11-03", "program": "No event scheduled", "venue": "Tata Theatre"}]
+
+FOR MULTIPLE VENUE "BOTH FREE" QUESTIONS:
+Example: "Closest date when JBT and Tata both free?"
+1. List ALL dates in November 2025
+2. For each date, check if EITHER venue has an event
+3. Return dates where BOTH venues are free (no JBT event AND no Tata event)
+4. Sort by date (closest first)
+5. Format: [{"event_date": "2025-11-03", "program": "Both venues free for maintenance", "venue": "JBT & Tata Theatre"}]
+
+FOR REGULAR EVENT QUERIES:
+Example: "Show all events at Tata" or "Events tomorrow"
 1. Filter events matching the criteria
-2. Return relevant events as JSON array
+2. Return matching events from database
+3. Format: [{"event_date": "...", "program": "...", "venue": "...", "crew": "..."}]
 
-IMPORTANT:
+OUTPUT FORMAT:
 - Return ONLY a valid JSON array, nothing else
 - No markdown, no explanations, no code blocks
-- Just the JSON array: [{"event_date": "...", "program": "...", "venue": "..."}]
-- For date availability queries, include ALL free dates in the month
-- Be smart about venue name matching (Tata/Tata Theatre/TT should all match)
+- Just pure JSON: [{"event_date": "...", "program": "...", "venue": "..."}]
+- Include relevant fields: event_date, program, venue (and crew/team if relevant)
+- Sort results by date (earliest first)
 
+EXAMPLES:
+
+Q: "Which dates no events at Tata?"
+A: [{"event_date":"2025-11-01","program":"No event scheduled","venue":"Tata Theatre"},{"event_date":"2025-11-03","program":"No event scheduled","venue":"Tata Theatre"}]
+
+Q: "Closest date JBT and Tata both free?"
+A: [{"event_date":"2025-11-05","program":"Both venues free for maintenance","venue":"JBT & Tata Theatre"}]
+
+Q: "Events tomorrow"
+A: [{"event_date":"2025-11-02","program":"Classical Concert","venue":"Tata Theatre","crew":"Ashwin"}]
+
+NOW ANALYZE AND RESPOND:
 JSON ARRAY:`
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -440,11 +469,42 @@ JSON ARRAY:`
     // Parse the JSON array from AI
     let results = []
     try {
-      results = JSON.parse(aiResponse)
-    } catch (parseError) {
+      // Try to extract JSON if AI added extra text
+      const jsonMatch = aiResponse.match(/\[[\s\S]*\]/)
+      if (jsonMatch) {
+        results = JSON.parse(jsonMatch[0])
+      } else {
+        results = JSON.parse(aiResponse)
+      }
+      
+      // Validate it's an array
+      if (!Array.isArray(results)) {
+        console.error('AI response is not an array:', results)
+        return c.json({ 
+          success: false, 
+          error: 'AI returned invalid format',
+          debug: aiResponse.substring(0, 200)
+        }, 500)
+      }
+      
+    } catch (parseError: any) {
       console.error('Failed to parse AI response:', parseError)
-      return c.json({ success: false, error: 'AI returned invalid data' }, 500)
+      console.error('Raw AI response:', aiResponse)
+      return c.json({ 
+        success: false, 
+        error: 'AI returned unparseable data: ' + parseError.message,
+        debug: aiResponse.substring(0, 200)
+      }, 500)
     }
+    
+    // Ensure results have required fields
+    results = results.map(r => ({
+      event_date: r.event_date || r.date || '',
+      program: r.program || r.title || 'Event',
+      venue: r.venue || '',
+      crew: r.crew || '',
+      team: r.team || ''
+    }))
     
     return c.json({ 
       success: true,

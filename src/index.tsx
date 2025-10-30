@@ -362,10 +362,22 @@ app.post('/api/ai/query', async (c) => {
       return c.json({ success: false, error: 'AI service not configured' }, 500)
     }
     
-    // Get ALL events from the database for AI to analyze
+    // Get relevant events from the database for AI to analyze
+    // Only include events from 3 months ago to 6 months ahead (to reduce payload size)
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+    const sixMonthsAhead = new Date()
+    sixMonthsAhead.setMonth(sixMonthsAhead.getMonth() + 6)
+    
     const allEvents = await c.env.DB.prepare(`
-      SELECT * FROM events ORDER BY event_date ASC
-    `).all()
+      SELECT event_date, program, venue, crew, team 
+      FROM events 
+      WHERE event_date >= ? AND event_date <= ?
+      ORDER BY event_date ASC
+    `).bind(
+      threeMonthsAgo.toISOString().split('T')[0],
+      sixMonthsAhead.toISOString().split('T')[0]
+    ).all()
     
     // Get current date context
     const today = new Date()
@@ -455,7 +467,12 @@ JSON ARRAY:`
     if (!response.ok) {
       const error = await response.text()
       console.error('Anthropic API error:', error)
-      return c.json({ success: false, error: 'AI query failed' }, 500)
+      return c.json({ 
+        success: false, 
+        error: 'Anthropic API error',
+        status: response.status,
+        details: error.substring(0, 500)
+      }, 500)
     }
     
     const aiResult = await response.json()
@@ -516,7 +533,12 @@ JSON ARRAY:`
     
   } catch (error: any) {
     console.error('AI query error:', error)
-    return c.json({ success: false, error: error.message }, 500)
+    return c.json({ 
+      success: false, 
+      error: 'AI query failed',
+      details: error.message,
+      stack: error.stack?.substring(0, 300)
+    }, 500)
   }
 })
 

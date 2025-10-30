@@ -367,6 +367,13 @@ app.post('/api/ai/query', async (c) => {
       SELECT * FROM events ORDER BY event_date DESC LIMIT 5
     `).all()
     
+    // Get current month date range for context
+    const today = new Date()
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
+    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    const startDate = firstDay.toISOString().split('T')[0]
+    const endDate = lastDay.toISOString().split('T')[0]
+    
     // Call Anthropic Claude API to convert natural language to SQL
     const prompt = `You are a SQL query generator for an events database. The database has the following schema:
 
@@ -387,14 +394,39 @@ Columns:
 Sample data:
 ${JSON.stringify(sampleEvents.results, null, 2)}
 
+Current date: ${today.toISOString().split('T')[0]}
+Current month range: ${startDate} to ${endDate}
+
 User query: "${query}"
 
-Generate a SQL SELECT query to answer this question. Return ONLY the SQL query, nothing else. The query should:
-1. Use SQLite syntax
-2. Always include ORDER BY clause for consistent results
+IMPORTANT: If the user asks for "dates with NO events" or "free dates" or "available dates" at a venue, you MUST generate a CTE query that:
+1. Creates a list of all dates in the relevant month
+2. LEFT JOINs with events table filtered by venue
+3. Returns dates WHERE the event is NULL
+
+Example for "which dates no events at Tata Theatre":
+WITH RECURSIVE dates(date) AS (
+  SELECT DATE('${startDate}')
+  UNION ALL
+  SELECT DATE(date, '+1 day')
+  FROM dates
+  WHERE date < DATE('${endDate}')
+)
+SELECT dates.date as event_date, 'No event scheduled' as program, 'Tata Theatre' as venue
+FROM dates
+LEFT JOIN events ON dates.date = events.event_date AND LOWER(events.venue) LIKE '%tata%'
+WHERE events.id IS NULL
+ORDER BY dates.date;
+
+For regular queries (finding events that exist), generate normal SELECT queries.
+
+Generate ONLY the SQL query, nothing else. The query should:
+1. Use SQLite syntax with RECURSIVE CTEs for date generation
+2. Always include ORDER BY clause
 3. Use appropriate WHERE clauses
-4. Limit results to 50 rows maximum
-5. Use date comparisons with DATE() function for date fields
+4. Limit results to 50 rows maximum (except for date availability queries)
+5. Use LOWER() and LIKE for case-insensitive venue matching
+6. For "no events" queries, use the CTE pattern shown above
 
 SQL Query:`
     

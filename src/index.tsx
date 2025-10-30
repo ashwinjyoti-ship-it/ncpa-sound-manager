@@ -346,7 +346,7 @@ app.get('/api/analytics/stats', async (c) => {
   }
 })
 
-// AI Query endpoint - Natural language to SQL conversion
+// AI Query endpoint - Intelligent data analysis with Claude
 app.post('/api/ai/query', async (c) => {
   try {
     const body = await c.req.json()
@@ -362,73 +362,49 @@ app.post('/api/ai/query', async (c) => {
       return c.json({ success: false, error: 'AI service not configured' }, 500)
     }
     
-    // Get sample events to provide context
-    const sampleEvents = await c.env.DB.prepare(`
-      SELECT * FROM events ORDER BY event_date DESC LIMIT 5
+    // Get ALL events from the database for AI to analyze
+    const allEvents = await c.env.DB.prepare(`
+      SELECT * FROM events ORDER BY event_date ASC
     `).all()
     
-    // Get current month date range for context
+    // Get current date context
     const today = new Date()
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1)
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-    const startDate = firstDay.toISOString().split('T')[0]
-    const endDate = lastDay.toISOString().split('T')[0]
+    const currentMonth = today.toLocaleString('default', { month: 'long' })
+    const currentYear = today.getFullYear()
     
-    // Call Anthropic Claude API to convert natural language to SQL
-    const prompt = `You are a SQL query generator for an events database. The database has the following schema:
+    // Let Claude ANALYZE the data directly, not generate SQL
+    const prompt = `You are an intelligent data analyst for NCPA Sound Crew event management.
 
-Table: events
-Columns:
-- id (INTEGER PRIMARY KEY)
-- event_date (DATE) - format: YYYY-MM-DD
-- program (TEXT) - event/program name
-- venue (TEXT) - venue name (e.g., "Tata Theatre", "Experimental Theatre")
-- team (TEXT) - curator team name
-- sound_requirements (TEXT) - technical requirements
-- call_time (TEXT) - when crew should arrive
-- crew (TEXT) - crew member names
-- requirements_updated (BOOLEAN) - 1 if sound requirements filled, 0 if empty
-- created_at (DATETIME)
-- updated_at (DATETIME)
+CURRENT CONTEXT:
+- Today's date: ${today.toISOString().split('T')[0]}
+- Current month: ${currentMonth} ${currentYear}
 
-Sample data:
-${JSON.stringify(sampleEvents.results, null, 2)}
+COMPLETE EVENT DATABASE:
+${JSON.stringify(allEvents.results, null, 2)}
 
-Current date: ${today.toISOString().split('T')[0]}
-Current month range: ${startDate} to ${endDate}
+USER QUESTION: "${query}"
 
-User query: "${query}"
+INSTRUCTIONS:
+Analyze the complete event data above and answer the user's question intelligently.
 
-IMPORTANT: If the user asks for "dates with NO events" or "free dates" or "available dates" at a venue, you MUST generate a CTE query that:
-1. Creates a list of all dates in the relevant month
-2. LEFT JOINs with events table filtered by venue
-3. Returns dates WHERE the event is NULL
+For "no events" or "free dates" or "available dates" questions:
+1. Look at ALL dates in the relevant month (Nov 1-30, 2025)
+2. Check which dates have events at the specified venue
+3. Return dates that DON'T have events (free dates for maintenance)
+4. Format as JSON array with structure: [{"event_date": "YYYY-MM-DD", "program": "No event scheduled", "venue": "Venue Name"}]
 
-Example for "which dates no events at Tata Theatre":
-WITH RECURSIVE dates(date) AS (
-  SELECT DATE('${startDate}')
-  UNION ALL
-  SELECT DATE(date, '+1 day')
-  FROM dates
-  WHERE date < DATE('${endDate}')
-)
-SELECT dates.date as event_date, 'No event scheduled' as program, 'Tata Theatre' as venue
-FROM dates
-LEFT JOIN events ON dates.date = events.event_date AND LOWER(events.venue) LIKE '%tata%'
-WHERE events.id IS NULL
-ORDER BY dates.date;
+For regular queries:
+1. Filter events matching the criteria
+2. Return relevant events as JSON array
 
-For regular queries (finding events that exist), generate normal SELECT queries.
+IMPORTANT:
+- Return ONLY a valid JSON array, nothing else
+- No markdown, no explanations, no code blocks
+- Just the JSON array: [{"event_date": "...", "program": "...", "venue": "..."}]
+- For date availability queries, include ALL free dates in the month
+- Be smart about venue name matching (Tata/Tata Theatre/TT should all match)
 
-Generate ONLY the SQL query, nothing else. The query should:
-1. Use SQLite syntax with RECURSIVE CTEs for date generation
-2. Always include ORDER BY clause
-3. Use appropriate WHERE clauses
-4. Limit results to 50 rows maximum (except for date availability queries)
-5. Use LOWER() and LIKE for case-insensitive venue matching
-6. For "no events" queries, use the CTE pattern shown above
-
-SQL Query:`
+JSON ARRAY:`
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -438,8 +414,8 @@ SQL Query:`
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
-        max_tokens: 1024,
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 4096,
         messages: [{
           role: 'user',
           content: prompt
@@ -454,18 +430,28 @@ SQL Query:`
     }
     
     const aiResult = await response.json()
-    const sqlQuery = aiResult.content[0].text.trim()
+    let aiResponse = aiResult.content[0].text.trim()
     
-    console.log('Generated SQL:', sqlQuery)
+    // Clean up response - remove markdown if present
+    aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
     
-    // Execute the generated SQL query
-    const { results } = await c.env.DB.prepare(sqlQuery).all()
+    console.log('AI Response:', aiResponse)
+    
+    // Parse the JSON array from AI
+    let results = []
+    try {
+      results = JSON.parse(aiResponse)
+    } catch (parseError) {
+      console.error('Failed to parse AI response:', parseError)
+      return c.json({ success: false, error: 'AI returned invalid data' }, 500)
+    }
     
     return c.json({ 
       success: true,
-      query: sqlQuery,
+      query: query,
       data: results,
-      explanation: `Found ${results.length} matching events`
+      explanation: `AI analyzed ${allEvents.results.length} events and found ${results.length} results`,
+      method: 'AI Analysis (Claude Sonnet 4)'
     })
     
   } catch (error: any) {

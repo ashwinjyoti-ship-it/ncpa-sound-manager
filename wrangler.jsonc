@@ -12,5 +12,8 @@
       "database_name": "ncpa-sound-crew-db",
       "database_id": "8dd5bac9-26b7-45d7-94b3-7a013ec3e880"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }

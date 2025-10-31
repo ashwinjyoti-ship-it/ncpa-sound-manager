@@ -372,10 +372,12 @@ app.post('/api/ai/query', async (c) => {
       sixMonthsAhead.toISOString().split('T')[0]
     ).all()
     
-    // Smart detection: Handle "both venues free" queries directly in code
+    // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
     const lowerQuery = query.toLowerCase()
-    const isBothFreeQuery = (lowerQuery.includes('both') && lowerQuery.includes('free')) ||
-                            (lowerQuery.includes('jbt') && lowerQuery.includes('tata') && (lowerQuery.includes('free') || lowerQuery.includes('available')))
+    const hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
+    const hasTata = lowerQuery.includes('tata')
+    const hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule')
+    const isBothFreeQuery = hasJBT && hasTata && hasAvailability
     
     if (isBothFreeQuery) {
       // Extract month from query (default to current month if not specified)

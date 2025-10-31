@@ -403,14 +403,26 @@ app.post('/api/ai/query', async (c) => {
       }
       
       // Filter events for JBT and Tata in that month
-      const jbtEvents = allEvents.results.filter((e: any) => 
-        (e.venue?.includes('Jamshed Bhabha') || e.venue?.includes('JBT')) &&
-        e.event_date.startsWith(`${year}-${String(monthIndex + 1).padStart(2, '0')}`)
-      )
-      const tataEvents = allEvents.results.filter((e: any) => 
-        e.venue?.includes('Tata Theatre') &&
-        e.event_date.startsWith(`${year}-${String(monthIndex + 1).padStart(2, '0')}`)
-      )
+      // Note: Venue formats can be "JBT", "JBT 5pm", "Jamshed Bhabha Theatre", etc.
+      const monthPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+      
+      const jbtEvents = allEvents.results.filter((e: any) => {
+        const venue = e.venue?.toLowerCase() || ''
+        const dateMatches = e.event_date.startsWith(monthPrefix)
+        // Match: "JBT", "JBT 5pm", "Jamshed Bhabha", etc.
+        // But NOT: "TET & JBT Museum" (that's TET, not JBT)
+        const isJBT = (venue.startsWith('jbt') || venue.includes('jamshed') || venue.includes('bhabha')) &&
+                      !venue.startsWith('tet')
+        return isJBT && dateMatches
+      })
+      
+      const tataEvents = allEvents.results.filter((e: any) => {
+        const venue = e.venue?.toLowerCase() || ''
+        const dateMatches = e.event_date.startsWith(monthPrefix)
+        // Match: "TT", "TT 6pm", "Tata Theatre", etc.
+        const isTata = venue.startsWith('tt') || venue.includes('tata theatre')
+        return isTata && dateMatches
+      })
       
       // Find dates where both are free
       const jbtDates = new Set(jbtEvents.map((e: any) => e.event_date))

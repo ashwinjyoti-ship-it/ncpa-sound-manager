@@ -356,14 +356,7 @@ app.post('/api/ai/query', async (c) => {
       return c.json({ success: false, error: 'Query is required' }, 400)
     }
     
-    // Get API key from environment
-    const apiKey = c.env.ANTHROPIC_API_KEY
-    if (!apiKey) {
-      return c.json({ success: false, error: 'AI service not configured' }, 500)
-    }
-    
-    // Get relevant events from the database for AI to analyze
-    // Only include events from 3 months ago to 6 months ahead (to reduce payload size)
+    // Get relevant events from the database
     const threeMonthsAgo = new Date()
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
     const sixMonthsAhead = new Date()
@@ -379,10 +372,72 @@ app.post('/api/ai/query', async (c) => {
       sixMonthsAhead.toISOString().split('T')[0]
     ).all()
     
-    // Get current date context
+    // Smart detection: Handle "both venues free" queries directly in code
+    const lowerQuery = query.toLowerCase()
+    const isBothFreeQuery = (lowerQuery.includes('both') && lowerQuery.includes('free')) ||
+                            (lowerQuery.includes('jbt') && lowerQuery.includes('tata') && (lowerQuery.includes('free') || lowerQuery.includes('available')))
+    
+    if (isBothFreeQuery) {
+      // Extract month from query (default to current month if not specified)
+      const monthMatch = query.match(/november|december|january|february|march|april|may|june|july|august|september|october/i)
+      const targetMonth = monthMatch ? monthMatch[0].toLowerCase() : null
+      
+      // Generate all dates in target month
+      const today = new Date()
+      let year = today.getFullYear()
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+      const monthIndex = targetMonth ? monthNames.indexOf(targetMonth) : today.getMonth()
+      
+      // If target month is in the past, use next year
+      if (monthIndex < today.getMonth()) {
+        year++
+      }
+      
+      const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+      const allDatesInMonth = []
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, monthIndex, day)
+        allDatesInMonth.push(date.toISOString().split('T')[0])
+      }
+      
+      // Filter events for JBT and Tata in that month
+      const jbtEvents = allEvents.results.filter((e: any) => 
+        (e.venue?.includes('Jamshed Bhabha') || e.venue?.includes('JBT')) &&
+        e.event_date.startsWith(`${year}-${String(monthIndex + 1).padStart(2, '0')}`)
+      )
+      const tataEvents = allEvents.results.filter((e: any) => 
+        e.venue?.includes('Tata Theatre') &&
+        e.event_date.startsWith(`${year}-${String(monthIndex + 1).padStart(2, '0')}`)
+      )
+      
+      // Find dates where both are free
+      const jbtDates = new Set(jbtEvents.map((e: any) => e.event_date))
+      const tataDates = new Set(tataEvents.map((e: any) => e.event_date))
+      
+      const freeDates = allDatesInMonth
+        .filter(date => !jbtDates.has(date) && !tataDates.has(date))
+        .map(date => ({
+          event_date: date,
+          program: 'Both venues free for maintenance',
+          venue: 'JBT & Tata Theatre',
+          crew: '',
+          team: ''
+        }))
+      
+      return c.json({
+        success: true,
+        query: query,
+        data: freeDates,
+        explanation: `Code analysis found ${freeDates.length} dates where both venues are free`,
+        method: 'Smart Code Analysis'
+      })
+    }
+    
+    // For other queries, use AI (with minimal context)
     const today = new Date()
     const currentMonth = today.toLocaleString('default', { month: 'long' })
     const currentYear = today.getFullYear()
+    const apiKey = c.env.ANTHROPIC_API_KEY
     
     // Let Claude ANALYZE the data directly, not generate SQL
     const prompt = `You are an intelligent data analyst for NCPA Sound Crew event management.
@@ -391,8 +446,8 @@ CURRENT CONTEXT:
 - Today's date: ${today.toISOString().split('T')[0]}
 - Current month: ${currentMonth} ${currentYear}
 
-COMPLETE EVENT DATABASE (all events in system):
-${JSON.stringify(allEvents.results, null, 2)}
+COMPLETE EVENT DATABASE (simplified for analysis):
+${allEvents.results.map((e: any) => `${e.event_date}|${e.venue}|${e.program}`).join('\n')}
 
 USER QUESTION: "${query}"
 
@@ -447,36 +502,60 @@ A: [{"event_date":"2025-11-02","program":"Classical Concert","venue":"Tata Theat
 NOW ANALYZE AND RESPOND:
 JSON ARRAY:`
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-5-haiku-20241022',
-        max_tokens: 2048,
-        messages: [{
-          role: 'user',
-          content: prompt
-        }]
-      })
-    })
+    // Use Cloudflare Workers AI for fast, local processing (no external API)
+    let aiResponse: string
     
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Anthropic API error:', error)
+    try {
+      // Try Cloudflare AI first (built-in, fast, no CPU timeout)
+      if (c.env.AI) {
+        const aiResult = await c.env.AI.run('@cf/meta/llama-3.2-3b-instruct', {
+          prompt: prompt,
+          max_tokens: 1024
+        })
+        aiResponse = aiResult.response || aiResult.text || JSON.stringify(aiResult)
+      } else {
+        // Fallback to Anthropic if AI binding not available
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01'
+          },
+          body: JSON.stringify({
+            model: 'claude-3-5-haiku-20241022',
+            max_tokens: 2048,
+            messages: [{
+              role: 'user',
+              content: prompt
+            }]
+          })
+        })
+        
+        if (!response.ok) {
+          const error = await response.text()
+          console.error('Anthropic API error:', error)
+          return c.json({ 
+            success: false, 
+            error: 'Anthropic API error',
+            status: response.status,
+            details: error.substring(0, 500)
+          }, 500)
+        }
+        
+        const aiResult = await response.json()
+        aiResponse = aiResult.content[0].text
+      }
+    } catch (aiError: any) {
+      console.error('AI processing error:', aiError)
       return c.json({ 
         success: false, 
-        error: 'Anthropic API error',
-        status: response.status,
-        details: error.substring(0, 500)
+        error: 'AI processing failed',
+        details: aiError.message
       }, 500)
     }
     
-    const aiResult = await response.json()
-    let aiResponse = aiResult.content[0].text.trim()
+    aiResponse = aiResponse.trim()
     
     // Clean up response - remove markdown if present
     aiResponse = aiResponse.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
@@ -528,7 +607,7 @@ JSON ARRAY:`
       query: query,
       data: results,
       explanation: `AI analyzed ${allEvents.results.length} events and found ${results.length} results`,
-      method: 'AI Analysis (Claude Sonnet 4)'
+      method: c.env.AI ? 'AI Analysis (Cloudflare Llama 3.1)' : 'AI Analysis (Claude Haiku)'
     })
     
   } catch (error: any) {

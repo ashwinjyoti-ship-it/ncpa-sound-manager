@@ -346,15 +346,122 @@ app.get('/api/analytics/stats', async (c) => {
   }
 })
 
+// ============================================
+// INTENT CLASSIFIER - Analyzes query intent
+// ============================================
+function classifyIntent(query: string, pastContext: any[]) {
+  const lowerQuery = query.toLowerCase()
+  
+  // Extract learned preferences from past context
+  const learnedPreferences: any[] = []
+  pastContext.forEach(ctx => {
+    if (ctx.context_data) {
+      try {
+        const data = JSON.parse(ctx.context_data)
+        if (data.venues) learnedPreferences.push({ type: 'venue_preference', value: data.venues })
+        if (data.time) learnedPreferences.push({ type: 'time_preference', value: data.time })
+      } catch (e) {
+        // Ignore parse errors
+      }
+    }
+  })
+  
+  // Detect venues mentioned
+  const venues = {
+    jbt: lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha'),
+    tata: lowerQuery.includes('tata') || lowerQuery.includes('tt '),
+    tet: lowerQuery.includes('tet') || lowerQuery.includes('experimental'),
+    all: lowerQuery.includes('all venues') || lowerQuery.includes('no events')
+  }
+  
+  // Detect intent type
+  const intentTypes = {
+    availability: lowerQuery.includes('free') || lowerQuery.includes('available') || 
+                  lowerQuery.includes('maintenance') || lowerQuery.includes('schedule'),
+    workshop: lowerQuery.includes('workshop') || lowerQuery.includes('training'),
+    eventQuery: lowerQuery.includes('show') || lowerQuery.includes('event') || 
+                lowerQuery.includes('program') || lowerQuery.includes('performance'),
+    crewQuery: lowerQuery.includes('crew') && !lowerQuery.includes('workshop'),
+    dateQuery: lowerQuery.includes('when') || lowerQuery.includes('which date') || 
+               lowerQuery.includes('what day')
+  }
+  
+  // Determine if clarification is needed
+  let needsClarification = false
+  let clarificationMessage = ''
+  let suggestedQueries: string[] = []
+  let intentType = 'general'
+  
+  // Case 1: Workshop/availability query without specific venue
+  if ((intentTypes.workshop || intentTypes.availability) && !venues.jbt && !venues.tata && !venues.tet && !venues.all) {
+    // Check if we have learned preferences
+    const venuePreference = learnedPreferences.find(p => p.type === 'venue_preference')
+    
+    if (venuePreference) {
+      // Apply learned preference
+      console.log('Applying learned venue preference:', venuePreference.value)
+      venues.jbt = venuePreference.value.includes('JBT')
+      venues.tata = venuePreference.value.includes('Tata')
+      venues.tet = venuePreference.value.includes('TET')
+      intentType = 'availability_with_learned_preference'
+    } else {
+      needsClarification = true
+      intentType = 'ambiguous_availability'
+      clarificationMessage = "I'd be happy to help you find dates! Could you clarify:\n\n1. Which venue(s) do you need? (JBT, Tata Theatre, Experimental Theatre, or all venues?)\n2. Do you need the entire venue free, or just no events scheduled?\n3. Any specific time requirements (morning, afternoon, evening)?\n\nI'll remember your preference for next time!"
+      suggestedQueries = [
+        'When are JBT and Tata both free in November?',
+        'Days with no events in any venue in November',
+        'When is Experimental Theatre available in November?'
+      ]
+    }
+  }
+  // Case 2: Multi-venue availability
+  else if ((venues.jbt && venues.tata) || (venues.jbt && venues.tet) || (venues.tata && venues.tet)) {
+    intentType = 'multi_venue_availability'
+  }
+  // Case 3: All venues free (no events at all)
+  else if (venues.all || (lowerQuery.includes('no events') && lowerQuery.includes('day'))) {
+    intentType = 'all_venues_free'
+  }
+  // Case 4: Single venue availability
+  else if (venues.jbt || venues.tata || venues.tet) {
+    intentType = 'single_venue_availability'
+  }
+  // Case 5: Event query
+  else if (intentTypes.eventQuery) {
+    intentType = 'event_search'
+  }
+  // Case 6: Crew query
+  else if (intentTypes.crewQuery) {
+    intentType = 'crew_search'
+  }
+  
+  return {
+    type: intentType,
+    needsClarification,
+    clarificationMessage,
+    suggestedQueries,
+    context: {
+      venues,
+      intentTypes,
+      query: query
+    },
+    learnedPreferences
+  }
+}
+
 // AI Query endpoint - Intelligent data analysis with Claude
 app.post('/api/ai/query', async (c) => {
   try {
     const body = await c.req.json()
-    const { query } = body
+    const { query, session_id } = body
     
     if (!query) {
       return c.json({ success: false, error: 'Query is required' }, 400)
     }
+    
+    // Generate session ID if not provided
+    const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substring(7)}`
     
     // Get relevant events from the database
     const threeMonthsAgo = new Date()
@@ -372,28 +479,78 @@ app.post('/api/ai/query', async (c) => {
       sixMonthsAhead.toISOString().split('T')[0]
     ).all()
     
-    // Handle ambiguous queries by asking for clarification
+    // ============================================
+    // INTENT CLASSIFIER - Determines query intent
+    // ============================================
     const lowerQuery = query.toLowerCase()
-    const isAmbiguous = (lowerQuery.includes('crew workshop') || lowerQuery.includes('workshop')) && 
-                        !lowerQuery.includes('jbt') && 
-                        !lowerQuery.includes('tata') &&
-                        !lowerQuery.includes('all venues')
     
-    if (isAmbiguous) {
+    // Check context memory for similar past queries
+    const pastContext = await c.env.DB.prepare(`
+      SELECT intent, context_data, resolved 
+      FROM query_context 
+      WHERE session_id = ? AND resolved = 1 
+      ORDER BY created_at DESC 
+      LIMIT 5
+    `).bind(sessionId).all()
+    
+    // Intent classification
+    const intent = classifyIntent(lowerQuery, pastContext.results)
+    
+    // Store query context
+    await c.env.DB.prepare(`
+      INSERT INTO query_context (session_id, query_text, intent, context_data, resolved)
+      VALUES (?, ?, ?, ?, 0)
+    `).bind(
+      sessionId,
+      query,
+      intent.type,
+      JSON.stringify(intent.context)
+    ).run()
+    
+    // Handle ambiguous queries using intent classification
+    if (intent.needsClarification) {
+      // Store clarification request
+      await c.env.DB.prepare(`
+        UPDATE query_context 
+        SET context_data = ? 
+        WHERE session_id = ? AND query_text = ?
+      `).bind(
+        JSON.stringify({ ...intent.context, clarification_requested: true }),
+        sessionId,
+        query
+      ).run()
+      
       return c.json({
         success: true,
         query: query,
+        session_id: sessionId,
         data: [],
         clarification_needed: true,
-        question: "I'd be happy to help you find dates for a crew workshop! Could you clarify:\n\n1. Which venue(s) do you need? (JBT, Tata Theatre, Experimental Theatre, or all venues?)\n2. Do you need the entire venue free, or just no events scheduled?\n3. Any specific time requirements (morning, afternoon, evening)?\n\nFor example, you could ask:\n- 'When are JBT and Tata both free in November?'\n- 'Days with no events in any venue in November'\n- 'When is Experimental Theatre available for morning workshop?'",
+        question: intent.clarificationMessage,
+        intent: intent.type,
+        suggested_queries: intent.suggestedQueries,
         method: 'Clarification Request'
       })
     }
     
+    // If we have context from learning, apply it
+    if (intent.learnedPreferences && intent.learnedPreferences.length > 0) {
+      console.log('Applying learned preferences:', intent.learnedPreferences)
+    }
+    
     // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
-    const hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
-    const hasTata = lowerQuery.includes('tata')
+    // Also apply learned venue preferences
+    let hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
+    let hasTata = lowerQuery.includes('tata')
     const hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule')
+    
+    // Apply learned preferences if available
+    if (intent.type === 'availability_with_learned_preference' && intent.context.venues) {
+      hasJBT = intent.context.venues.jbt
+      hasTata = intent.context.venues.tata
+      console.log('Applied learned venue preferences: JBT=', hasJBT, 'Tata=', hasTata)
+    }
+    
     const isBothFreeQuery = hasJBT && hasTata && hasAvailability
     
     if (isBothFreeQuery) {
@@ -455,12 +612,30 @@ app.post('/api/ai/query', async (c) => {
           team: ''
         }))
       
+      // Mark query as resolved and store learned context
+      await c.env.DB.prepare(`
+        UPDATE query_context 
+        SET resolved = 1, context_data = ?
+        WHERE session_id = ? AND query_text = ?
+      `).bind(
+        JSON.stringify({
+          venues: ['JBT', 'Tata'],
+          intent: 'multi_venue_availability',
+          successful: true,
+          result_count: freeDates.length
+        }),
+        sessionId,
+        query
+      ).run()
+      
       return c.json({
         success: true,
         query: query,
+        session_id: sessionId,
         data: freeDates,
         explanation: `Code analysis found ${freeDates.length} dates where both venues are free`,
-        method: 'Smart Code Analysis'
+        method: 'Smart Code Analysis',
+        learned: true
       })
     }
     
@@ -508,12 +683,30 @@ app.post('/api/ai/query', async (c) => {
         }
       }
       
+      // Mark query as resolved and store learned context
+      await c.env.DB.prepare(`
+        UPDATE query_context 
+        SET resolved = 1, context_data = ?
+        WHERE session_id = ? AND query_text = ?
+      `).bind(
+        JSON.stringify({
+          venues: ['All'],
+          intent: 'all_venues_free',
+          successful: true,
+          result_count: completelyFreeDates.length
+        }),
+        sessionId,
+        query
+      ).run()
+      
       return c.json({
         success: true,
         query: query,
+        session_id: sessionId,
         data: completelyFreeDates,
         explanation: `Found ${completelyFreeDates.length} days with no events scheduled in any venue`,
-        method: 'Smart Code Analysis'
+        method: 'Smart Code Analysis',
+        learned: true
       })
     }
     

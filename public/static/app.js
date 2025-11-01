@@ -1395,6 +1395,13 @@ function closeAIAssistant() {
   document.getElementById('aiAssistantModal').classList.remove('active');
 }
 
+// Session management for context memory
+let aiSessionId = localStorage.getItem('ai_session_id');
+if (!aiSessionId) {
+  aiSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  localStorage.setItem('ai_session_id', aiSessionId);
+}
+
 async function askAI(predefinedQuery) {
   const input = document.getElementById('aiQueryInput');
   const query = predefinedQuery || input.value.trim();
@@ -1411,7 +1418,10 @@ async function askAI(predefinedQuery) {
   document.getElementById('aiResultsContainer').innerHTML = '';
   
   try {
-    const response = await axios.post(`${API_BASE}/ai/query`, { query });
+    const response = await axios.post(`${API_BASE}/ai/query`, { 
+      query,
+      session_id: aiSessionId
+    });
     
     if (response.data.success) {
       const { data, explanation, query: sqlQuery, clarification_needed, question } = response.data;
@@ -1439,8 +1449,9 @@ async function askAI(predefinedQuery) {
         return;
       }
       
-      // Show explanation
-      document.getElementById('aiExplanation').textContent = explanation || `Found ${data.length} results`;
+      // Show explanation with learning indicator
+      const learningBadge = response.data.learned ? ' 🧠 <span class="text-xs text-green-600">(Learning applied)</span>' : '';
+      document.getElementById('aiExplanation').innerHTML = (explanation || `Found ${data.length} results`) + learningBadge;
       
       // Display results
       if (data.length === 0) {

@@ -372,8 +372,25 @@ app.post('/api/ai/query', async (c) => {
       sixMonthsAhead.toISOString().split('T')[0]
     ).all()
     
-    // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
+    // Handle ambiguous queries by asking for clarification
     const lowerQuery = query.toLowerCase()
+    const isAmbiguous = (lowerQuery.includes('crew workshop') || lowerQuery.includes('workshop')) && 
+                        !lowerQuery.includes('jbt') && 
+                        !lowerQuery.includes('tata') &&
+                        !lowerQuery.includes('all venues')
+    
+    if (isAmbiguous) {
+      return c.json({
+        success: true,
+        query: query,
+        data: [],
+        clarification_needed: true,
+        question: "I'd be happy to help you find dates for a crew workshop! Could you clarify:\n\n1. Which venue(s) do you need? (JBT, Tata Theatre, Experimental Theatre, or all venues?)\n2. Do you need the entire venue free, or just no events scheduled?\n3. Any specific time requirements (morning, afternoon, evening)?\n\nFor example, you could ask:\n- 'When are JBT and Tata both free in November?'\n- 'Days with no events in any venue in November'\n- 'When is Experimental Theatre available for morning workshop?'",
+        method: 'Clarification Request'
+      })
+    }
+    
+    // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
     const hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
     const hasTata = lowerQuery.includes('tata')
     const hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule')
@@ -443,6 +460,59 @@ app.post('/api/ai/query', async (c) => {
         query: query,
         data: freeDates,
         explanation: `Code analysis found ${freeDates.length} dates where both venues are free`,
+        method: 'Smart Code Analysis'
+      })
+    }
+    
+    // Handle "completely free" or "no events" queries (all venues)
+    const isCompletelyFreeQuery = (lowerQuery.includes('no events') || lowerQuery.includes('completely free') || 
+                                   lowerQuery.includes('all venues') || lowerQuery.includes('no shows')) &&
+                                   (lowerQuery.includes('day') || lowerQuery.includes('date'))
+    
+    if (isCompletelyFreeQuery) {
+      // Extract month from query
+      const monthMatch = query.match(/november|december|january|february|march|april|may|june|july|august|september|october/i)
+      const targetMonth = monthMatch ? monthMatch[0].toLowerCase() : null
+      
+      const today = new Date()
+      let year = today.getFullYear()
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+      const monthIndex = targetMonth ? monthNames.indexOf(targetMonth) : today.getMonth()
+      
+      if (monthIndex < today.getMonth()) {
+        year++
+      }
+      
+      const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+      const monthPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+      
+      // Get all event dates in the month
+      const eventDates = new Set(
+        allEvents.results
+          .filter((e: any) => e.event_date.startsWith(monthPrefix))
+          .map((e: any) => e.event_date)
+      )
+      
+      // Find dates with no events at all
+      const completelyFreeDates = []
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, monthIndex, day).toISOString().split('T')[0]
+        if (!eventDates.has(date)) {
+          completelyFreeDates.push({
+            event_date: date,
+            program: 'No events scheduled - Perfect for crew workshop',
+            venue: 'All venues available',
+            crew: '',
+            team: ''
+          })
+        }
+      }
+      
+      return c.json({
+        success: true,
+        query: query,
+        data: completelyFreeDates,
+        explanation: `Found ${completelyFreeDates.length} days with no events scheduled in any venue`,
         method: 'Smart Code Analysis'
       })
     }

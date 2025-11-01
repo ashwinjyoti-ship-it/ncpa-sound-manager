@@ -1414,10 +1414,30 @@ async function askAI(predefinedQuery) {
     const response = await axios.post(`${API_BASE}/ai/query`, { query });
     
     if (response.data.success) {
-      const { data, explanation, query: sqlQuery } = response.data;
+      const { data, explanation, query: sqlQuery, clarification_needed, question } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
+      
+      // Handle clarification requests
+      if (clarification_needed && question) {
+        document.getElementById('aiExplanation').textContent = '🤔 Need more information';
+        document.getElementById('aiResultsContainer').innerHTML = `
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-3 flex-1">
+                <p class="text-sm text-blue-700 whitespace-pre-line">${question}</p>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
       
       // Show explanation
       document.getElementById('aiExplanation').textContent = explanation || `Found ${data.length} results`;

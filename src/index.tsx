@@ -542,12 +542,13 @@ app.post('/api/ai/query', async (c) => {
     // Also apply learned venue preferences
     let hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
     let hasTata = lowerQuery.includes('tata')
-    const hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule')
+    let hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule') || lowerQuery.includes('workshop')
     
     // Apply learned preferences if available
     if (intent.type === 'availability_with_learned_preference' && intent.context.venues) {
       hasJBT = intent.context.venues.jbt
       hasTata = intent.context.venues.tata
+      hasAvailability = true  // Force availability check when using learned preferences
       console.log('Applied learned venue preferences: JBT=', hasJBT, 'Tata=', hasTata)
     }
     

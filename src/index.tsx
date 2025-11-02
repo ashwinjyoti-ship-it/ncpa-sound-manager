@@ -711,6 +711,107 @@ app.post('/api/ai/query', async (c) => {
       })
     }
     
+    // Handle single venue availability queries
+    const hasTET = lowerQuery.includes('tet') || lowerQuery.includes('experimental')
+    const singleVenueQuery = (hasJBT && !hasTata && !hasTET) || 
+                             (!hasJBT && hasTata && !hasTET) || 
+                             (!hasJBT && !hasTata && hasTET)
+    
+    if (singleVenueQuery && hasAvailability) {
+      // Determine which venue
+      let venueName = ''
+      let venueFilter: (venue: string) => boolean
+      
+      if (hasJBT) {
+        venueName = 'JBT'
+        venueFilter = (v: string) => {
+          const lv = v.toLowerCase()
+          return (lv.startsWith('jbt') || lv.includes('jamshed') || lv.includes('bhabha')) && !lv.startsWith('tet')
+        }
+      } else if (hasTata) {
+        venueName = 'Tata Theatre'
+        venueFilter = (v: string) => {
+          const lv = v.toLowerCase()
+          return lv.startsWith('tt') || lv.includes('tata theatre')
+        }
+      } else if (hasTET) {
+        venueName = 'Experimental Theatre'
+        venueFilter = (v: string) => {
+          const lv = v.toLowerCase()
+          return lv.startsWith('tet') || lv.includes('experimental')
+        }
+      } else {
+        // Should not reach here
+        venueFilter = () => false
+      }
+      
+      // Extract month
+      const monthMatch = query.match(/november|december|january|february|march|april|may|june|july|august|september|october/i)
+      const targetMonth = monthMatch ? monthMatch[0].toLowerCase() : null
+      
+      const today = new Date()
+      let year = today.getFullYear()
+      const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+      const monthIndex = targetMonth ? monthNames.indexOf(targetMonth) : today.getMonth()
+      
+      if (monthIndex < today.getMonth()) {
+        year++
+      }
+      
+      const daysInMonth = new Date(year, monthIndex + 1, 0).getDate()
+      const monthPrefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+      
+      // Get events for this venue in this month
+      const venueEvents = allEvents.results.filter((e: any) => {
+        const dateMatches = e.event_date.startsWith(monthPrefix)
+        const venueMatches = venueFilter(e.venue || '')
+        return dateMatches && venueMatches
+      })
+      
+      const eventDates = new Set(venueEvents.map((e: any) => e.event_date))
+      
+      // Find free dates
+      const freeDates = []
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, monthIndex, day).toISOString().split('T')[0]
+        if (!eventDates.has(date)) {
+          freeDates.push({
+            event_date: date,
+            program: `No event scheduled at ${venueName}`,
+            venue: venueName,
+            crew: '',
+            team: ''
+          })
+        }
+      }
+      
+      // Mark as resolved
+      await c.env.DB.prepare(`
+        UPDATE query_context 
+        SET resolved = 1, context_data = ?
+        WHERE session_id = ? AND query_text = ?
+      `).bind(
+        JSON.stringify({
+          venues: [venueName],
+          intent: 'single_venue_availability',
+          successful: true,
+          result_count: freeDates.length
+        }),
+        sessionId,
+        query
+      ).run()
+      
+      return c.json({
+        success: true,
+        query: query,
+        session_id: sessionId,
+        data: freeDates,
+        explanation: `Found ${freeDates.length} free dates for ${venueName} in ${monthNames[monthIndex]}`,
+        method: 'Smart Code Analysis',
+        learned: true
+      })
+    }
+    
     // For other queries, use AI (with minimal context)
     const today = new Date()
     const currentMonth = today.toLocaleString('default', { month: 'long' })

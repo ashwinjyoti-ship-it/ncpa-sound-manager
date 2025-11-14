@@ -598,6 +598,7 @@ WHERE program LIKE '%Dance%';
 - ✅ **Append-Only Imports** - Word/CSV uploads add new events without replacing existing ones
 - ✅ **Detailed Import Feedback** - Shows inserted, skipped (duplicates), and invalid counts
 - ✅ **Data Preservation** - Your manual entries are never overwritten
+- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
 
 ### Version 2.0 (October 25, 2025) 🚀
 

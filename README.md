@@ -63,10 +63,13 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Delete button for each event
    - Columns: Date, Program, Venue, Team, Sound Requirements, Call Time, Crew, Actions
 
-3. **📤 CSV Upload**
+3. **📤 CSV Upload with Smart Duplicate Detection**
    - Drag & drop or click to upload CSV files
    - Automatic parsing with flexible column mapping
-   - Bulk import of multiple events
+   - **Intelligent duplicate detection**: Prevents re-importing existing events
+   - **Preserves manual entries**: Won't overwrite manually-added shows
+   - **Append-only behavior**: New events added alongside existing data
+   - Detailed feedback shows: inserted, skipped (duplicates), invalid
    - Validates data before import
    - Supports common CSV formats
 
@@ -76,6 +79,8 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - **100% data capture**: No truncation, all events extracted
    - **Intelligent chunking**: Splits large documents, processes each chunk with Claude AI
    - **Automatic deduplication**: Removes duplicate events across chunk boundaries
+   - **Smart duplicate detection**: Preserves manually-added events when re-importing
+   - **Append-only uploads**: New events added alongside existing data, no deletion
    - **Persistent progress notification**: Shows real-time processing status
    - **Auto-navigation**: Automatically jumps to uploaded month in calendar
    - No strict formatting requirements - works with tables, lists, or any structure
@@ -220,7 +225,7 @@ Real-time UI Update
 - `GET /api/events/range?start=YYYY-MM-DD&end=YYYY-MM-DD` - Get events by date range
 - `GET /api/events/search?q=query` - Search events
 - `POST /api/events` - Create new event
-- `POST /api/events/bulk` - Bulk upload events (CSV)
+- `POST /api/events/bulk` - Bulk upload events with duplicate detection (CSV/Word)
 - `PUT /api/events/:id` - Update event
 - `DELETE /api/events/:id` - Delete event
 
@@ -259,12 +264,15 @@ Real-time UI Update
    - Optionally add: Team, Sound Requirements, Call Time, Crew
    - Click "Add Show" to save
 
-3. **Upload Multiple Events (CSV)**
-   - Click "Upload CSV" button
-   - Select your CSV file
+3. **Upload Multiple Events (CSV/Word)**
+   - Click "Upload CSV" or "Upload Word" button
+   - Select your file (CSV or .docx)
    - Required columns: Date, Program, Venue
    - Optional columns: Team, Sound Requirements, Call Time, Crew
-   - Events will be imported automatically
+   - **Smart duplicate detection**: System checks for existing events
+   - **Preserves manual entries**: Your manually-added shows won't be affected
+   - Events will be imported automatically (only new ones added)
+   - Detailed feedback shows what was added, skipped, or invalid
 
 4. **Edit Event Details**
    - Switch to Table view
@@ -308,6 +316,29 @@ Date,Program,Venue,Team,Sound Requirement,Call Time,Crew
 - Venue: `Venue`, `venue`
 - Sound Requirements: `Sound Requirements`, `Sound Requirement` (both work!)
 - Others: Case-insensitive
+
+### Duplicate Detection & Data Preservation
+
+**🔒 Your Manual Entries Are Safe!**
+
+The system uses intelligent duplicate detection to protect your data:
+
+**How It Works:**
+- Events are considered duplicates if they have the **same date + program + venue**
+- When uploading CSV or Word files, the system checks every event before inserting
+- If an event already exists, it's skipped (not replaced)
+
+**What This Means:**
+1. ✅ **Manually-added shows are preserved** - They won't be overwritten during uploads
+2. ✅ **Append-only behavior** - New events are added alongside existing ones
+3. ✅ **Re-import protection** - If you upload the same file twice, duplicates are skipped
+4. ✅ **Detailed feedback** - You'll see exactly what was added vs. skipped
+
+**Example:**
+- You manually add: "Romeo and Juliet" on Nov 20 at JBT
+- You upload a Word document containing the same show
+- Result: System skips the duplicate, shows "1 duplicates skipped (already exist)"
+- Your manual entry remains unchanged! ✨
 
 ### Color Coding
 
@@ -560,9 +591,17 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 2.0 (Current - October 25, 2025) 🚀
+### Version 2.1 (Current - November 14, 2025) 🔒
 
-**🆕 New in Version 2.0:**
+**🆕 New in Version 2.1:**
+- ✅ **Smart Duplicate Detection** - Protects manually-added events during uploads
+- ✅ **Append-Only Imports** - Word/CSV uploads add new events without replacing existing ones
+- ✅ **Detailed Import Feedback** - Shows inserted, skipped (duplicates), and invalid counts
+- ✅ **Data Preservation** - Your manual entries are never overwritten
+
+### Version 2.0 (October 25, 2025) 🚀
+
+**Major Features in Version 2.0:**
 - ✅ **Today's date indicator** - Blue highlight for current day in calendar
 - ✅ **Production deployment** - Live on https://ncpa-sound.pages.dev
 
@@ -634,5 +673,6 @@ Developed for: **NCPA Sound Crew**
 
 ---
 
-**Last Updated:** October 25, 2025
-**Status:** ✅ Version 2.0 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Last Updated:** November 14, 2025
+**Status:** ✅ Version 2.1 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Latest:** Smart duplicate detection protects your manual entries! 🔒

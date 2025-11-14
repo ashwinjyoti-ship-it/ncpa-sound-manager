@@ -251,7 +251,7 @@ app.post('/api/events/bulk-delete', async (c) => {
   }
 })
 
-// Bulk upload events (for CSV import)
+// Bulk upload events (for CSV/Word import with duplicate detection)
 app.post('/api/events/bulk', async (c) => {
   try {
     const body = await c.req.json()
@@ -261,15 +261,39 @@ app.post('/api/events/bulk', async (c) => {
       return c.json({ success: false, error: 'Events array is required' }, 400)
     }
     
-    // Insert all events in a transaction-like batch
-    const results = []
+    // Track results and skipped duplicates
+    const inserted = []
+    const skipped = []
+    const invalid = []
+    
     for (const event of events) {
       const { event_date, program, venue, team, sound_requirements, call_time, crew } = event
       
+      // Validate required fields
       if (!event_date || !program || !venue) {
-        continue // Skip invalid events
+        invalid.push({ ...event, reason: 'Missing required fields (date, program, or venue)' })
+        continue
       }
       
+      // Check for duplicate: same date + program + venue
+      // This prevents re-importing events that already exist (from manual entry or previous imports)
+      const existing = await c.env.DB.prepare(`
+        SELECT id FROM events 
+        WHERE event_date = ? AND program = ? AND venue = ?
+        LIMIT 1
+      `).bind(event_date, program, venue).first()
+      
+      if (existing) {
+        // Duplicate found - skip insertion to preserve existing data
+        skipped.push({ 
+          ...event, 
+          reason: 'Duplicate event already exists',
+          existing_id: existing.id 
+        })
+        continue
+      }
+      
+      // Not a duplicate - insert new event
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
       
       const result = await c.env.DB.prepare(`
@@ -286,13 +310,30 @@ app.post('/api/events/bulk', async (c) => {
         requirements_updated
       ).run()
       
-      results.push({ id: result.meta.last_row_id, ...event })
+      inserted.push({ id: result.meta.last_row_id, ...event })
+    }
+    
+    // Build detailed response message
+    let message = `${inserted.length} events uploaded successfully`
+    if (skipped.length > 0) {
+      message += `, ${skipped.length} duplicates skipped`
+    }
+    if (invalid.length > 0) {
+      message += `, ${invalid.length} invalid entries ignored`
     }
     
     return c.json({ 
       success: true, 
-      message: `${results.length} events uploaded successfully`,
-      data: results
+      message,
+      data: inserted,
+      skipped: skipped.length > 0 ? skipped : undefined,
+      invalid: invalid.length > 0 ? invalid : undefined,
+      stats: {
+        total_processed: events.length,
+        inserted: inserted.length,
+        skipped: skipped.length,
+        invalid: invalid.length
+      }
     }, 201)
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)

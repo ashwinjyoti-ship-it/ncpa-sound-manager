@@ -518,7 +518,20 @@ function handleCSVUpload(e) {
         const response = await axios.post(`${API_BASE}/events/bulk`, { events: eventsToUpload });
         
         if (response.data.success) {
-          showNotification(`✓ Successfully uploaded ${eventsToUpload.length} events! ${invalidEvents.length > 0 ? `(Skipped ${invalidEvents.length} invalid rows)` : ''}`, 'success');
+          const stats = response.data.stats || {};
+          const uploaded = stats.inserted || response.data.data.length;
+          const duplicates = stats.skipped || 0;
+          const invalid = stats.invalid || 0;
+          
+          let message = `✓ ${uploaded} new events added`;
+          if (duplicates > 0) {
+            message += `, ${duplicates} duplicates skipped`;
+          }
+          if (invalid > 0 || invalidEvents.length > 0) {
+            message += `, ${invalid + invalidEvents.length} invalid entries ignored`;
+          }
+          
+          showNotification(message, 'success');
           await loadEvents();
         } else {
           showNotification(`Upload failed: ${response.data.error || 'Unknown error'}`, 'error');
@@ -613,8 +626,10 @@ async function handleWordUpload(e) {
     const uploadResponse = await axios.post(`${API_BASE}/events/bulk`, { events });
     
     if (uploadResponse.data.success) {
-      const uploaded = uploadResponse.data.data.length;
-      const duplicates = uploadResponse.data.skipped ? uploadResponse.data.skipped.length : 0;
+      const stats = uploadResponse.data.stats || {};
+      const uploaded = stats.inserted || uploadResponse.data.data.length;
+      const duplicates = stats.skipped || 0;
+      const invalid = stats.invalid || 0;
       
       // Reload events first
       await loadEvents();
@@ -625,14 +640,19 @@ async function handleWordUpload(e) {
         renderCalendar();
       }
       
-      // Show final success message
-      let message = `✅ Upload complete! ${uploaded} events added`;
+      // Show detailed success message
+      let message = `✅ Upload complete! ${uploaded} new events added`;
       if (duplicates > 0) {
-        message += ` (${duplicates} duplicates skipped)`;
+        message += `, ${duplicates} duplicates skipped (already exist)`;
+      }
+      if (invalid > 0) {
+        message += `, ${invalid} invalid entries ignored`;
       }
       
-      updatePersistentNotification(progressNotification, message, 'success');
-      setTimeout(() => removePersistentNotification(progressNotification), 5000);
+      // Show success even if some were skipped (this is expected behavior)
+      const notificationType = uploaded > 0 ? 'success' : (duplicates > 0 ? 'info' : 'warning');
+      updatePersistentNotification(progressNotification, message, notificationType);
+      setTimeout(() => removePersistentNotification(progressNotification), 6000);
       
     } else {
       updatePersistentNotification(progressNotification, `❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');

@@ -108,6 +108,15 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Shows results immediately
    - Empty result feedback
 
+5b. **📥 CSV Export**
+   - Export events for any specific month/year
+   - Select month and year from dropdown
+   - Downloads CSV file: `NCPA_Events_MonthName_Year.csv`
+   - Includes all fields: Date, Program, Venue, Team, Sound Requirements, Call Time, Crew
+   - Proper CSV formatting with quote escaping
+   - Perfect for backup, Excel analysis, or sharing with team
+   - One-click download
+
 6. **💬 WhatsApp Export**
    - Export events for WhatsApp messaging
    - Time ranges: Tomorrow, This Week, Next Week, Custom Date
@@ -286,6 +295,18 @@ Real-time UI Update
    - Search works across all fields
    - Results appear instantly
    - Clear search to see all events
+
+5b. **Export Events to CSV**
+   - Click "Export CSV" button (top toolbar)
+   - Select the month and year you want to export
+   - Click "Download CSV"
+   - File downloads as: `NCPA_Events_MonthName_Year.csv`
+   - Open in Excel, Google Sheets, or any spreadsheet software
+   - Perfect for:
+     - Monthly reports
+     - Backup copies
+     - Sharing with team members
+     - Data analysis
 
 6. **View Event Details**
    - In Calendar view, click any event card
@@ -591,14 +612,22 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 2.1 (Current - November 14, 2025) 🔒
+### Version 2.2 (Current - November 14, 2025) 📥
 
-**🆕 New in Version 2.1:**
+**🆕 New in Version 2.2:**
+- ✅ **CSV Export** - Export events for any specific month/year
+- ✅ **Month/Year Selector** - Easy dropdown selection for export period
+- ✅ **Auto-formatted Filenames** - Downloads as `NCPA_Events_MonthName_Year.csv`
+- ✅ **Complete Data Export** - All fields included (Date, Program, Venue, Team, Sound Requirements, Call Time, Crew)
+- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
+
+### Version 2.1 (November 14, 2025) 🔒
+
+**Features in Version 2.1:**
 - ✅ **Smart Duplicate Detection** - Protects manually-added events during uploads
 - ✅ **Append-Only Imports** - Word/CSV uploads add new events without replacing existing ones
 - ✅ **Detailed Import Feedback** - Shows inserted, skipped (duplicates), and invalid counts
 - ✅ **Data Preservation** - Your manual entries are never overwritten
-- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
 
 ### Version 2.0 (October 25, 2025) 🚀
 
@@ -675,5 +704,7 @@ Developed for: **NCPA Sound Crew**
 ---
 
 **Last Updated:** November 14, 2025
-**Status:** ✅ Version 2.1 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
-**Latest:** Smart duplicate detection protects your manual entries! 🔒
+**Status:** ✅ Version 2.2 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Latest Features:** 
+- 📥 CSV Export for any month/year
+- 🔒 Smart duplicate detection protects your manual entries

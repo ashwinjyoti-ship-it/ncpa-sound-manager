@@ -1521,6 +1521,12 @@ app.get('/', (c) => {
                             <i class="fab fa-whatsapp mr-1.5"></i>Export
                         </button>
                         
+                        <!-- CSV Export -->
+                        <button onclick="openCSVExportModal()" 
+                                class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            <i class="fas fa-file-download mr-1.5"></i>Export CSV
+                        </button>
+                        
                         <!-- Word Upload -->
                         <button onclick="document.getElementById('wordInput').click()" 
                                 class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
@@ -1769,6 +1775,56 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     <textarea id="exportText" readonly class="w-full h-64 p-4 border border-gray-300 rounded-lg bg-gray-50 font-mono text-sm"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Export Modal -->
+        <div id="csvExportModal" class="modal">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                        <i class="fas fa-file-download mr-2"></i>Export CSV
+                    </h2>
+                    <button onclick="closeCSVExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <p class="text-gray-600">Select month to export:</p>
+                    
+                    <div class="grid grid-cols-1 gap-3">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Month:</label>
+                            <select id="csvExportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8">August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Year:</label>
+                            <select id="csvExportYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                                <option value="2024">2024</option>
+                                <option value="2025" selected>2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button onclick="generateCSVExport()" 
+                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                        <i class="fas fa-download mr-2"></i>Download CSV
+                    </button>
                 </div>
             </div>
         </div>

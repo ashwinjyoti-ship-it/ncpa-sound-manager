@@ -1200,6 +1200,7 @@ window.onclick = function(event) {
   const addShowModal = document.getElementById('addShowModal');
   const deleteConfirmModal = document.getElementById('deleteConfirmModal');
   const whatsappModal = document.getElementById('whatsappExportModal');
+  const csvModal = document.getElementById('csvExportModal');
   const aiModal = document.getElementById('aiAssistantModal');
   
   if (event.target === eventModal) {
@@ -1213,6 +1214,9 @@ window.onclick = function(event) {
   }
   if (event.target === whatsappModal) {
     closeWhatsAppExportModal();
+  }
+  if (event.target === csvModal) {
+    closeCSVExportModal();
   }
   if (event.target === aiModal) {
     closeAIAssistant();
@@ -1391,6 +1395,99 @@ function copyToClipboard() {
     console.error('Failed to copy:', err);
     showNotification('Failed to copy. Please copy manually.', 'error');
   }
+}
+
+// ============================================
+// CSV EXPORT
+// ============================================
+
+function openCSVExportModal() {
+  const modal = document.getElementById('csvExportModal');
+  modal.classList.add('active');
+  
+  // Set current month and year as defaults
+  const now = new Date();
+  document.getElementById('csvExportMonth').value = now.getMonth() + 1;
+  document.getElementById('csvExportYear').value = now.getFullYear();
+}
+
+function closeCSVExportModal() {
+  document.getElementById('csvExportModal').classList.remove('active');
+}
+
+async function generateCSVExport() {
+  const month = document.getElementById('csvExportMonth').value;
+  const year = document.getElementById('csvExportYear').value;
+  
+  if (!month || !year) {
+    showNotification('Please select month and year', 'error');
+    return;
+  }
+  
+  try {
+    // Calculate date range for the month
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    // Fetch events for this month
+    showNotification('Fetching events...', 'info');
+    const response = await axios.get(`${API_BASE}/events/range?start=${startDate}&end=${endDate}`);
+    
+    if (!response.data.success || !response.data.data || response.data.data.length === 0) {
+      showNotification('No events found for this month', 'warning');
+      return;
+    }
+    
+    const events = response.data.data;
+    
+    // Convert to CSV format
+    const csvContent = convertEventsToCSV(events);
+    
+    // Create download link
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNames[parseInt(month) - 1];
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `NCPA_Events_${monthName}_${year}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification(`✅ Downloaded ${events.length} events for ${monthName} ${year}`, 'success');
+    closeCSVExportModal();
+    
+  } catch (error) {
+    console.error('CSV export error:', error);
+    showNotification(`Failed to export CSV: ${error.message}`, 'error');
+  }
+}
+
+function convertEventsToCSV(events) {
+  // CSV headers
+  const headers = ['Date', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Crew'];
+  
+  // Convert events to CSV rows
+  const rows = events.map(event => {
+    return [
+      event.event_date || '',
+      `"${(event.program || '').replace(/"/g, '""')}"`, // Escape quotes
+      `"${(event.venue || '').replace(/"/g, '""')}"`,
+      `"${(event.team || '').replace(/"/g, '""')}"`,
+      `"${(event.sound_requirements || '').replace(/"/g, '""')}"`,
+      event.call_time || '',
+      `"${(event.crew || '').replace(/"/g, '""')}"`
+    ].join(',');
+  });
+  
+  // Combine headers and rows
+  return [headers.join(','), ...rows].join('\n');
 }
 
 // ============================================

@@ -89,16 +89,20 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Example: 32KB document → 3 chunks → 50 events in ~45 seconds
    - Fallback: CSV upload available for extremely large files (>50KB)
 
-4. **➕ Manual Event Entry**
+4. **➕ Manual Event Entry (with Smart Autocomplete)**
    - "Add Show" button on both views
    - Form with all fields:
      - Date (required, dropdown calendar)
      - Program/Event (required)
-     - Venue (required)
-     - Team (optional)
+     - **Venue (required) - Autocomplete dropdown with custom entry**
+       - Common venues: JBT, TET, GDT, LT, SVR, Experimental Theatre
+       - Type custom venue name if needed
+     - **Team (optional) - Autocomplete dropdown with custom entry**
+       - Common teams: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
      - Sound Requirements (optional, textarea)
      - Call Time (optional)
-     - Crew (optional)
+     - **Crew (optional) - Autocomplete dropdown with custom entry**
+       - Common crew: Ashwin, Team A, Sound 1
    - Tracks creation date in database
 
 5. **🔍 Search Functionality**
@@ -108,13 +112,19 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Shows results immediately
    - Empty result feedback
 
-5b. **📥 CSV Export**
+5b. **📥 Export Events (Excel & CSV)**
    - Export events for any specific month/year
-   - Select month and year from dropdown
-   - Downloads CSV file: `NCPA_Events_MonthName_Year.csv`
+   - Select month and year from dropdowns
+   - **Excel Export (.xlsx)** - Professional format with auto-fit columns
+     - Opens directly in Excel - no import issues
+     - Formatted headers and data
+     - Filename: `NCPA_Events_MonthName_Year.xlsx`
+     - Perfect for professional reports and presentations
+   - **CSV Export** - Universal format for data processing
+     - Filename: `NCPA_Events_MonthName_Year.csv`
+     - Proper quote escaping for special characters
+     - Compatible with all spreadsheet software
    - Includes all fields: Date, Program, Venue, Team, Sound Requirements, Call Time, Crew
-   - Proper CSV formatting with quote escaping
-   - Perfect for backup, Excel analysis, or sharing with team
    - One-click download
 
 6. **💬 WhatsApp Export**
@@ -612,14 +622,29 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 2.3.2 (Current - November 29, 2025) 🎨
+### Version 2.4 (Current - November 29, 2025) 📊✨
 
-**🆕 New in Version 2.3.2:**
+**🆕 New in Version 2.4:**
+- ✅ **Excel Export (.xlsx)** - Direct Excel file export with professional formatting
+  - Auto-fit columns for better readability
+  - No import issues - opens directly in Excel
+  - SheetJS library integration (client-side processing)
+- ✅ **Autocomplete Dropdowns** - Smart autocomplete for common values
+  - Venue: JBT, TET, GDT, LT, SVR, TT, Experimental Theatre
+  - Team: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
+  - Crew: Ashwin, Team A, Sound 1
+  - Custom text entry still allowed - type anything you need
+- ✅ **Improved Export UI** - Choose between CSV or Excel format
+- ✅ **Better Data Entry** - Faster event creation with suggested values
+- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
+
+### Version 2.3.2 (November 29, 2025) 🎨
+
+**Features in Version 2.3.2:**
 - ✅ **New Orange Color Scheme** - Switched from brown (#8B4513) to vibrant orange (#FF6B35)
 - ✅ **Updated Button Colors** - All buttons now use consistent orange theme
 - ✅ **Cache-Busting** - Version bump to force browser refresh
 - ✅ **Event Count Fix** - Resolved caching issue showing incorrect count
-- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
 
 ### Version 2.3 (November 24, 2025) 📊
 
@@ -719,7 +744,7 @@ Developed for: **NCPA Sound Crew**
 ---
 
 **Last Updated:** November 14, 2025
-**Status:** ✅ Version 2.3.2 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Status:** ✅ Version 2.4 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
 **Latest Features:** 
 - 📥 CSV Export for any month/year
 - 🔒 Smart duplicate detection protects your manual entries

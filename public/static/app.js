@@ -113,16 +113,33 @@ function renderCalendar() {
   // Get events for this month
   const startDate = new Date(year, month, 1).toISOString().split('T')[0];
   const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
-  const monthEvents = allEvents.filter(event => 
-    event.event_date >= startDate && event.event_date <= endDate
-  );
   
-  // Update event count display
-  updateEventCount(monthEvents.length);
+  // Filter events and count unique ones only (by ID)
+  const monthEvents = allEvents.filter(event => {
+    // Make sure event_date exists and is valid
+    if (!event.event_date) return false;
+    
+    // Ensure we're comparing strings properly
+    const eventDate = event.event_date.toString();
+    return eventDate >= startDate && eventDate <= endDate;
+  });
+  
+  // Remove any duplicates by ID (shouldn't happen, but just in case)
+  const uniqueEventIds = new Set();
+  const uniqueMonthEvents = monthEvents.filter(event => {
+    if (uniqueEventIds.has(event.id)) {
+      return false; // Skip duplicate
+    }
+    uniqueEventIds.add(event.id);
+    return true;
+  });
+  
+  // Update event count display with unique count
+  updateEventCount(uniqueMonthEvents.length);
   
   // Group events by date
   const eventsByDate = {};
-  monthEvents.forEach(event => {
+  uniqueMonthEvents.forEach(event => {
     const date = event.event_date;
     if (!eventsByDate[date]) {
       eventsByDate[date] = [];

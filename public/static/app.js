@@ -90,6 +90,13 @@ function renderCurrentView() {
 // CALENDAR VIEW
 // ============================================
 
+function updateEventCount(count) {
+  const countElement = document.getElementById('eventCount');
+  if (countElement) {
+    countElement.textContent = count;
+  }
+}
+
 function renderCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -109,6 +116,9 @@ function renderCalendar() {
   const monthEvents = allEvents.filter(event => 
     event.event_date >= startDate && event.event_date <= endDate
   );
+  
+  // Update event count display
+  updateEventCount(monthEvents.length);
   
   // Group events by date
   const eventsByDate = {};
@@ -427,30 +437,262 @@ function closeAddShowModal() {
   document.getElementById('addShowModal').classList.remove('active');
 }
 
+function toggleDateFields() {
+  const dateType = document.querySelector('input[name="dateType"]:checked').value;
+  const singleDateField = document.getElementById('singleDateField');
+  const multipleDateFields = document.getElementById('multipleDateFields');
+  const singleDate = document.getElementById('singleDate');
+  const startDate = document.getElementById('startDate');
+  const endDate = document.getElementById('endDate');
+  
+  if (dateType === 'single') {
+    singleDateField.style.display = 'block';
+    multipleDateFields.style.display = 'none';
+    singleDate.required = true;
+    startDate.required = false;
+    endDate.required = false;
+  } else {
+    singleDateField.style.display = 'none';
+    multipleDateFields.style.display = 'block';
+    singleDate.required = false;
+    startDate.required = true;
+    endDate.required = true;
+  }
+}
+
 async function handleAddShow(e) {
   e.preventDefault();
   
   const formData = new FormData(e.target);
   const data = Object.fromEntries(formData.entries());
+  const dateType = data.dateType;
   
   try {
-    const response = await axios.post(`${API_BASE}/events`, data);
-    
-    if (response.data.success) {
-      showNotification('Show added successfully', 'success');
-      closeAddShowModal();
-      await loadEvents();
+    if (dateType === 'single') {
+      // Single date event
+      const response = await axios.post(`${API_BASE}/events`, {
+        event_date: data.event_date,
+        program: data.program,
+        venue: data.venue,
+        team: data.team || null,
+        sound_requirements: data.sound_requirements || null,
+        call_time: data.call_time || null,
+        crew: data.crew || null
+      });
       
-      // Navigate to the month of the added show
-      if (data.event_date) {
+      if (response.data.success) {
+        showNotification('Show added successfully', 'success');
+        closeAddShowModal();
+        await loadEvents();
+        
+        // Navigate to the month of the added show
         const eventDate = new Date(data.event_date);
         currentDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), 1);
+        renderCalendar();
+      }
+    } else {
+      // Multiple dates (date range)
+      const startDate = new Date(data.start_date);
+      const endDate = new Date(data.end_date);
+      
+      if (startDate > endDate) {
+        showNotification('Start date must be before or equal to end date', 'error');
+        return;
+      }
+      
+      // Generate array of events for all dates in range
+      const events = [];
+      const currentDateIter = new Date(startDate);
+      
+      while (currentDateIter <= endDate) {
+        events.push({
+          event_date: currentDateIter.toISOString().split('T')[0],
+          program: data.program,
+          venue: data.venue,
+          team: data.team || null,
+          sound_requirements: data.sound_requirements || null,
+          call_time: data.call_time || null,
+          crew: data.crew || null
+        });
+        currentDateIter.setDate(currentDateIter.getDate() + 1);
+      }
+      
+      // Upload all events at once using bulk API
+      showNotification(`Creating ${events.length} events...`, 'info');
+      const response = await axios.post(`${API_BASE}/events/bulk`, { events });
+      
+      if (response.data.success) {
+        const stats = response.data.stats || {};
+        const inserted = stats.inserted || 0;
+        const skipped = stats.skipped || 0;
+        
+        let message = `${inserted} events created`;
+        if (skipped > 0) {
+          message += ` (${skipped} duplicates skipped)`;
+        }
+        
+        showNotification(message, 'success');
+        closeAddShowModal();
+        await loadEvents();
+        
+        // Navigate to the month of the first date
+        currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
         renderCalendar();
       }
     }
   } catch (error) {
     console.error('Error adding show:', error);
-    showNotification('Failed to add show', 'error');
+    showNotification('Failed to add show: ' + (error.response?.data?.error || error.message), 'error');
+  }
+}
+
+// ============================================
+// EDIT EVENT
+// ============================================
+
+function toggleEditDateFields() {
+  const dateType = document.querySelector('input[name="editDateType"]:checked').value;
+  const singleDateField = document.getElementById('editSingleDateField');
+  const multipleDateFields = document.getElementById('editMultipleDateFields');
+  const singleDate = document.getElementById('editSingleDate');
+  const startDate = document.getElementById('editStartDate');
+  const endDate = document.getElementById('editEndDate');
+  
+  if (dateType === 'single') {
+    singleDateField.style.display = 'block';
+    multipleDateFields.style.display = 'none';
+    singleDate.required = true;
+    startDate.required = false;
+    endDate.required = false;
+  } else {
+    singleDateField.style.display = 'none';
+    multipleDateFields.style.display = 'block';
+    singleDate.required = false;
+    startDate.required = true;
+    endDate.required = true;
+    // Pre-fill start date with current event date
+    if (singleDate.value) {
+      startDate.value = singleDate.value;
+    }
+  }
+}
+
+async function editEventFromModal(eventId) {
+  // Close event detail modal
+  closeEventModal();
+  
+  // Fetch event details
+  try {
+    const response = await axios.get(`${API_BASE}/events/${eventId}`);
+    if (response.data.success) {
+      const event = response.data.data;
+      
+      // Populate form
+      document.getElementById('editEventId').value = event.id;
+      document.getElementById('editSingleDate').value = event.event_date;
+      document.getElementById('editProgram').value = event.program;
+      document.getElementById('editVenue').value = event.venue;
+      document.getElementById('editTeam').value = event.team || '';
+      document.getElementById('editSoundReq').value = event.sound_requirements || '';
+      document.getElementById('editCallTime').value = event.call_time || '';
+      document.getElementById('editCrew').value = event.crew || '';
+      
+      // Reset to single date mode
+      document.querySelector('input[name="editDateType"][value="single"]').checked = true;
+      toggleEditDateFields();
+      
+      // Open edit modal
+      document.getElementById('editEventModal').classList.add('active');
+    }
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    showNotification('Failed to load event details', 'error');
+  }
+}
+
+function closeEditEventModal() {
+  document.getElementById('editEventModal').classList.remove('active');
+}
+
+async function handleEditEvent(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+  const dateType = data.editDateType;
+  const eventId = data.event_id;
+  
+  try {
+    if (dateType === 'single') {
+      // Simple update for single date
+      const response = await axios.put(`${API_BASE}/events/${eventId}`, {
+        event_date: data.event_date,
+        program: data.program,
+        venue: data.venue,
+        team: data.team || null,
+        sound_requirements: data.sound_requirements || null,
+        call_time: data.call_time || null,
+        crew: data.crew || null
+      });
+      
+      if (response.data.success) {
+        showNotification('Event updated successfully', 'success');
+        closeEditEventModal();
+        await loadEvents();
+        renderCalendar();
+      }
+    } else {
+      // Multiple dates - update original and create copies for additional dates
+      const startDate = new Date(data.start_date);
+      const endDate = new Date(data.end_date);
+      
+      if (startDate > endDate) {
+        showNotification('Start date must be before or equal to end date', 'error');
+        return;
+      }
+      
+      // Update original event to start date
+      await axios.put(`${API_BASE}/events/${eventId}`, {
+        event_date: data.start_date,
+        program: data.program,
+        venue: data.venue,
+        team: data.team || null,
+        sound_requirements: data.sound_requirements || null,
+        call_time: data.call_time || null,
+        crew: data.crew || null
+      });
+      
+      // Create copies for remaining dates
+      const events = [];
+      const currentDateIter = new Date(startDate);
+      currentDateIter.setDate(currentDateIter.getDate() + 1); // Start from day after start date
+      
+      while (currentDateIter <= endDate) {
+        events.push({
+          event_date: currentDateIter.toISOString().split('T')[0],
+          program: data.program,
+          venue: data.venue,
+          team: data.team || null,
+          sound_requirements: data.sound_requirements || null,
+          call_time: data.call_time || null,
+          crew: data.crew || null
+        });
+        currentDateIter.setDate(currentDateIter.getDate() + 1);
+      }
+      
+      if (events.length > 0) {
+        await axios.post(`${API_BASE}/events/bulk`, { events });
+      }
+      
+      const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+      showNotification(`Event extended to ${totalDays} dates`, 'success');
+      closeEditEventModal();
+      await loadEvents();
+      renderCalendar();
+    }
+  } catch (error) {
+    console.error('Error updating event:', error);
+    showNotification('Failed to update event: ' + (error.response?.data?.error || error.message), 'error');
   }
 }
 
@@ -1198,6 +1440,7 @@ function removePersistentNotification(toast) {
 window.onclick = function(event) {
   const eventModal = document.getElementById('eventModal');
   const addShowModal = document.getElementById('addShowModal');
+  const editEventModal = document.getElementById('editEventModal');
   const deleteConfirmModal = document.getElementById('deleteConfirmModal');
   const whatsappModal = document.getElementById('whatsappExportModal');
   const csvModal = document.getElementById('csvExportModal');
@@ -1208,6 +1451,9 @@ window.onclick = function(event) {
   }
   if (event.target === addShowModal) {
     closeAddShowModal();
+  }
+  if (event.target === editEventModal) {
+    closeEditEventModal();
   }
   if (event.target === deleteConfirmModal) {
     closeDeleteConfirm();

@@ -1507,6 +1507,14 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     
+                    <!-- Event Count Display -->
+                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                        <i class="fas fa-calendar-check mr-2 text-blue-600"></i>
+                        <span class="text-sm font-semibold text-blue-800">
+                            <span id="eventCount">0</span> events this month
+                        </span>
+                    </div>
+                    
                     <div class="flex space-x-3">
                         <!-- Search -->
                         <div class="relative">
@@ -1662,10 +1670,48 @@ app.get('/', (c) => {
                 </div>
                 <form id="addShowForm" onsubmit="handleAddShow(event)">
                     <div class="space-y-4">
+                        <!-- Date Type Selection -->
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Event Duration *</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="dateType" value="single" checked onchange="toggleDateFields()" 
+                                           class="mr-2">
+                                    <span class="text-sm">Single Date</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="dateType" value="multiple" onchange="toggleDateFields()" 
+                                           class="mr-2">
+                                    <span class="text-sm">Multiple Dates (Same show across dates)</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Single Date Field -->
+                        <div id="singleDateField">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                            <input type="date" name="event_date" required 
+                            <input type="date" name="event_date" id="singleDate"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        
+                        <!-- Multiple Date Fields -->
+                        <div id="multipleDateFields" style="display: none;">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                                    <input type="date" name="start_date" id="startDate"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                                    <input type="date" name="end_date" id="endDate"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Same show will be created for all dates in this range with identical venue, crew, and requirements.
+                            </p>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Program/Event *</label>
@@ -1707,6 +1753,106 @@ app.get('/', (c) => {
                                 class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
                                 style="background-color: #8B4513;">
                             Add Show
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Event Modal -->
+        <div id="editEventModal" class="modal">
+            <div class="modal-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #8B4513;">Edit Event</h2>
+                    <button onclick="closeEditEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <form id="editEventForm" onsubmit="handleEditEvent(event)">
+                    <input type="hidden" name="event_id" id="editEventId">
+                    <div class="space-y-4">
+                        <!-- Date Type Selection -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Event Duration *</label>
+                            <div class="flex space-x-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="editDateType" value="single" checked onchange="toggleEditDateFields()" 
+                                           class="mr-2">
+                                    <span class="text-sm">Single Date</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="editDateType" value="multiple" onchange="toggleEditDateFields()" 
+                                           class="mr-2">
+                                    <span class="text-sm">Extend to Multiple Dates</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Single Date Field -->
+                        <div id="editSingleDateField">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                            <input type="date" name="event_date" id="editSingleDate"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        
+                        <!-- Multiple Date Fields -->
+                        <div id="editMultipleDateFields" style="display: none;">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                                    <input type="date" name="start_date" id="editStartDate"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                                    <input type="date" name="end_date" id="editEndDate"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                </div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Creates copies of this event for additional dates. Original event will be updated to start date.
+                            </p>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Program/Event *</label>
+                            <input type="text" name="program" id="editProgram" required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
+                            <input type="text" name="venue" id="editVenue" required 
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
+                            <input type="text" name="team" id="editTeam"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
+                            <textarea name="sound_requirements" id="editSoundReq" rows="3" 
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
+                            <input type="text" name="call_time" id="editCallTime"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Crew (sound team)</label>
+                            <input type="text" name="crew" id="editCrew"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                    </div>
+                    <div class="flex justify-end space-x-3 mt-6">
+                        <button type="button" onclick="closeEditEventModal()" 
+                                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+                            Cancel
+                        </button>
+                        <button type="submit" 
+                                class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
+                                style="background-color: #8B4513;">
+                            Save Changes
                         </button>
                     </div>
                 </form>

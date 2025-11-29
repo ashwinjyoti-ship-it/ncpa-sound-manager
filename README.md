@@ -612,14 +612,29 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 2.2 (Current - November 14, 2025) 📥
+### Version 2.3.2 (Current - November 29, 2025) 🎨
+
+**🆕 New in Version 2.3.2:**
+- ✅ **New Orange Color Scheme** - Switched from brown (#8B4513) to vibrant orange (#FF6B35)
+- ✅ **Updated Button Colors** - All buttons now use consistent orange theme
+- ✅ **Cache-Busting** - Version bump to force browser refresh
+- ✅ **Event Count Fix** - Resolved caching issue showing incorrect count
+- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
+
+### Version 2.3 (November 24, 2025) 📊
+
+**🆕 New in Version 2.3:**
+- ✅ **Event Count Display** - Shows number of events in current month
+- ✅ **Multi-Date Event Creation** - Create same show across multiple dates
+- ✅ **Enhanced Event Editing** - Edit dates and extend events to multiple days
+
+### Version 2.2 (November 14, 2025) 📥
 
 **🆕 New in Version 2.2:**
 - ✅ **CSV Export** - Export events for any specific month/year
 - ✅ **Month/Year Selector** - Easy dropdown selection for export period
 - ✅ **Auto-formatted Filenames** - Downloads as `NCPA_Events_MonthName_Year.csv`
 - ✅ **Complete Data Export** - All fields included (Date, Program, Venue, Team, Sound Requirements, Call Time, Crew)
-- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
 
 ### Version 2.1 (November 14, 2025) 🔒
 
@@ -704,7 +719,7 @@ Developed for: **NCPA Sound Crew**
 ---
 
 **Last Updated:** November 14, 2025
-**Status:** ✅ Version 2.2 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Status:** ✅ Version 2.3.2 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
 **Latest Features:** 
 - 📥 CSV Export for any month/year
 - 🔒 Smart duplicate detection protects your manual entries

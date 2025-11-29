@@ -1728,7 +1728,7 @@ app.get('/', (c) => {
                                 <option value="TET">Tata Theatre</option>
                                 <option value="GDT">Godrej Dance Theatre</option>
                                 <option value="LT">Little Theatre</option>
-                                <option value="SVR">Sriram V. Rai Hall</option>
+                                <option value="SVR">Sea View Room</option>
                                 <option value="TT">Tata Theatre</option>
                                 <option value="Experimental Theatre">Experimental Theatre</option>
                             </datalist>
@@ -1766,8 +1766,20 @@ app.get('/', (c) => {
                                    placeholder="Select or type crew name">
                             <datalist id="crewList">
                                 <option value="Ashwin">Ashwin</option>
-                                <option value="Team A">Team A</option>
-                                <option value="Sound 1">Sound 1</option>
+                                <option value="Naren">Naren</option>
+                                <option value="Sandeep">Sandeep</option>
+                                <option value="Coni">Coni</option>
+                                <option value="Nikhil">Nikhil</option>
+                                <option value="NS">NS</option>
+                                <option value="Aditya">Aditya</option>
+                                <option value="Viraj">Viraj</option>
+                                <option value="Shridhar">Shridhar</option>
+                                <option value="Nazar">Nazar</option>
+                                <option value="Omkar">Omkar</option>
+                                <option value="Akshay">Akshay</option>
+                                <option value="OC1">OC1 (Outside Crew 1)</option>
+                                <option value="OC2">OC2 (Outside Crew 2)</option>
+                                <option value="OC3">OC3 (Outside Crew 3)</option>
                             </datalist>
                         </div>
                     </div>

@@ -1754,6 +1754,89 @@ function convertEventsToCSV(events) {
 }
 
 // ============================================
+// EXCEL EXPORT
+// ============================================
+
+async function generateExcelExport() {
+  const month = document.getElementById('csvExportMonth').value;
+  const year = document.getElementById('csvExportYear').value;
+  
+  if (!month || !year) {
+    showNotification('Please select month and year', 'error');
+    return;
+  }
+  
+  try {
+    // Calculate date range for the month
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    // Fetch events for this month
+    showNotification('Fetching events...', 'info');
+    const response = await axios.get(`${API_BASE}/events/range?start=${startDate}&end=${endDate}`);
+    
+    if (!response.data.success || !response.data.data || response.data.data.length === 0) {
+      showNotification('No events found for this month', 'warning');
+      return;
+    }
+    
+    const events = response.data.data;
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    
+    // Prepare data for Excel
+    const worksheetData = [
+      ['Date', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Crew']
+    ];
+    
+    events.forEach(event => {
+      worksheetData.push([
+        event.event_date || '',
+        event.program || '',
+        event.venue || '',
+        event.team || '',
+        event.sound_requirements || '',
+        event.call_time || '',
+        event.crew || ''
+      ]);
+    });
+    
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 12 },  // Date
+      { wch: 50 },  // Program
+      { wch: 10 },  // Venue
+      { wch: 20 },  // Team
+      { wch: 30 },  // Sound Requirements
+      { wch: 10 },  // Call Time
+      { wch: 20 }   // Crew
+    ];
+    
+    // Add worksheet to workbook
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNames[parseInt(month) - 1];
+    
+    XLSX.utils.book_append_sheet(wb, ws, `${monthName} ${year}`);
+    
+    // Generate Excel file and download
+    XLSX.writeFile(wb, `NCPA_Events_${monthName}_${year}.xlsx`);
+    
+    showNotification(`✅ Downloaded ${events.length} events for ${monthName} ${year}`, 'success');
+    closeCSVExportModal();
+    
+  } catch (error) {
+    console.error('Excel export error:', error);
+    showNotification(`Failed to export Excel: ${error.message}`, 'error');
+  }
+}
+
+// ============================================
 // AI ASSISTANT
 // ============================================
 

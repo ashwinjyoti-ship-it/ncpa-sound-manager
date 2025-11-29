@@ -1529,10 +1529,10 @@ app.get('/', (c) => {
                             <i class="fab fa-whatsapp mr-1.5"></i>Export
                         </button>
                         
-                        <!-- CSV Export -->
+                        <!-- Export -->
                         <button onclick="openCSVExportModal()" 
                                 class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
-                            <i class="fas fa-file-download mr-1.5"></i>Export CSV
+                            <i class="fas fa-file-download mr-1.5"></i>Export
                         </button>
                         
                         <!-- Word Upload -->
@@ -1720,13 +1720,34 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
-                            <input type="text" name="venue" required 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="venue" required list="venueList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type venue">
+                            <datalist id="venueList">
+                                <option value="JBT">Jamshed Bhabha Theatre</option>
+                                <option value="TET">Tata Theatre</option>
+                                <option value="GDT">Godrej Dance Theatre</option>
+                                <option value="LT">Little Theatre</option>
+                                <option value="SVR">Sriram V. Rai Hall</option>
+                                <option value="TT">Tata Theatre</option>
+                                <option value="Experimental Theatre">Experimental Theatre</option>
+                            </datalist>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
-                            <input type="text" name="team" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="team" list="teamList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type team name">
+                            <datalist id="teamList">
+                                <option value="Bruce/Rajeshr">Bruce/Rajeshr</option>
+                                <option value="Bruce/Team">Bruce/Team</option>
+                                <option value="Bruce/Binalfar">Bruce/Binalfar</option>
+                                <option value="Farahnaz & Team">Farahnaz & Team</option>
+                                <option value="Nooshir/Team">Nooshir/Team</option>
+                                <option value="Dr. Rao/Team">Dr. Rao/Team</option>
+                                <option value="Dr. Swapni/Team">Dr. Swapni/Team</option>
+                                <option value="Bianca/Team">Bianca/Team</option>
+                            </datalist>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
@@ -1740,8 +1761,14 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Crew (sound team)</label>
-                            <input type="text" name="crew" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="crew" list="crewList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type crew name">
+                            <datalist id="crewList">
+                                <option value="Ashwin">Ashwin</option>
+                                <option value="Team A">Team A</option>
+                                <option value="Sound 1">Sound 1</option>
+                            </datalist>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
@@ -1820,13 +1847,15 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
-                            <input type="text" name="venue" id="editVenue" required 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="venue" id="editVenue" required list="venueList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type venue">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
-                            <input type="text" name="team" id="editTeam"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="team" id="editTeam" list="teamList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type team name">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
@@ -1840,8 +1869,9 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Crew (sound team)</label>
-                            <input type="text" name="crew" id="editCrew"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                            <input type="text" name="crew" id="editCrew" list="crewList"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   placeholder="Select or type crew name">
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
@@ -1930,7 +1960,7 @@ app.get('/', (c) => {
             <div class="modal-content" style="max-width: 500px;">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold" style="color: #FF6B35;">
-                        <i class="fas fa-file-download mr-2"></i>Export CSV
+                        <i class="fas fa-file-download mr-2"></i>Export Events
                     </h2>
                     <button onclick="closeCSVExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
@@ -1941,7 +1971,7 @@ app.get('/', (c) => {
                     <div class="grid grid-cols-1 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Month:</label>
-                            <select id="csvExportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            <select id="csvExportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                                 <option value="1">January</option>
                                 <option value="2">February</option>
                                 <option value="3">March</option>
@@ -1959,7 +1989,7 @@ app.get('/', (c) => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Year:</label>
-                            <select id="csvExportYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600">
+                            <select id="csvExportYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                                 <option value="2024">2024</option>
                                 <option value="2025" selected>2025</option>
                                 <option value="2026">2026</option>
@@ -1967,10 +1997,16 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     
-                    <button onclick="generateCSVExport()" 
-                            class="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
-                        <i class="fas fa-download mr-2"></i>Download CSV
-                    </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="generateCSVExport()" 
+                                class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all">
+                            <i class="fas fa-file-csv mr-2"></i>CSV
+                        </button>
+                        <button onclick="generateExcelExport()" 
+                                class="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                            <i class="fas fa-file-excel mr-2"></i>Excel
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2045,7 +2081,8 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=2.3.2"></script>
+        <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
+        <script src="/static/app.js?v=2.3.3"></script>
     </body>
     </html>
   `)

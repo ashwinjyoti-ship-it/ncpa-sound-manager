@@ -1385,8 +1385,8 @@ app.get('/', (c) => {
           }
           
           .tab-active {
-            border-bottom: 3px solid #8B4513;
-            color: #8B4513;
+            border-bottom: 3px solid #FF6B35;
+            color: #FF6B35;
           }
           
           .event-card-green {
@@ -1436,7 +1436,7 @@ app.get('/', (c) => {
           table th {
             position: sticky;
             top: 0;
-            background-color: #8B4513;
+            background-color: #FF6B35;
             color: white;
             z-index: 10;
           }
@@ -1473,7 +1473,7 @@ app.get('/', (c) => {
             height: 20px;
             border: 3px solid rgba(139, 69, 19, 0.3);
             border-radius: 50%;
-            border-top-color: #8B4513;
+            border-top-color: #FF6B35;
             animation: spin 1s ease-in-out infinite;
           }
           
@@ -1487,7 +1487,7 @@ app.get('/', (c) => {
             <!-- Header -->
             <header class="bg-white shadow-md">
                 <div class="container mx-auto px-6 py-4">
-                    <h1 class="text-3xl font-bold text-center" style="color: #8B4513;">
+                    <h1 class="text-3xl font-bold text-center" style="color: #FF6B35;">
                         <i class="fas fa-music mr-2"></i>
                         NCPA Sound Crew
                     </h1>
@@ -1508,7 +1508,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <!-- Event Count Display -->
-                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
+                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 bg-orange-50 rounded-lg border border-orange-200">
                         <i class="fas fa-calendar-check mr-2 text-blue-600"></i>
                         <span class="text-sm font-semibold text-blue-800">
                             <span id="eventCount">0</span> events this month
@@ -1525,13 +1525,13 @@ app.get('/', (c) => {
                         
                         <!-- WhatsApp Export -->
                         <button onclick="openWhatsAppExportModal()" 
-                                class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                                class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
                             <i class="fab fa-whatsapp mr-1.5"></i>Export
                         </button>
                         
                         <!-- CSV Export -->
                         <button onclick="openCSVExportModal()" 
-                                class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                                class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
                             <i class="fas fa-file-download mr-1.5"></i>Export CSV
                         </button>
                         
@@ -1552,7 +1552,7 @@ app.get('/', (c) => {
                         <!-- Add Show -->
                         <button onclick="openAddShowModal()" 
                                 class="px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
-                                style="background-color: #8B4513;">
+                                style="background-color: #FF6B35;">
                             <i class="fas fa-plus mr-1.5"></i>Add Show
                         </button>
                     </div>
@@ -1565,7 +1565,7 @@ app.get('/', (c) => {
                         <button onclick="changeMonth(-1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
                             <i class="fas fa-chevron-left"></i> Previous
                         </button>
-                        <h2 id="currentMonthYear" class="text-2xl font-bold" style="color: #8B4513;"></h2>
+                        <h2 id="currentMonthYear" class="text-2xl font-bold" style="color: #FF6B35;"></h2>
                         <button onclick="changeMonth(1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
                             Next <i class="fas fa-chevron-right"></i>
                         </button>
@@ -1630,7 +1630,7 @@ app.get('/', (c) => {
                                 <col style="width: 7%;">   <!-- Actions -->
                             </colgroup>
                             <thead>
-                                <tr style="background-color: #8B4513;">
+                                <tr style="background-color: #FF6B35;">
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Date</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Program/Event</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Venue</th>
@@ -1654,7 +1654,7 @@ app.get('/', (c) => {
         <div id="eventModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">Event Details</h2>
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Event Details</h2>
                     <button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <div id="eventModalContent"></div>
@@ -1665,7 +1665,7 @@ app.get('/', (c) => {
         <div id="addShowModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">Add New Show</h2>
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Add New Show</h2>
                     <button onclick="closeAddShowModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="addShowForm" onsubmit="handleAddShow(event)">
@@ -1751,7 +1751,7 @@ app.get('/', (c) => {
                         </button>
                         <button type="submit" 
                                 class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
-                                style="background-color: #8B4513;">
+                                style="background-color: #FF6B35;">
                             Add Show
                         </button>
                     </div>
@@ -1763,7 +1763,7 @@ app.get('/', (c) => {
         <div id="editEventModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">Edit Event</h2>
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Edit Event</h2>
                     <button onclick="closeEditEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="editEventForm" onsubmit="handleEditEvent(event)">
@@ -1851,7 +1851,7 @@ app.get('/', (c) => {
                         </button>
                         <button type="submit" 
                                 class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
-                                style="background-color: #8B4513;">
+                                style="background-color: #FF6B35;">
                             Save Changes
                         </button>
                     </div>
@@ -1862,7 +1862,7 @@ app.get('/', (c) => {
         <!-- Delete Confirmation Modal -->
         <div id="deleteConfirmModal" class="modal">
             <div class="modal-content" style="max-width: 400px;">
-                <h2 class="text-xl font-bold mb-4" style="color: #8B4513;">Delete Event</h2>
+                <h2 class="text-xl font-bold mb-4" style="color: #FF6B35;">Delete Event</h2>
                 <p class="text-gray-700 mb-6" id="deleteConfirmMessage">Are you sure you want to delete this event?</p>
                 <div class="flex justify-end space-x-3">
                     <button onclick="closeDeleteConfirm()" 
@@ -1881,7 +1881,7 @@ app.get('/', (c) => {
         <div id="whatsappExportModal" class="modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
                         <i class="fab fa-whatsapp mr-2"></i>Export for WhatsApp
                     </h2>
                     <button onclick="closeWhatsAppExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -1890,10 +1890,10 @@ app.get('/', (c) => {
                 <div class="space-y-4 mb-6">
                     <p class="text-gray-600">Select a time range to export events:</p>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="exportTomorrow()" class="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                        <button onclick="exportTomorrow()" class="px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
                             <i class="fas fa-calendar-day mr-2"></i>Tomorrow
                         </button>
-                        <button onclick="exportThisWeek()" class="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                        <button onclick="exportThisWeek()" class="px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
                             <i class="fas fa-calendar-week mr-2"></i>This Week
                         </button>
                         <button onclick="exportNextWeek()" class="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
@@ -1916,7 +1916,7 @@ app.get('/', (c) => {
                 <div id="exportPreview" style="display: none;">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-semibold text-gray-700">Preview:</h3>
-                        <button onclick="copyToClipboard()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                        <button onclick="copyToClipboard()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
                             <i class="fas fa-copy mr-2"></i>Copy to Clipboard
                         </button>
                     </div>
@@ -1929,7 +1929,7 @@ app.get('/', (c) => {
         <div id="csvExportModal" class="modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
                         <i class="fas fa-file-download mr-2"></i>Export CSV
                     </h2>
                     <button onclick="closeCSVExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -1968,7 +1968,7 @@ app.get('/', (c) => {
                     </div>
                     
                     <button onclick="generateCSVExport()" 
-                            class="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all">
+                            class="w-full px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
                         <i class="fas fa-download mr-2"></i>Download CSV
                     </button>
                 </div>
@@ -1985,7 +1985,7 @@ app.get('/', (c) => {
         <div id="aiAssistantModal" class="modal">
             <div class="modal-content" style="max-width: 700px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #8B4513;">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
                         <i class="fas fa-robot mr-2"></i>AI Assistant
                     </h2>
                     <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -1994,10 +1994,10 @@ app.get('/', (c) => {
                 <div class="mb-6">
                     <p class="text-gray-600 mb-4">Ask me anything about your events! Try these examples:</p>
                     <div class="grid grid-cols-2 gap-2 mb-4">
-                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 text-left">
+                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-left">
                             📅 Events tomorrow
                         </button>
-                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm bg-green-50 text-green-700 rounded-lg hover:bg-green-100 text-left">
+                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-left">
                             🏛️ Events at Tata Theatre
                         </button>
                         <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left">
@@ -2045,7 +2045,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=1.6.3"></script>
+        <script src="/static/app.js?v=2.3.2"></script>
     </body>
     </html>
   `)

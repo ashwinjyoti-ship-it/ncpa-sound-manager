@@ -1381,7 +1381,7 @@ app.get('/', (c) => {
         <style>
           body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #f9f7f4;
+            background-color: #FFF8DC;
           }
           
           .tab-active {
@@ -1390,18 +1390,21 @@ app.get('/', (c) => {
           }
           
           .event-card-green {
-            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            background: #FFFFFF;
             border-left: 4px solid #28a745;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           }
           
           .event-card-peach {
-            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-            border-left: 4px solid #ffc107;
+            background: #FFFFFF;
+            border-left: 4px solid #FF6B35;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
           }
           
           .calendar-day {
             min-height: 120px;
-            border: 1px solid #e0e0e0;
+            border: 1px solid #E8E8E8;
+            background-color: #FFFFFF;
           }
           
           .modal {
@@ -1482,10 +1485,10 @@ app.get('/', (c) => {
           }
         </style>
     </head>
-    <body class="bg-gray-50">
+    <body style="background-color: #FFF8DC;">
         <div class="min-h-screen">
             <!-- Header -->
-            <header class="bg-white shadow-md">
+            <header class="shadow-md" style="background-color: #FFF8DC; border-bottom: 2px solid #FFE4B5;">
                 <div class="container mx-auto px-6 py-4">
                     <h1 class="text-3xl font-bold text-center" style="color: #FF6B35;">
                         <i class="fas fa-music mr-2"></i>
@@ -1508,9 +1511,9 @@ app.get('/', (c) => {
                     </div>
                     
                     <!-- Event Count Display -->
-                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 bg-orange-50 rounded-lg border border-orange-200">
-                        <i class="fas fa-calendar-check mr-2 text-blue-600"></i>
-                        <span class="text-sm font-semibold text-blue-800">
+                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 rounded-lg" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
+                        <i class="fas fa-calendar-check mr-2" style="color: #FF6B35;"></i>
+                        <span class="text-sm font-semibold" style="color: #FF6B35;">
                             <span id="eventCount">0</span> events this month
                         </span>
                     </div>
@@ -1559,27 +1562,27 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Calendar View -->
-                <div id="calendarView" class="bg-white rounded-lg shadow-lg p-6">
+                <div id="calendarView" class="rounded-lg p-6" style="background-color: #FFFFFF;">
                     <!-- Calendar controls -->
                     <div class="flex justify-between items-center mb-6">
-                        <button onclick="changeMonth(-1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <button onclick="changeMonth(-1)" class="px-3 py-1.5 text-sm rounded-lg" style="background-color: #FFE4B5; color: #8B4513;">
                             <i class="fas fa-chevron-left"></i> Previous
                         </button>
                         <h2 id="currentMonthYear" class="text-2xl font-bold" style="color: #FF6B35;"></h2>
-                        <button onclick="changeMonth(1)" class="px-3 py-1.5 text-sm bg-gray-200 rounded-lg hover:bg-gray-300">
+                        <button onclick="changeMonth(1)" class="px-3 py-1.5 text-sm rounded-lg" style="background-color: #FFE4B5; color: #8B4513;">
                             Next <i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
                     
                     <!-- Calendar grid -->
                     <div class="grid grid-cols-7 gap-2">
-                        <div class="font-bold text-center py-2 bg-gray-100">Sun</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Mon</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Tue</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Wed</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Thu</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Fri</div>
-                        <div class="font-bold text-center py-2 bg-gray-100">Sat</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">SUN</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">MON</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">TUE</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">WED</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">THU</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">FRI</div>
+                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">SAT</div>
                     </div>
                     <div id="calendarGrid" class="grid grid-cols-7 gap-2 mt-2"></div>
                 </div>
@@ -2094,7 +2097,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=2.4.2"></script>
+        <script src="/static/app.js?v=2.4.3"></script>
     </body>
     </html>
   `)

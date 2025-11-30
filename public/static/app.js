@@ -112,7 +112,8 @@ function renderCalendar() {
   
   // Get events for this month
   const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-  const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0];
+  // Fix: Use daysInMonth to get last day of current month, not previous month
+  const endDate = new Date(year, month, daysInMonth).toISOString().split('T')[0];
   
   // Filter events and count unique ones only (by ID)
   const monthEvents = allEvents.filter(event => {

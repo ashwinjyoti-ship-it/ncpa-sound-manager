@@ -15,13 +15,11 @@
   ],
   "ai": {
     "binding": "AI"
-  }
-  // Vectorize temporarily disabled until token permissions updated
-  // Uncomment after creating index:
-  // "vectorize": [
-  //   {
-  //     "binding": "VECTORIZE",
-  //     "index_name": "ncpa-events-index"
-  //   }
-  // ]
+  },
+  "vectorize": [
+    {
+      "binding": "VECTORIZE",
+      "index_name": "ncpa-events-index"
+    }
+  ]
 }

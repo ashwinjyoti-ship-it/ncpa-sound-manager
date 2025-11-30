@@ -1,0 +1,389 @@
+// RAG Query Endpoint - Version 4.0
+// Natural Language Search + Smart Analytics + Predictive Insights
+
+import type { Context } from 'hono'
+import type {
+  Env,
+  Event,
+  RAGQueryRequest,
+  RAGQueryResponse,
+  ExtractedEntities,
+  ClaudeSonnetRequest,
+  ClaudeSonnetResponse
+} from './types'
+import {
+  extractEntities,
+  semanticSearch,
+  getCrewWorkload,
+  getVenueStats,
+  predictAvailability,
+  formatRAGResponse,
+  resolveVenueName
+} from './rag-utils'
+
+export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
+  const startTime = Date.now()
+  
+  try {
+    const body: RAGQueryRequest = await c.req.json()
+    const { query, session_id, include_analytics = true, include_predictions = true, max_results = 50 } = body
+    
+    if (!query) {
+      return c.json({ success: false, error: 'Query is required' }, 400)
+    }
+    
+    const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substring(7)}`
+    const apiKey = c.env.ANTHROPIC_API_KEY
+    
+    // ============================================
+    // STEP 1: Load Conversation History
+    // ============================================
+    const history = await c.env.DB.prepare(`
+      SELECT user_query, ai_response 
+      FROM conversation_history 
+      WHERE session_id = ? AND success = 1
+      ORDER BY created_at DESC 
+      LIMIT 3
+    `).bind(sessionId).all()
+    
+    const conversationHistory = history.results.map((h: any) => ({
+      user: h.user_query,
+      assistant: JSON.parse(h.ai_response).answer || ''
+    })).reverse() // Oldest first
+    
+    // ============================================
+    // STEP 2: Extract Entities with Claude Sonnet 4
+    // ============================================
+    console.log('🧠 Extracting entities...')
+    const entities: ExtractedEntities = await extractEntities(
+      query,
+      apiKey,
+      conversationHistory
+    )
+    console.log('✅ Entities:', JSON.stringify(entities))
+    
+    // ============================================
+    // STEP 3: Resolve Venue Names
+    // ============================================
+    if (entities.venue) {
+      const canonical = await resolveVenueName(entities.venue, c.env.DB)
+      if (canonical) {
+        entities.venue = canonical
+      }
+    }
+    
+    // ============================================
+    // STEP 4: Semantic Search (if Vectorize available)
+    // ============================================
+    let semanticEventIds: number[] = []
+    let vectorize_used = false
+    
+    try {
+      if (c.env.VECTORIZE) {
+        console.log('🔍 Performing semantic search...')
+        semanticEventIds = await semanticSearch(query, entities, c.env, max_results)
+        vectorize_used = true
+        console.log(`✅ Found ${semanticEventIds.length} semantic matches`)
+      }
+    } catch (error) {
+      console.log('⚠️ Vectorize not available, using SQL fallback')
+    }
+    
+    // ============================================
+    // STEP 5: SQL Fallback Query
+    // ============================================
+    let sqlQuery = 'SELECT * FROM events WHERE 1=1'
+    const sqlParams: any[] = []
+    
+    // Date filters
+    if (entities.start_date && entities.end_date) {
+      sqlQuery += ' AND event_date >= ? AND event_date <= ?'
+      sqlParams.push(entities.start_date, entities.end_date)
+    } else if (entities.date) {
+      sqlQuery += ' AND event_date = ?'
+      sqlParams.push(entities.date)
+    } else if (entities.month) {
+      sqlQuery += ` AND strftime('%Y-%m', event_date) = ?`
+      sqlParams.push(entities.month)
+    } else if (entities.year) {
+      sqlQuery += ` AND strftime('%Y', event_date) = ?`
+      sqlParams.push(entities.year)
+    } else {
+      // Default: last 3 months + next 6 months
+      const threeMonthsAgo = new Date()
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+      const sixMonthsAhead = new Date()
+      sixMonthsAhead.setMonth(sixMonthsAhead.getMonth() + 6)
+      
+      sqlQuery += ' AND event_date >= ? AND event_date <= ?'
+      sqlParams.push(
+        threeMonthsAgo.toISOString().split('T')[0],
+        sixMonthsAhead.toISOString().split('T')[0]
+      )
+    }
+    
+    // Venue filter
+    if (entities.venue) {
+      sqlQuery += ' AND venue LIKE ?'
+      sqlParams.push(`%${entities.venue}%`)
+    }
+    
+    // Crew filter
+    if (entities.crew) {
+      const crewNames = entities.crew.split(',').map(c => c.trim())
+      const crewConditions = crewNames.map(() => 'crew LIKE ?').join(' OR ')
+      sqlQuery += ` AND (${crewConditions})`
+      crewNames.forEach(crew => sqlParams.push(`%${crew}%`))
+    }
+    
+    // Program filter
+    if (entities.program) {
+      sqlQuery += ' AND program LIKE ?'
+      sqlParams.push(`%${entities.program}%`)
+    }
+    
+    // Semantic ranking (if available)
+    if (vectorize_used && semanticEventIds.length > 0) {
+      sqlQuery += ` AND id IN (${semanticEventIds.join(',')})`
+    }
+    
+    sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results}`
+    
+    console.log('📊 Executing SQL:', sqlQuery.substring(0, 200))
+    const eventsResult = await c.env.DB.prepare(sqlQuery).bind(...sqlParams).all()
+    const events = eventsResult.results as Event[]
+    
+    console.log(`✅ Retrieved ${events.length} events`)
+    
+    // ============================================
+    // STEP 6: Generate Analytics (if requested)
+    // ============================================
+    let insights: any = undefined
+    
+    if (include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')) {
+      console.log('📈 Generating analytics...')
+      
+      const dateRange = {
+        start: entities.start_date || events[0]?.event_date || '',
+        end: entities.end_date || events[events.length - 1]?.event_date || ''
+      }
+      
+      // Venue stats
+      const venueStats = await getVenueStats(dateRange.start, dateRange.end, c.env.DB)
+      const busiestVenue = Object.entries(venueStats).sort((a, b) => b[1] - a[1])[0]
+      
+      // Crew workload
+      const crewWorkload: Record<string, number> = {}
+      for (const event of events) {
+        const crewNames = event.crew.split(',').map(c => c.trim())
+        for (const crew of crewNames) {
+          crewWorkload[crew] = (crewWorkload[crew] || 0) + 1
+        }
+      }
+      const busiestCrew = Object.entries(crewWorkload).sort((a, b) => b[1] - a[1])[0]
+      
+      insights = {
+        total_events: events.length,
+        date_range: dateRange,
+        busiest_venue: busiestVenue?.[0],
+        busiest_crew: busiestCrew?.[0],
+        venue_stats: venueStats,
+        crew_workload: crewWorkload
+      }
+      
+      console.log('✅ Analytics generated')
+    }
+    
+    // ============================================
+    // STEP 7: Generate Predictions (if requested)
+    // ============================================
+    let predictions: any = undefined
+    
+    if (include_predictions && entities.intent === 'prediction') {
+      console.log('🔮 Generating predictions...')
+      
+      if (entities.venue && entities.start_date && entities.end_date) {
+        const freeDates = await predictAvailability(
+          entities.venue,
+          entities.start_date,
+          entities.end_date,
+          c.env.DB
+        )
+        
+        predictions = {
+          venue: entities.venue,
+          date_range: { start: entities.start_date, end: entities.end_date },
+          free_dates: freeDates,
+          free_date_count: freeDates.length,
+          next_available: freeDates[0] || null
+        }
+      }
+      
+      console.log('✅ Predictions generated')
+    }
+    
+    // ============================================
+    // STEP 8: Generate Natural Language Response with Claude Sonnet 4
+    // ============================================
+    console.log('🤖 Generating response with Claude Sonnet 4...')
+    
+    const systemPrompt = `You are an intelligent assistant for NCPA Sound Crew event management.
+
+CAPABILITIES:
+1. Natural language search across events
+2. Smart analytics (venue stats, crew workload)
+3. Predictive insights (availability, patterns)
+
+RESPONSE STYLE:
+- Professional but conversational
+- Provide insights, not just data
+- Highlight patterns and anomalies
+- Suggest actionable recommendations
+
+CURRENT DATE: ${new Date().toISOString().split('T')[0]}`
+
+    const contextPrompt = `
+USER QUERY: "${query}"
+
+EXTRACTED INTENT: ${entities.intent}
+EXTRACTED ENTITIES: ${JSON.stringify(entities)}
+
+MATCHING EVENTS (${events.length} results):
+${events.length > 0 ? JSON.stringify(events.slice(0, 10), null, 2) : 'No events found'}
+${events.length > 10 ? `\n... and ${events.length - 10} more events` : ''}
+
+${insights ? `\nANALYTICS INSIGHTS:\n${JSON.stringify(insights, null, 2)}` : ''}
+
+${predictions ? `\nPREDICTIVE INSIGHTS:\n${JSON.stringify(predictions, null, 2)}` : ''}
+
+CONVERSATION HISTORY:
+${conversationHistory.length > 0 
+  ? conversationHistory.map(h => `User: ${h.user}\nAssistant: ${h.assistant}`).join('\n\n')
+  : 'No previous conversation'}
+
+TASK:
+1. Analyze the data thoroughly
+2. Answer the user's question naturally
+3. Provide 2-3 key insights
+4. Give 2-3 actionable recommendations
+5. Keep response concise (3-4 paragraphs max)
+
+Your response should be helpful, insightful, and actionable.`
+
+    const request: ClaudeSonnetRequest = {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2048,
+      temperature: 0.7,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: contextPrompt
+        }
+      ]
+    }
+    
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(request)
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Claude API error: ${response.status}`)
+    }
+    
+    const claudeResult: ClaudeSonnetResponse = await response.json()
+    const answer = claudeResult.content[0].text.trim()
+    const tokenCount = claudeResult.usage.input_tokens + claudeResult.usage.output_tokens
+    
+    console.log(`✅ Response generated (${tokenCount} tokens)`)
+    
+    // ============================================
+    // STEP 9: Format Response
+    // ============================================
+    const recommendations: string[] = []
+    
+    // Auto-generate recommendations based on insights
+    if (insights?.crew_workload) {
+      const maxWorkload = Math.max(...Object.values(insights.crew_workload))
+      const minWorkload = Math.min(...Object.values(insights.crew_workload))
+      
+      if (maxWorkload > minWorkload * 2) {
+        recommendations.push('Consider balancing crew workload - some members are handling 2x more events')
+      }
+    }
+    
+    if (insights?.venue_stats) {
+      const totalEvents = Object.values(insights.venue_stats).reduce((a: any, b: any) => a + b, 0)
+      const venueCount = Object.keys(insights.venue_stats).length
+      
+      if (totalEvents > venueCount * 10) {
+        recommendations.push('High event volume detected - review scheduling capacity')
+      }
+    }
+    
+    const responseTime = Date.now() - startTime
+    
+    const ragResponse: RAGQueryResponse = {
+      success: true,
+      answer,
+      events,
+      insights,
+      recommendations: recommendations.length > 0 ? recommendations : undefined,
+      ...formatRAGResponse(answer, events, entities, insights, recommendations),
+      metadata: {
+        query_intent: entities.intent,
+        entities_extracted: entities,
+        vectorize_used,
+        claude_model: 'claude-sonnet-4-20250514',
+        response_time_ms: responseTime,
+        token_count: tokenCount
+      },
+      session_id: sessionId
+    }
+    
+    // ============================================
+    // STEP 10: Save to Conversation History
+    // ============================================
+    await c.env.DB.prepare(`
+      INSERT INTO conversation_history (
+        session_id, user_query, ai_response, context_used, 
+        entities_extracted, query_intent, token_count, 
+        response_time_ms, success
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind(
+      sessionId,
+      query,
+      JSON.stringify(ragResponse),
+      JSON.stringify({ event_count: events.length, insights, predictions }),
+      JSON.stringify(entities),
+      entities.intent,
+      tokenCount,
+      responseTime,
+      1
+    ).run()
+    
+    console.log(`✅ RAG Query completed in ${responseTime}ms`)
+    
+    return c.json(ragResponse)
+    
+  } catch (error: any) {
+    console.error('❌ RAG Query failed:', error)
+    
+    const responseTime = Date.now() - startTime
+    
+    return c.json({
+      success: false,
+      error: 'RAG query processing failed',
+      details: error.message,
+      metadata: {
+        response_time_ms: responseTime
+      }
+    }, 500)
+  }
+}

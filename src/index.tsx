@@ -1,9 +1,14 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
+import type { Env } from './types'
+import { handleRAGQuery } from './rag-endpoint'
+import { generateEventEmbedding } from './rag-utils'
 
 type Bindings = {
   DB: D1Database;
+  AI: any;
+  VECTORIZE: any;
   ANTHROPIC_API_KEY: string;
 }
 
@@ -134,10 +139,42 @@ app.post('/api/events', async (c) => {
       requirements_updated
     ).run()
     
+    const eventId = result.meta.last_row_id
+    
+    // Generate embedding for semantic search (Version 4.0)
+    try {
+      if (c.env.AI && c.env.VECTORIZE) {
+        const event = { id: eventId, event_date, program, venue, team, sound_requirements, call_time, crew, created_at: new Date().toISOString() }
+        const { text, vector, metadata } = await generateEventEmbedding(event, c.env.AI)
+        
+        // Store in Vectorize
+        await c.env.VECTORIZE.insert([{
+          id: `event-${eventId}`,
+          values: vector,
+          metadata
+        }])
+        
+        // Store embedding metadata in DB
+        await c.env.DB.prepare(`
+          INSERT INTO event_embeddings (event_id, embedding_text, metadata_json, vector_id)
+          VALUES (?, ?, ?, ?)
+        `).bind(eventId, text, JSON.stringify(metadata), `event-${eventId}`).run()
+        
+        // Update event with embedding_id
+        await c.env.DB.prepare(`
+          UPDATE events SET embedding_id = ? WHERE id = ?
+        `).bind(`event-${eventId}`, eventId).run()
+        
+        console.log(`✅ Generated embedding for event ${eventId}`)
+      }
+    } catch (embError) {
+      console.warn('⚠️ Embedding generation failed (non-critical):', embError)
+    }
+    
     return c.json({ 
       success: true, 
       data: { 
-        id: result.meta.last_row_id,
+        id: eventId,
         event_date,
         program,
         venue,
@@ -491,7 +528,12 @@ function classifyIntent(query: string, pastContext: any[]) {
   }
 }
 
-// AI Query endpoint - Intelligent data analysis with Claude
+// ============================================
+// RAG QUERY ENDPOINT (Version 4.0 - Claude Sonnet 4 + Vectorize)
+// ============================================
+app.post('/api/ai/rag', handleRAGQuery)
+
+// AI Query endpoint - Intelligent data analysis with Claude (Legacy)
 app.post('/api/ai/query', async (c) => {
   try {
     const body = await c.req.json()

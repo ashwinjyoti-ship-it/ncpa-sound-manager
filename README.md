@@ -622,21 +622,55 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 2.4 (Current - November 29, 2025) 📊✨
+### Version 3.0 (Current - November 30, 2025) 🎉✨ **STABLE RELEASE**
 
-**🆕 New in Version 2.4:**
-- ✅ **Excel Export (.xlsx)** - Direct Excel file export with professional formatting
-  - Auto-fit columns for better readability
-  - No import issues - opens directly in Excel
-  - SheetJS library integration (client-side processing)
-- ✅ **Autocomplete Dropdowns** - Smart autocomplete for common values
-  - Venue: JBT, TET, GDT, LT, SVR, TT, Experimental Theatre
-  - Team: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
-  - Crew: Ashwin, Team A, Sound 1
-  - Custom text entry still allowed - type anything you need
-- ✅ **Improved Export UI** - Choose between CSV or Excel format
-- ✅ **Better Data Entry** - Faster event creation with suggested values
-- ✅ **DEPLOYED TO PRODUCTION** - Live at https://ncpa-sound.pages.dev 🚀
+**🆕 Major Features in Version 3.0:**
+
+1. **Multiple Crew Selection** 🎯
+   - Select multiple crew members via checkbox interface
+   - 15 crew members available: Ashwin, Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3
+   - Custom crew input for non-listed names
+   - Crew values automatically joined with commas
+   - Smart parsing of existing crew assignments
+   - 3-column scrollable grid layout
+
+2. **Warm Orange/Cream UI Theme** 🎨
+   - Professional cream/cornsilk background (#FFF8DC)
+   - Warm orange accents (#FF6B35)
+   - Brown text highlights (#8B4513)
+   - Clean white calendar cards
+   - Consistent color palette throughout
+   - Matches professional event management design
+
+3. **Excel Export (.xlsx)** 📊
+   - Direct Excel file export with professional formatting
+   - Auto-fit columns for better readability
+   - No import issues - opens directly in Excel
+   - SheetJS library integration (client-side processing)
+
+4. **Smart Autocomplete Dropdowns** ⚡
+   - Venue: JBT, TET, GDT, LT, SVR (Sea View Room), Experimental Theatre
+   - Team: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
+   - Crew: All 15 crew members with custom text option
+   - Custom text entry still allowed - type anything you need
+
+5. **Bug Fixes & Improvements** 🔧
+   - Fixed Excel export CSP issues
+   - Fixed event count calculation (date range bug)
+   - Improved duplicate detection
+   - Better cache management
+
+**Status:** ✅ **STABLE PRODUCTION RELEASE** - Live at https://ncpa-sound.pages.dev 🚀
+
+---
+
+### Version 2.4 (November 29, 2025) 📊
+
+**Features in Version 2.4:**
+- Excel Export (.xlsx) with professional formatting
+- Autocomplete Dropdowns for common values
+- Improved Export UI (CSV + Excel options)
+- Better data entry workflow
 
 ### Version 2.3.2 (November 29, 2025) 🎨
 
@@ -744,7 +778,7 @@ Developed for: **NCPA Sound Crew**
 ---
 
 **Last Updated:** November 14, 2025
-**Status:** ✅ Version 2.4 Active - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
+**Status:** ✅ **Version 3.0 STABLE** - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀
 **Latest Features:** 
 - 📥 CSV Export for any month/year
 - 🔒 Smart duplicate detection protects your manual entries

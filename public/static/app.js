@@ -1912,84 +1912,99 @@ async function askAI(predefinedQuery) {
   // Show loading
   document.getElementById('aiResponse').style.display = 'block';
   document.getElementById('aiLoading').style.display = 'inline-block';
-  document.getElementById('aiExplanation').textContent = 'Thinking...';
+  document.getElementById('aiExplanation').textContent = 'Thinking with AI...';
   document.getElementById('aiResultsContainer').innerHTML = '';
   
   try {
-    const response = await axios.post(`${API_BASE}/ai/query`, { 
+    // Use new RAG endpoint (Version 4.0)
+    const response = await axios.post(`${API_BASE}/ai/rag`, { 
       query,
-      session_id: aiSessionId
+      session_id: aiSessionId,
+      include_analytics: true,
+      include_predictions: true,
+      max_results: 50
     });
     
     if (response.data.success) {
-      const { data, explanation, query: sqlQuery, clarification_needed, question } = response.data;
+      // RAG response format
+      const { answer, events, insights, recommendations, follow_up_queries, metadata } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
       
-      // Handle clarification requests
-      if (clarification_needed && question) {
-        document.getElementById('aiExplanation').textContent = '🤔 Need more information';
-        document.getElementById('aiResultsContainer').innerHTML = `
-          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-            <div class="flex items-start">
-              <div class="flex-shrink-0">
-                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
-                </svg>
-              </div>
-              <div class="ml-3 flex-1">
-                <p class="text-sm text-blue-700 whitespace-pre-line">${question}</p>
-              </div>
-            </div>
-          </div>
-        `;
-        return;
-      }
-      
-      // Show explanation with learning indicator
-      const learningBadge = response.data.learned ? ' 🧠 <span class="text-xs text-green-600">(Learning applied)</span>' : '';
-      document.getElementById('aiExplanation').innerHTML = (explanation || `Found ${data.length} results`) + learningBadge;
+      // Show natural language answer
+      const vectorizeBadge = metadata?.vectorize_used ? ' 🔍 <span class="text-xs text-green-600">(Semantic search)</span>' : '';
+      document.getElementById('aiExplanation').innerHTML = answer + vectorizeBadge;
       
       // Display results
-      if (data.length === 0) {
-        document.getElementById('aiResultsContainer').innerHTML = '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
+      let resultsHTML = '';
+      
+      if (!events || events.length === 0) {
+        resultsHTML = '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
       } else {
-        // Render as table
-        let tableHTML = '<table class="w-full text-sm border-collapse"><thead><tr style="background-color: #8B4513;">';
+        // Show event count
+        resultsHTML += `<div class="mb-4 text-sm text-gray-600">Found ${events.length} events</div>`;
         
-        // Get column names from first result
-        const columns = Object.keys(data[0]);
-        columns.forEach(col => {
-          tableHTML += `<th class="px-3 py-2 text-left text-white font-semibold">${col}</th>`;
+        // Render events as cards (mobile-friendly)
+        resultsHTML += '<div class="space-y-3">';
+        events.forEach((event, index) => {
+          resultsHTML += `
+            <div class="border border-gray-200 rounded-lg p-4 hover:bg-orange-50 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="font-semibold text-gray-900">${formatDate(event.event_date).replace(/,\\s*\\d{4}/, '')}</div>
+                <div class="text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded">${event.venue}</div>
+              </div>
+              <div class="text-gray-800 mb-2">${event.program || 'No title'}</div>
+              ${event.crew ? `<div class="text-sm text-gray-600"><strong>Crew:</strong> ${event.crew}</div>` : ''}
+              ${event.call_time ? `<div class="text-sm text-gray-600"><strong>Call Time:</strong> ${event.call_time}</div>` : ''}
+              ${event.sound_requirements ? `<div class="text-sm text-gray-600 mt-2"><strong>Sound:</strong> ${event.sound_requirements.substring(0, 100)}${event.sound_requirements.length > 100 ? '...' : ''}</div>` : ''}
+            </div>
+          `;
         });
-        tableHTML += '</tr></thead><tbody>';
+        resultsHTML += '</div>';
         
-        // Add data rows
-        data.forEach((row, index) => {
-          tableHTML += `<tr class="border-b ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
-          columns.forEach(col => {
-            let value = row[col];
-            
-            // Format dates
-            if (col === 'event_date' && value) {
-              value = formatDate(value).replace(/,\s*\d{4}/, '');
-            }
-            
-            // Format sound requirements with links
-            if (col === 'sound_requirements' && value) {
-              value = formatLinksInText(value);
-            }
-            
-            // Truncate long text
-            if (typeof value === 'string' && value.length > 100) {
-              value = value.substring(0, 97) + '...';
-            }
-            
-            tableHTML += `<td class="px-3 py-2">${value || ''}</td>`;
+        // Show insights if available
+        if (insights) {
+          resultsHTML += '<div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">';
+          resultsHTML += '<h4 class="font-semibold text-blue-900 mb-2">📊 Insights</h4>';
+          resultsHTML += '<ul class="text-sm text-blue-800 space-y-1">';
+          if (insights.busiest_venue) resultsHTML += `<li><strong>Busiest venue:</strong> ${insights.busiest_venue}</li>`;
+          if (insights.busiest_crew) resultsHTML += `<li><strong>Most active crew:</strong> ${insights.busiest_crew}</li>`;
+          if (insights.total_events) resultsHTML += `<li><strong>Total events:</strong> ${insights.total_events}</li>`;
+          resultsHTML += '</ul></div>';
+        }
+        
+        // Show recommendations if available
+        if (recommendations && recommendations.length > 0) {
+          resultsHTML += '<div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">';
+          resultsHTML += '<h4 class="font-semibold text-yellow-900 mb-2">💡 Recommendations</h4>';
+          resultsHTML += '<ul class="text-sm text-yellow-800 space-y-1 list-disc list-inside">';
+          recommendations.forEach(rec => {
+            resultsHTML += `<li>${rec}</li>`;
           });
-          tableHTML += '</tr>';
-        });
+          resultsHTML += '</ul></div>';
+        }
+        
+        // Show follow-up suggestions
+        if (follow_up_queries && follow_up_queries.length > 0) {
+          resultsHTML += '<div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">';
+          resultsHTML += '<h4 class="font-semibold text-gray-700 mb-2">💬 You might also ask:</h4>';
+          resultsHTML += '<div class="flex flex-wrap gap-2">';
+          follow_up_queries.forEach(followUp => {
+            resultsHTML += `<button onclick="askAI('${followUp.replace(/'/g, "\\'")}')}" class="text-xs px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-orange-50 hover:border-orange-300 transition-colors">${followUp}</button>`;
+          });
+          resultsHTML += '</div></div>';
+        }
+      }
+      
+      document.getElementById('aiResultsContainer').innerHTML = resultsHTML;
+      
+      // Log metadata for debugging
+      console.log('RAG metadata:', metadata);
+      
+      // Clear input after successful query
+      input.value = '';
+      
         tableHTML += '</tbody></table>';
         
         document.getElementById('aiResultsContainer').innerHTML = tableHTML;

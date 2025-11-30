@@ -8,7 +8,7 @@ import { generateEventEmbedding } from './rag-utils'
 type Bindings = {
   DB: D1Database;
   AI: any;
-  VECTORIZE: any;
+  VECTORIZE?: any; // Optional - falls back to SQL if not available
   ANTHROPIC_API_KEY: string;
 }
 

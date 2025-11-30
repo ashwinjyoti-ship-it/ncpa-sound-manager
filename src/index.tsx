@@ -4,6 +4,7 @@ import { serveStatic } from 'hono/cloudflare-workers'
 import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
 import { generateEventEmbedding } from './rag-utils'
+import { backfillEmbeddings } from './backfill-embeddings'
 
 type Bindings = {
   DB: D1Database;
@@ -532,6 +533,25 @@ function classifyIntent(query: string, pastContext: any[]) {
 // RAG QUERY ENDPOINT (Version 4.0 - Claude Sonnet 4 + Vectorize)
 // ============================================
 app.post('/api/ai/rag', handleRAGQuery)
+
+// ============================================
+// EMBEDDING BACKFILL ENDPOINT (Admin Only)
+// ============================================
+app.post('/api/admin/backfill-embeddings', async (c) => {
+  try {
+    const { batch_size } = await c.req.json().catch(() => ({ batch_size: 50 }))
+    
+    const result = await backfillEmbeddings(c, batch_size || 50)
+    
+    return c.json(result)
+  } catch (error: any) {
+    return c.json({
+      success: false,
+      error: 'Backfill failed',
+      details: error.message
+    }, 500)
+  }
+})
 
 // AI Query endpoint - Intelligent data analysis with Claude (Legacy)
 app.post('/api/ai/query', async (c) => {

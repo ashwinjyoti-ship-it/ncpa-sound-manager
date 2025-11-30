@@ -80,7 +80,12 @@ Q: "Compare Ashwin and Naren's workload in November"
 A: {"intent":"comparison","venue":null,"crew":"Ashwin,Naren","date":null,"start_date":"2025-11-01","end_date":"2025-11-30","month":"2025-11","year":"2025","program":null,"confidence":0.92}
 
 Q: "Busiest venue last month"
-A: {"intent":"analytics","venue":null,"crew":null,"date":null,"start_date":"2025-11-01","end_date":"2025-11-30","month":"2025-11","year":"2025","program":null,"confidence":0.88}`
+A: {"intent":"analytics","venue":null,"crew":null,"date":null,"start_date":"2025-11-01","end_date":"2025-11-30","month":"2025-11","year":"2025","program":null,"confidence":0.88}
+
+Q: "Free dates at TATA" (no time specified)
+A: {"intent":"availability","venue":"Tata Theatre","crew":null,"date":null,"start_date":"2025-12-01","end_date":"2025-12-31","month":"2025-12","year":"2025","program":null,"confidence":0.90}
+
+IMPORTANT: If no date is specified, default to current/next month only (not past months).`
 
   const request: ClaudeSonnetRequest = {
     model: 'claude-sonnet-4-20250514',
@@ -116,7 +121,28 @@ A: {"intent":"analytics","venue":null,"crew":null,"date":null,"start_date":"2025
     // Clean markdown if present
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
     
-    return JSON.parse(cleaned)
+    const entities: ExtractedEntities = JSON.parse(cleaned)
+    
+    // ============================================
+    // SMART DATE DEFAULTS: If no dates specified, use current month onwards
+    // ============================================
+    const now = new Date()
+    const currentMonth = now.toISOString().substring(0, 7) // YYYY-MM
+    const firstOfMonth = `${currentMonth}-01`
+    const lastOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      .toISOString().substring(0, 10) // Last day of current month
+    
+    // For queries without dates, default to current month
+    // Applies to: availability, prediction, analytics, search
+    if (!entities.start_date && !entities.date && !entities.month) {
+      entities.start_date = firstOfMonth
+      entities.end_date = lastOfMonth
+      entities.month = currentMonth
+      entities.year = now.getFullYear().toString()
+      console.log(`🗓️ Applied smart date default: ${firstOfMonth} to ${lastOfMonth}`)
+    }
+    
+    return entities
     
   } catch (error) {
     console.error('Entity extraction failed:', error)

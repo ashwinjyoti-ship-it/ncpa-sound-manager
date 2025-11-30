@@ -26,7 +26,20 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
   
   try {
     const body: RAGQueryRequest = await c.req.json()
-    const { query, session_id, include_analytics = true, include_predictions = true, max_results = 50 } = body
+    const { query, session_id, max_results = 50 } = body
+    
+    // Smart defaults: Only include analytics/predictions if query explicitly asks
+    const queryLower = query.toLowerCase()
+    const include_analytics = queryLower.includes('insight') || 
+                             queryLower.includes('analyz') || 
+                             queryLower.includes('pattern') || 
+                             queryLower.includes('busiest') ||
+                             queryLower.includes('most') ||
+                             queryLower.includes('compare')
+    
+    const include_predictions = queryLower.includes('available') || 
+                                queryLower.includes('free') || 
+                                queryLower.includes('predict')
     
     if (!query) {
       return c.json({ success: false, error: 'Query is required' }, 400)
@@ -227,18 +240,14 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // ============================================
     console.log('🤖 Generating response with Claude Sonnet 4...')
     
-    const systemPrompt = `You are an intelligent assistant for NCPA Sound Crew event management.
+    const systemPrompt = `You are a concise assistant for NCPA Sound Crew event management.
 
-CAPABILITIES:
-1. Natural language search across events
-2. Smart analytics (venue stats, crew workload)
-3. Predictive insights (availability, patterns)
-
-RESPONSE STYLE:
-- Professional but conversational
-- Provide insights, not just data
-- Highlight patterns and anomalies
-- Suggest actionable recommendations
+RESPONSE RULES:
+1. **Be EXTREMELY concise** - max 2-3 sentences for simple queries
+2. **Only elaborate if needed** - for complex analysis queries
+3. **No unnecessary context** - get straight to the answer
+4. **Format for scanning** - use lists for multiple items
+5. **Omit obvious insights** - users know what they're looking at
 
 CURRENT DATE: ${new Date().toISOString().split('T')[0]}`
 
@@ -262,18 +271,19 @@ ${conversationHistory.length > 0
   : 'No previous conversation'}
 
 TASK:
-1. Analyze the data thoroughly
-2. Answer the user's question naturally
-3. Provide 2-3 key insights
-4. Give 2-3 actionable recommendations
-5. Keep response concise (3-4 paragraphs max)
+Answer the user's query in 1-2 sentences. Only provide extended analysis if the query explicitly asks for insights, recommendations, or patterns.
 
-Your response should be helpful, insightful, and actionable.`
+EXAMPLES:
+- "Free dates at TATA in December" → "15 free dates available in December 2025"
+- "Show Ashwin's events" → "Ashwin has 11 events scheduled"
+- "Analyze crew workload" → [Provide detailed analysis]
+
+Be direct. No fluff.`
 
     const request: ClaudeSonnetRequest = {
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      temperature: 0.7,
+      max_tokens: 512, // Reduced from 2048 to encourage concise responses
+      temperature: 0.5, // Lower temperature for more focused responses
       system: systemPrompt,
       messages: [
         {

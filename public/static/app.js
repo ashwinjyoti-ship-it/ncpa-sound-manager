@@ -618,7 +618,17 @@ async function editEventFromModal(eventId) {
       document.getElementById('editTeam').value = event.team || '';
       document.getElementById('editSoundReq').value = event.sound_requirements || '';
       document.getElementById('editCallTime').value = event.call_time || '';
-      document.getElementById('editCrew').value = event.crew || '';
+      
+      // Handle multiple crew selection
+      const crewList = event.crew ? event.crew.split(',').map(c => c.trim()) : [];
+      const checkboxes = document.querySelectorAll('.crew-checkbox');
+      checkboxes.forEach(checkbox => {
+        checkbox.checked = crewList.includes(checkbox.value);
+      });
+      // Set custom crew field with non-checkbox values
+      const knownCrew = ['Ashwin', 'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya', 'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'];
+      const customCrew = crewList.filter(c => !knownCrew.includes(c));
+      document.getElementById('editCrewCustom').value = customCrew.join(', ');
       
       // Reset to single date mode
       document.querySelector('input[name="editDateType"][value="single"]').checked = true;
@@ -645,6 +655,18 @@ async function handleEditEvent(e) {
   const dateType = data.editDateType;
   const eventId = data.event_id;
   
+  // Collect multiple crew selections
+  const selectedCrew = [];
+  document.querySelectorAll('.crew-checkbox:checked').forEach(checkbox => {
+    selectedCrew.push(checkbox.value);
+  });
+  // Add custom crew if provided
+  const customCrew = document.getElementById('editCrewCustom').value.trim();
+  if (customCrew) {
+    selectedCrew.push(...customCrew.split(',').map(c => c.trim()).filter(c => c));
+  }
+  const crewValue = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
+  
   try {
     if (dateType === 'single') {
       // Simple update for single date
@@ -655,7 +677,7 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: data.crew || null
+        crew: crewValue
       });
       
       if (response.data.success) {
@@ -682,7 +704,7 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: data.crew || null
+        crew: crewValue
       });
       
       // Create copies for remaining dates
@@ -698,7 +720,7 @@ async function handleEditEvent(e) {
           team: data.team || null,
           sound_requirements: data.sound_requirements || null,
           call_time: data.call_time || null,
-          crew: data.crew || null
+          crew: crewValue
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }

@@ -1883,10 +1883,75 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Crew (sound team)</label>
-                            <input type="text" name="crew" id="editCrew" list="crewList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
-                                   placeholder="Select or type crew name">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
+                            <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Ashwin" class="crew-checkbox">
+                                    <span class="text-sm">Ashwin</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Naren" class="crew-checkbox">
+                                    <span class="text-sm">Naren</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Sandeep" class="crew-checkbox">
+                                    <span class="text-sm">Sandeep</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Coni" class="crew-checkbox">
+                                    <span class="text-sm">Coni</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Nikhil" class="crew-checkbox">
+                                    <span class="text-sm">Nikhil</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="NS" class="crew-checkbox">
+                                    <span class="text-sm">NS</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Aditya" class="crew-checkbox">
+                                    <span class="text-sm">Aditya</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Viraj" class="crew-checkbox">
+                                    <span class="text-sm">Viraj</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Shridhar" class="crew-checkbox">
+                                    <span class="text-sm">Shridhar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Nazar" class="crew-checkbox">
+                                    <span class="text-sm">Nazar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Omkar" class="crew-checkbox">
+                                    <span class="text-sm">Omkar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Akshay" class="crew-checkbox">
+                                    <span class="text-sm">Akshay</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC1" class="crew-checkbox">
+                                    <span class="text-sm">OC1</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC2" class="crew-checkbox">
+                                    <span class="text-sm">OC2</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC3" class="crew-checkbox">
+                                    <span class="text-sm">OC3</span>
+                                </label>
+                            </div>
+                            <input type="text" id="editCrewCustom" placeholder="Or type custom crew name" 
+                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 text-sm">
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Select multiple crew or enter custom names. Selected crew will be joined with commas.
+                            </p>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
@@ -2097,7 +2162,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=2.4.3"></script>
+        <script src="/static/app.js?v=2.5.0"></script>
     </body>
     </html>
   `)

@@ -1,5 +1,35 @@
 # 🧠 RAG System Implementation Guide - Version 4.0
 
+## 🎯 **Response Optimization (Nov 30, 2025)**
+
+### **Concise Response Mode**
+The RAG system now provides **focused, actionable responses** instead of verbose explanations:
+
+**Before Optimization:**
+- Query: "Free dates at TATA" 
+- Response: 5 paragraphs discussing programming opportunities, seasonal patterns, strategic scheduling, etc.
+
+**After Optimization:**
+- Query: "Free dates at TATA"
+- Response: "All dates in December 2025 are free at Tata Theatre - no events currently scheduled."
+
+### **Smart Context Awareness**
+1. **Date Defaults**: Queries without dates automatically use current month (no past data)
+2. **Selective Insights**: Analytics only shown when query explicitly asks (contains: analyze, insight, compare, busiest, most, pattern)
+3. **Token Limit**: Reduced from 2048 to 512 tokens to encourage brevity
+4. **Temperature**: Lowered to 0.5 for more focused, deterministic responses
+
+### **Query Examples**
+
+| Query | Response Length | Insights Shown |
+|-------|----------------|----------------|
+| "Free dates at TATA" | 1 sentence | No |
+| "Show Ashwin events" | 1 sentence | No |
+| "Analyze crew workload" | 2-3 sentences | Yes (auto-detected) |
+| "Compare venues" | 3-4 sentences | Yes (auto-detected) |
+
+---
+
 ## 📊 **Implementation Status**
 
 ### ✅ **Completed Components**

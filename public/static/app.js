@@ -135,6 +135,11 @@ function renderCalendar() {
   });
   
   // Update event count display with unique count
+  console.log(`📊 Event Count Debug - Month: ${monthNames[month]} ${year}`);
+  console.log(`  - Total allEvents: ${allEvents.length}`);
+  console.log(`  - Filtered monthEvents: ${monthEvents.length}`);
+  console.log(`  - Unique monthEvents: ${uniqueMonthEvents.length}`);
+  console.log(`  - Date range: ${startDate} to ${endDate}`);
   updateEventCount(uniqueMonthEvents.length);
   
   // Group events by date
@@ -1763,6 +1768,13 @@ async function generateExcelExport() {
   
   if (!month || !year) {
     showNotification('Please select month and year', 'error');
+    return;
+  }
+  
+  // Check if XLSX library is loaded
+  if (typeof XLSX === 'undefined') {
+    showNotification('Excel library not loaded. Please refresh the page and try again.', 'error');
+    console.error('XLSX library is not loaded');
     return;
   }
   

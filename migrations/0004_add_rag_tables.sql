@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS venue_aliases (
 INSERT OR IGNORE INTO venue_aliases (canonical_name, alias) VALUES
   ('Tata Theatre', 'Tata Theatre'),
   ('Tata Theatre', 'TT'),
+  ('Tata Theatre', 'TATA'),
   ('Tata Theatre', 'Tata'),
   ('Tata Theatre', 'Tata Theater'),
   ('Jamshed Bhabha Theatre', 'Jamshed Bhabha Theatre'),

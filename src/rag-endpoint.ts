@@ -86,7 +86,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     }
     
     // ============================================
-    // STEP 4: Semantic Search (if Vectorize available)
+    // STEP 4: Semantic Search (optional, for ranking boost)
     // ============================================
     let semanticEventIds: number[] = []
     let vectorize_used = false
@@ -94,16 +94,16 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     try {
       if (c.env.VECTORIZE) {
         console.log('🔍 Performing semantic search...')
-        semanticEventIds = await semanticSearch(query, entities, c.env, max_results)
+        semanticEventIds = await semanticSearch(query, entities, c.env, max_results * 2)
         vectorize_used = true
         console.log(`✅ Found ${semanticEventIds.length} semantic matches`)
       }
     } catch (error) {
-      console.log('⚠️ Vectorize not available, using SQL fallback')
+      console.log('⚠️ Vectorize error, continuing with SQL only:', error)
     }
     
     // ============================================
-    // STEP 5: SQL Fallback Query
+    // STEP 5: SQL Query (ALWAYS EXECUTE - Vectorize is for ranking only)
     // ============================================
     let sqlQuery = 'SELECT * FROM events WHERE 1=1'
     const sqlParams: any[] = []
@@ -155,18 +155,38 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       sqlParams.push(`%${entities.program}%`)
     }
     
-    // Semantic ranking (if available)
-    if (vectorize_used && semanticEventIds.length > 0) {
-      sqlQuery += ` AND id IN (${semanticEventIds.join(',')})`
-    }
+    // NOTE: We do NOT filter SQL by Vectorize results anymore
+    // Vectorize is only used for relevance ranking, not filtering
+    // This ensures SQL always returns results even if Vectorize metadata filter fails
     
-    sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results}`
+    sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
     
     console.log('📊 Executing SQL:', sqlQuery.substring(0, 200))
     const eventsResult = await c.env.DB.prepare(sqlQuery).bind(...sqlParams).all()
-    const events = eventsResult.results as Event[]
+    let events = eventsResult.results as Event[]
     
-    console.log(`✅ Retrieved ${events.length} events`)
+    console.log(`✅ Retrieved ${events.length} SQL results`)
+    
+    // ============================================
+    // STEP 5.5: Smart Ranking & Filtering
+    // ============================================
+    // If Vectorize provided results, boost those events in ranking
+    if (vectorize_used && semanticEventIds.length > 0) {
+      const semanticSet = new Set(semanticEventIds)
+      events = events.sort((a, b) => {
+        const aIsSemanticMatch = semanticSet.has(a.id) ? 0 : 1
+        const bIsSemanticMatch = semanticSet.has(b.id) ? 0 : 1
+        if (aIsSemanticMatch !== bIsSemanticMatch) {
+          return aIsSemanticMatch - bIsSemanticMatch // Semantic matches first
+        }
+        return new Date(a.event_date).getTime() - new Date(b.event_date).getTime() // Then by date
+      })
+      console.log(`🎯 Boosted ${semanticEventIds.length} semantic matches in ranking`)
+    }
+    
+    // Limit to max_results
+    events = events.slice(0, max_results)
+    console.log(`📋 Final result: ${events.length} events`)
     
     // ============================================
     // STEP 6: Generate Analytics (if requested)
@@ -208,12 +228,13 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     }
     
     // ============================================
-    // STEP 7: Generate Predictions (if requested)
+    // STEP 7: Generate Predictions (ALWAYS for availability queries)
     // ============================================
     let predictions: any = undefined
     
-    if (include_predictions && entities.intent === 'prediction') {
-      console.log('🔮 Generating predictions...')
+    // Auto-detect "free dates" / "available" queries
+    if (include_predictions || entities.intent === 'availability') {
+      console.log('🔮 Generating availability predictions...')
       
       if (entities.venue && entities.start_date && entities.end_date) {
         const freeDates = await predictAvailability(
@@ -228,11 +249,12 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
           date_range: { start: entities.start_date, end: entities.end_date },
           free_dates: freeDates,
           free_date_count: freeDates.length,
-          next_available: freeDates[0] || null
+          next_available: freeDates[0] || null,
+          occupied_date_count: events.length
         }
+        
+        console.log(`✅ Predictions: ${freeDates.length} free dates, ${events.length} occupied dates`)
       }
-      
-      console.log('✅ Predictions generated')
     }
     
     // ============================================
@@ -271,11 +293,17 @@ ${conversationHistory.length > 0
   : 'No previous conversation'}
 
 TASK:
-Answer the user's query in 1-2 sentences. Only provide extended analysis if the query explicitly asks for insights, recommendations, or patterns.
+Answer the user's query in 1-2 sentences. If predictions show free dates, LIST THEM EXPLICITLY.
+
+CRITICAL RULES FOR "FREE DATES" QUERIES:
+1. If predictions.free_dates exists and is non-empty → List the specific free dates
+2. If predictions.free_dates is empty → State "All dates are occupied"
+3. NEVER say "no events found" when showing free dates (that's confusing!)
+4. Format dates clearly: "Dec 1, 5, 7-9, 15" (use ranges for consecutive dates)
 
 EXAMPLES:
-- "Free dates at TATA in December" → "15 free dates available in December 2025"
-- "Show Ashwin's events" → "Ashwin has 11 events scheduled"
+- "Free dates at TATA in December" → "Tata Theatre free dates in December: 1-3, 7, 9-12, 15-20, 25-31 (18 free dates)"
+- "Show Ashwin's events" → "Ashwin has 11 events scheduled in December"
 - "Analyze crew workload" → [Provide detailed analysis]
 
 Be direct. No fluff.`

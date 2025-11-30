@@ -221,20 +221,24 @@ export async function semanticSearch(
     // Generate query embedding
     const queryVector = await generateEmbedding(query, env.AI)
     
-    // Build metadata filters
+    // Build metadata filters - ONLY use month/year for accuracy
+    // Venue/crew matching is too strict due to name variations
     const filter: Record<string, any> = {}
-    if (entities.venue) {
-      filter.venue = entities.venue
-    }
-    if (entities.crew) {
-      filter.crew = entities.crew
-    }
+    
+    // Only filter by date ranges (these are reliable)
     if (entities.month) {
       filter.month = entities.month
     }
     if (entities.year) {
       filter.year = entities.year
     }
+    
+    // NOTE: We DO NOT filter by venue/crew in Vectorize metadata
+    // because venue names vary (e.g., "Tata Theatre" vs "TATA" vs "TT")
+    // Instead, we let semantic search find relevant events,
+    // then filter by venue/crew in SQL post-processing
+    
+    console.log('🔍 Vectorize metadata filter:', JSON.stringify(filter))
     
     // Query Vectorize
     const results = await env.VECTORIZE.query(queryVector, {
@@ -353,19 +357,34 @@ export async function predictAvailability(
     allDates.push(d.toISOString().split('T')[0])
   }
   
-  // Get booked dates
+  // Resolve venue name to get ALL possible aliases
+  const canonicalVenue = await resolveVenueName(venue, db)
+  const venueAliases = canonicalVenue 
+    ? await expandVenueQuery(canonicalVenue, db)
+    : [venue]
+  
+  console.log(`🔍 Checking availability for venue: "${venue}" → Aliases: [${venueAliases.join(', ')}]`)
+  
+  // Build query with OR conditions for all aliases
+  const venueConditions = venueAliases.map(() => 'venue = ?').join(' OR ')
+  
   const booked = await db.prepare(`
-    SELECT DISTINCT event_date 
+    SELECT DISTINCT event_date, venue
     FROM events 
-    WHERE venue LIKE ? 
+    WHERE (${venueConditions})
       AND event_date >= ? 
       AND event_date <= ?
-  `).bind(`%${venue}%`, startDate, endDate).all()
+  `).bind(...venueAliases, startDate, endDate).all()
+  
+  console.log(`📅 Found ${booked.results.length} booked dates for ${venue}`)
   
   const bookedDates = new Set(booked.results.map((r: any) => r.event_date))
+  const freeDates = allDates.filter(d => !bookedDates.has(d))
+  
+  console.log(`✅ ${freeDates.length} free dates, ${bookedDates.size} occupied dates`)
   
   // Return free dates
-  return allDates.filter(d => !bookedDates.has(d))
+  return freeDates
 }
 
 // ============================================

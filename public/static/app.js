@@ -401,28 +401,6 @@ function closeEventModal() {
   document.getElementById('eventModal').classList.remove('active');
 }
 
-// Edit event from modal - switches to table view and scrolls to row
-function editEventFromModal(eventId) {
-  // Close modal
-  closeEventModal();
-  
-  // Switch to table view
-  showTab('table');
-  
-  // Wait for table to render, then scroll to the row
-  setTimeout(() => {
-    const row = document.getElementById(`event-row-${eventId}`);
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Highlight the row briefly
-      row.style.backgroundColor = '#fef3c7'; // Yellow highlight
-      setTimeout(() => {
-        row.style.backgroundColor = '';
-      }, 2000);
-    }
-  }, 100);
-}
-
 // Delete event from modal with confirmation
 async function deleteEventFromModal(eventId) {
   // Close modal first
@@ -618,17 +596,7 @@ async function editEventFromModal(eventId) {
       document.getElementById('editTeam').value = event.team || '';
       document.getElementById('editSoundReq').value = event.sound_requirements || '';
       document.getElementById('editCallTime').value = event.call_time || '';
-      
-      // Handle multiple crew selection
-      const crewList = event.crew ? event.crew.split(',').map(c => c.trim()) : [];
-      const checkboxes = document.querySelectorAll('.crew-checkbox');
-      checkboxes.forEach(checkbox => {
-        checkbox.checked = crewList.includes(checkbox.value);
-      });
-      // Set custom crew field with non-checkbox values
-      const knownCrew = ['Ashwin', 'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya', 'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'];
-      const customCrew = crewList.filter(c => !knownCrew.includes(c));
-      document.getElementById('editCrewCustom').value = customCrew.join(', ');
+      document.getElementById('editCrew').value = event.crew || '';
       
       // Reset to single date mode
       document.querySelector('input[name="editDateType"][value="single"]').checked = true;
@@ -655,18 +623,6 @@ async function handleEditEvent(e) {
   const dateType = data.editDateType;
   const eventId = data.event_id;
   
-  // Collect multiple crew selections
-  const selectedCrew = [];
-  document.querySelectorAll('.crew-checkbox:checked').forEach(checkbox => {
-    selectedCrew.push(checkbox.value);
-  });
-  // Add custom crew if provided
-  const customCrew = document.getElementById('editCrewCustom').value.trim();
-  if (customCrew) {
-    selectedCrew.push(...customCrew.split(',').map(c => c.trim()).filter(c => c));
-  }
-  const crewValue = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
-  
   try {
     if (dateType === 'single') {
       // Simple update for single date
@@ -677,7 +633,7 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewValue
+        crew: data.crew || null
       });
       
       if (response.data.success) {
@@ -704,7 +660,7 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewValue
+        crew: data.crew || null
       });
       
       // Create copies for remaining dates
@@ -720,7 +676,7 @@ async function handleEditEvent(e) {
           team: data.team || null,
           sound_requirements: data.sound_requirements || null,
           call_time: data.call_time || null,
-          crew: crewValue
+          crew: data.crew || null
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }
@@ -967,117 +923,6 @@ async function handleWordUpload(e) {
   }
 }
 
-// ============================================
-// SEARCH
-// ============================================
-
-async function handleSearch(query) {
-  const events = [];
-  
-  // Extract month and year from filename or text
-  let month = null;
-  let year = null;
-  
-  // Try to extract from filename
-  const filenameMatch = filename.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{4})/i);
-  if (filenameMatch) {
-    month = parseMonthName(filenameMatch[1]);
-    year = parseInt(filenameMatch[2]);
-  }
-  
-  // Try to extract from text if not found in filename
-  if (!month || !year) {
-    const textMatch = text.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s*(\d{4})/i);
-    if (textMatch) {
-      month = parseMonthName(textMatch[1]);
-      year = parseInt(textMatch[2]);
-    }
-  }
-  
-  if (!month || !year) {
-    console.error('Could not extract month/year from document');
-    showNotification('❌ Could not detect month/year in document. Filename should contain month and year (e.g., "Feb 2025.docx")', 'error');
-    return [];
-  }
-  
-  console.log(`✓ Detected month: ${month}, year: ${year}`);
-  
-  // Split text into lines
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-  
-  // Find the header row - be flexible with matching
-  let headerIndex = -1;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].toLowerCase();
-    // Look for key header indicators
-    if ((line.includes('day') || line.includes('date')) && 
-        (line.includes('programme') || line.includes('program') || line.includes('event'))) {
-      headerIndex = i;
-      console.log(`✓ Found potential header at line ${i}: "${lines[i].substring(0, 100)}"`);
-      break;
-    }
-  }
-  
-  if (headerIndex === -1) {
-    console.error('Could not find table header row');
-    console.log('First 10 lines of document:', lines.slice(0, 10));
-    showNotification('❌ Could not find table header. Document should have columns with "Day/Date" and "Programme/Event"', 'error');
-    return [];
-  }
-  
-  console.log(`✓ Using header at line ${headerIndex}`);
-  
-  // Parse rows after header
-  for (let i = headerIndex + 1; i < lines.length; i++) {
-    const line = lines[i];
-    
-    // Check if line starts with a day pattern
-    const dayMatch = line.match(/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(\d{1,2})(st|nd|rd|th)/i);
-    if (dayMatch) {
-      const dayNumber = parseInt(dayMatch[2]);
-      const event_date = `${year}-${String(month).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-      
-      // Gather all text for this event
-      let fullText = line.substring(dayMatch[0].length).trim();
-      let j = i + 1;
-      while (j < lines.length) {
-        const nextLine = lines[j];
-        if (/^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(st|nd|rd|th)/i.test(nextLine) || 
-            (nextLine.includes('Day') && nextLine.includes('Date'))) {
-          break;
-        }
-        fullText += ' ' + nextLine;
-        j++;
-      }
-      
-      const parsed = parseEventLine(fullText);
-      
-      if (parsed.program && parsed.venue) {
-        events.push({
-          event_date,
-          program: parsed.program,
-          venue: parsed.venue,
-          team: '',
-          sound_requirements: parsed.sound_requirements || '',
-          call_time: parsed.call_time || '',
-          crew: parsed.crew || ''
-        });
-      }
-      
-      i = j - 1;
-    }
-  }
-  
-  if (events.length === 0) {
-    console.warn('⚠️ No valid events parsed. Possible reasons:');
-    console.warn('  - No lines matched day pattern (Mon/Tue/etc + number + st/nd/rd/th)');
-    console.warn('  - Parsed events missing program or venue');
-    console.log('Sample lines after header:', lines.slice(headerIndex + 1, Math.min(headerIndex + 6, lines.length)));
-  } else {
-    console.log(`✓ Parsed ${events.length} events successfully`);
-  }
-  return events;
-}
 
 function parseEventLine(text) {
   let program = '';
@@ -1912,106 +1757,83 @@ async function askAI(predefinedQuery) {
   // Show loading
   document.getElementById('aiResponse').style.display = 'block';
   document.getElementById('aiLoading').style.display = 'inline-block';
-  document.getElementById('aiExplanation').textContent = 'Thinking with AI...';
+  document.getElementById('aiExplanation').textContent = 'Thinking...';
   document.getElementById('aiResultsContainer').innerHTML = '';
   
   try {
-    // Use new RAG endpoint (Version 4.0)
+    // Use the new RAG endpoint for better responses
     const response = await axios.post(`${API_BASE}/ai/rag`, { 
       query,
-      session_id: aiSessionId,
-      include_analytics: true,
-      include_predictions: true,
-      max_results: 50
+      session_id: aiSessionId
     });
     
     if (response.data.success) {
-      // RAG response format
-      const { answer, events, insights, recommendations, follow_up_queries, metadata } = response.data;
+      const { answer, events, insights, recommendations, follow_up_suggestions } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
-      const vectorizeBadge = metadata?.vectorize_used ? ' 🔍 <span class="text-xs text-green-600">(Semantic search)</span>' : '';
-      document.getElementById('aiExplanation').innerHTML = answer + vectorizeBadge;
+      document.getElementById('aiExplanation').innerHTML = answer || 'Here are the results:';
       
       // Display results
       let resultsHTML = '';
       
-      if (!events || events.length === 0) {
-        resultsHTML = '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
-      } else {
-        // Show event count
-        resultsHTML += `<div class="mb-4 text-sm text-gray-600">Found ${events.length} events</div>`;
-        
-        // Render events as cards (mobile-friendly)
-        resultsHTML += '<div class="space-y-3">';
-        events.forEach((event, index) => {
+      // Show events if any
+      if (events && events.length > 0) {
+        resultsHTML += '<div class="space-y-3 mb-4">';
+        events.forEach(event => {
           resultsHTML += `
-            <div class="border border-gray-200 rounded-lg p-4 hover:bg-orange-50 transition-colors">
+            <div class="bg-white border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
               <div class="flex justify-between items-start mb-2">
-                <div class="font-semibold text-gray-900">${formatDate(event.event_date).replace(/,\\s*\\d{4}/, '')}</div>
-                <div class="text-sm px-2 py-1 bg-orange-100 text-orange-800 rounded">${event.venue}</div>
+                <div class="flex-1">
+                  <div class="text-sm text-orange-600 font-semibold">${formatDate(event.event_date)}</div>
+                  <div class="text-lg font-bold text-gray-800 mt-1">${event.program}</div>
+                </div>
               </div>
-              <div class="text-gray-800 mb-2">${event.program || 'No title'}</div>
-              ${event.crew ? `<div class="text-sm text-gray-600"><strong>Crew:</strong> ${event.crew}</div>` : ''}
-              ${event.call_time ? `<div class="text-sm text-gray-600"><strong>Call Time:</strong> ${event.call_time}</div>` : ''}
-              ${event.sound_requirements ? `<div class="text-sm text-gray-600 mt-2"><strong>Sound:</strong> ${event.sound_requirements.substring(0, 100)}${event.sound_requirements.length > 100 ? '...' : ''}</div>` : ''}
+              <div class="grid grid-cols-2 gap-2 text-sm mt-3">
+                <div><span class="text-gray-600">Venue:</span> <span class="font-medium">${event.venue || 'N/A'}</span></div>
+                <div><span class="text-gray-600">Crew:</span> <span class="font-medium">${event.crew || 'N/A'}</span></div>
+                <div><span class="text-gray-600">Call Time:</span> <span class="font-medium">${event.call_time || 'N/A'}</span></div>
+                <div><span class="text-gray-600">Team:</span> <span class="font-medium">${event.team || 'N/A'}</span></div>
+              </div>
+              ${event.sound_requirements ? `<div class="mt-3 text-sm"><span class="text-gray-600">Sound Requirements:</span> <div class="mt-1 text-gray-700">${formatLinksInText(event.sound_requirements)}</div></div>` : ''}
             </div>
           `;
         });
         resultsHTML += '</div>';
-        
-        // Show insights if available
-        if (insights) {
-          resultsHTML += '<div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">';
-          resultsHTML += '<h4 class="font-semibold text-blue-900 mb-2">📊 Insights</h4>';
-          resultsHTML += '<ul class="text-sm text-blue-800 space-y-1">';
-          if (insights.busiest_venue) resultsHTML += `<li><strong>Busiest venue:</strong> ${insights.busiest_venue}</li>`;
-          if (insights.busiest_crew) resultsHTML += `<li><strong>Most active crew:</strong> ${insights.busiest_crew}</li>`;
-          if (insights.total_events) resultsHTML += `<li><strong>Total events:</strong> ${insights.total_events}</li>`;
-          resultsHTML += '</ul></div>';
+      } else {
+        resultsHTML += '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
+      }
+      
+      // Show insights
+      if (insights && Object.keys(insights).length > 0) {
+        resultsHTML += '<div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-orange-800 mb-2">📊 Insights</h4><ul class="space-y-1 text-sm">';
+        for (const [key, value] of Object.entries(insights)) {
+          resultsHTML += `<li><span class="text-gray-600">${key}:</span> <span class="font-medium text-gray-800">${value}</span></li>`;
         }
-        
-        // Show recommendations if available
-        if (recommendations && recommendations.length > 0) {
-          resultsHTML += '<div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">';
-          resultsHTML += '<h4 class="font-semibold text-yellow-900 mb-2">💡 Recommendations</h4>';
-          resultsHTML += '<ul class="text-sm text-yellow-800 space-y-1 list-disc list-inside">';
-          recommendations.forEach(rec => {
-            resultsHTML += `<li>${rec}</li>`;
-          });
-          resultsHTML += '</ul></div>';
-        }
-        
-        // Show follow-up suggestions
-        if (follow_up_queries && follow_up_queries.length > 0) {
-          resultsHTML += '<div class="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">';
-          resultsHTML += '<h4 class="font-semibold text-gray-700 mb-2">💬 You might also ask:</h4>';
-          resultsHTML += '<div class="flex flex-wrap gap-2">';
-          follow_up_queries.forEach(followUp => {
-            resultsHTML += `<button onclick="askAI('${followUp.replace(/'/g, "\\'")}')}" class="text-xs px-3 py-1 bg-white border border-gray-300 rounded-full hover:bg-orange-50 hover:border-orange-300 transition-colors">${followUp}</button>`;
-          });
-          resultsHTML += '</div></div>';
-        }
+        resultsHTML += '</ul></div>';
+      }
+      
+      // Show recommendations
+      if (recommendations && recommendations.length > 0) {
+        resultsHTML += '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-blue-800 mb-2">💡 Recommendations</h4><ul class="space-y-1 text-sm list-disc list-inside">';
+        recommendations.forEach(rec => {
+          resultsHTML += `<li class="text-gray-700">${rec}</li>`;
+        });
+        resultsHTML += '</ul></div>';
+      }
+      
+      // Show follow-up suggestions
+      if (follow_up_suggestions && follow_up_suggestions.length > 0) {
+        resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
+        follow_up_suggestions.forEach(suggestion => {
+          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs bg-white border border-gray-300 rounded-full px-3 py-1 hover:bg-orange-50 hover:border-orange-300 transition-colors">${suggestion}</button>`;
+        });
+        resultsHTML += '</div></div>';
       }
       
       document.getElementById('aiResultsContainer').innerHTML = resultsHTML;
-      
-      // Log metadata for debugging
-      console.log('RAG metadata:', metadata);
-      
-      // Clear input after successful query
-      input.value = '';
-      
-        tableHTML += '</tbody></table>';
-        
-        document.getElementById('aiResultsContainer').innerHTML = tableHTML;
-        
-        // Show SQL query in console for debugging
-        console.log('Generated SQL:', sqlQuery);
-      }
       
       // Clear input after successful query
       input.value = '';

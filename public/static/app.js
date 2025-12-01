@@ -1860,9 +1860,9 @@ async function askAI(predefinedQuery) {
           `;
         });
         resultsHTML += '</div>';
-      } else {
-        resultsHTML += '<p class="text-gray-500 text-center py-4">No events found matching your query.</p>';
       }
+      // Note: Don't show "No events found" for aggregation queries
+      // The answer already contains the count/summary
       
       // Show insights
       if (insights && Object.keys(insights).length > 0) {

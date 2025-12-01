@@ -367,20 +367,25 @@ Be direct. No fluff.`
     
     const responseTime = Date.now() - startTime
     
+    // For aggregation queries (count/total), don't return event objects
+    // The answer already contains the count, showing events would be redundant
+    const displayEvents = entities.intent === 'aggregation' ? [] : events
+    
     const ragResponse: RAGQueryResponse = {
       success: true,
       answer,
-      events,
+      events: displayEvents,
       insights,
       recommendations: recommendations.length > 0 ? recommendations : undefined,
-      ...formatRAGResponse(answer, events, entities, insights, recommendations),
+      ...formatRAGResponse(answer, displayEvents, entities, insights, recommendations),
       metadata: {
         query_intent: entities.intent,
         entities_extracted: entities,
         vectorize_used,
         claude_model: 'claude-sonnet-4-20250514',
         response_time_ms: responseTime,
-        token_count: tokenCount
+        token_count: tokenCount,
+        total_events_found: events.length // Keep actual count in metadata
       },
       session_id: sessionId
     }

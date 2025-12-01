@@ -85,7 +85,17 @@ A: {"intent":"analytics","venue":null,"crew":null,"date":null,"start_date":"2025
 Q: "Free dates at TATA" (no time specified)
 A: {"intent":"availability","venue":"Tata Theatre","crew":null,"date":null,"start_date":"2025-12-01","end_date":"2025-12-31","month":"2025-12","year":"2025","program":null,"confidence":0.90}
 
-IMPORTANT: If no date is specified, default to current/next month only (not past months).`
+Q: "How many events in December 25?" (ambiguous: could be Dec 25th or year 2025)
+A: {"intent":"aggregation","venue":null,"crew":null,"date":null,"start_date":"2025-12-01","end_date":"2025-12-31","month":"2025-12","year":"2025","program":null,"confidence":0.85}
+
+Q: "Events on December 25th" (clearly asking for single day)
+A: {"intent":"search","venue":null,"crew":null,"date":"2025-12-25","start_date":null,"end_date":null,"month":"2025-12","year":"2025","program":null,"confidence":0.95}
+
+IMPORTANT RULES:
+1. "December 25" without "th" or "25th" → interpret as year 2025 (month December)
+2. "December 25th" or "25th December" → interpret as single day (December 25, 2025)
+3. If no date is specified, default to current/next month only (not past months)
+4. Current date context: ${new Date().toISOString().split('T')[0]}`
 
   const request: ClaudeSonnetRequest = {
     model: 'claude-sonnet-4-20250514',

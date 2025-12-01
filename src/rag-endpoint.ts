@@ -436,9 +436,10 @@ Be direct. No fluff. Use EXACT numbers from the data above.`
     
     const responseTime = Date.now() - startTime
     
-    // For aggregation queries (count/total), don't return event objects
-    // The answer already contains the count, showing events would be redundant
-    const displayEvents = entities.intent === 'aggregation' ? [] : events
+    // For aggregation and availability queries, don't return event objects
+    // - Aggregation: The answer already contains the count
+    // - Availability: The answer contains free dates; showing occupied events is confusing
+    const displayEvents = (entities.intent === 'aggregation' || entities.intent === 'availability') ? [] : events
     
     const ragResponse: RAGQueryResponse = {
       success: true,

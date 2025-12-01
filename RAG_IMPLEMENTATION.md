@@ -1,8 +1,32 @@
 # 🧠 RAG System Implementation Guide - Version 4.0
 
-## 🎯 **Response Optimization (Nov 30, 2025)**
+## 🎯 **Latest Improvements (Nov 30-Dec 1, 2025)**
 
-### **Concise Response Mode**
+### **1. Aggregation Query Fix (Dec 1, 2025)**
+**Problem**: Query "How many events in December 25?" returned confusing results:
+- Answer: "50 events scheduled in December 2025" ✅
+- But showed "0 events" below the answer ❌
+
+**Root Cause**: Aggregation queries (count/total) were returning full event arrays (50 events) while the answer only needed the count.
+
+**Solution**:
+```typescript
+// For aggregation queries, don't return event objects
+const displayEvents = entities.intent === 'aggregation' ? [] : events
+```
+
+**Result**: Clean, non-contradictory responses
+- Answer: "**50 events** scheduled in December 2025"
+- Events array: empty (no cards shown)
+- Metadata: `total_events_found: 50` (for debugging)
+
+### **2. Date Ambiguity Handling**
+**Improved entity extraction for "December 25"**:
+- "December 25" (no ordinal) → December 2025 (entire month)
+- "December 25th" → December 25, 2025 (single day)
+- "25th December" → December 25, 2025 (single day)
+
+### **3. Concise Response Mode**
 The RAG system now provides **focused, actionable responses** instead of verbose explanations:
 
 **Before Optimization:**
@@ -13,7 +37,7 @@ The RAG system now provides **focused, actionable responses** instead of verbose
 - Query: "Free dates at TATA"
 - Response: "All dates in December 2025 are free at Tata Theatre - no events currently scheduled."
 
-### **Smart Context Awareness**
+### **4. Smart Context Awareness**
 1. **Date Defaults**: Queries without dates automatically use current month (no past data)
 2. **Selective Insights**: Analytics only shown when query explicitly asks (contains: analyze, insight, compare, busiest, most, pattern)
 3. **Token Limit**: Reduced from 2048 to 512 tokens to encourage brevity
@@ -21,12 +45,12 @@ The RAG system now provides **focused, actionable responses** instead of verbose
 
 ### **Query Examples**
 
-| Query | Response Length | Insights Shown |
-|-------|----------------|----------------|
-| "Free dates at TATA" | 1 sentence | No |
-| "Show Ashwin events" | 1 sentence | No |
-| "Analyze crew workload" | 2-3 sentences | Yes (auto-detected) |
-| "Compare venues" | 3-4 sentences | Yes (auto-detected) |
+| Query | Response Length | Events Shown | Intent |
+|-------|----------------|--------------|--------|
+| "How many events in December 25?" | 1 sentence | None (count in answer) | aggregation |
+| "Free dates at TATA" | 1 sentence | None (dates in answer) | availability |
+| "Show Ashwin events" | 1 sentence | Event cards | search |
+| "Analyze crew workload" | 2-3 sentences | None (analytics) | analytics |
 
 ---
 

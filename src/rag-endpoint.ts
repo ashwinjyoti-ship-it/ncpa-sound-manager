@@ -213,14 +213,16 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // Vectorize is only used for relevance ranking, not filtering
     // This ensures SQL always returns results even if Vectorize metadata filter fails
     
-    // For aggregation and availability queries, don't limit results
+    // For aggregation, availability, and analytics queries, don't limit results
     // - Aggregation: Need ALL events to count accurately
     // - Availability: Need ALL events to calculate truly free dates
+    // - Analytics: Need ALL events for accurate analysis (crew workload, venue stats)
     // - Other queries: Limit for performance
-    if (!is_aggregation && entities.intent !== 'availability') {
+    const is_analytics = include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')
+    if (!is_aggregation && entities.intent !== 'availability' && !is_analytics) {
       sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
     } else {
-      sqlQuery += ` ORDER BY event_date ASC` // No limit for aggregation/availability queries
+      sqlQuery += ` ORDER BY event_date ASC` // No limit for aggregation/availability/analytics queries
     }
     
     console.log('📊 Executing SQL:', sqlQuery.substring(0, 200))
@@ -249,10 +251,11 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // Limit to max_results (unless we need ALL events for accurate calculations)
     // - Aggregation queries: Need ALL events to count accurately
     // - Availability queries: Need ALL events to find truly free dates
-    if (!is_aggregation && entities.intent !== 'availability') {
+    // - Analytics queries: Need ALL events for accurate statistics
+    if (!is_aggregation && entities.intent !== 'availability' && !is_analytics) {
       events = events.slice(0, max_results)
     }
-    console.log(`📋 Final result: ${events.length} events (is_aggregation: ${is_aggregation}, intent: ${entities.intent})`)
+    console.log(`📋 Final result: ${events.length} events (is_aggregation: ${is_aggregation}, is_analytics: ${is_analytics}, intent: ${entities.intent})`)
     
     // ============================================
     // STEP 6: Generate Analytics (if requested)

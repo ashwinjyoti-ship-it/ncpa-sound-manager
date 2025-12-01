@@ -1825,27 +1825,75 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Crew (sound team)</label>
-                            <input type="text" name="crew" list="crewList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
-                                   placeholder="Select or type crew name">
-                            <datalist id="crewList">
-                                <option value="Ashwin">Ashwin</option>
-                                <option value="Naren">Naren</option>
-                                <option value="Sandeep">Sandeep</option>
-                                <option value="Coni">Coni</option>
-                                <option value="Nikhil">Nikhil</option>
-                                <option value="NS">NS</option>
-                                <option value="Aditya">Aditya</option>
-                                <option value="Viraj">Viraj</option>
-                                <option value="Shridhar">Shridhar</option>
-                                <option value="Nazar">Nazar</option>
-                                <option value="Omkar">Omkar</option>
-                                <option value="Akshay">Akshay</option>
-                                <option value="OC1">OC1 (Outside Crew 1)</option>
-                                <option value="OC2">OC2 (Outside Crew 2)</option>
-                                <option value="OC3">OC3 (Outside Crew 3)</option>
-                            </datalist>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
+                            <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Ashwin" class="add-crew-checkbox">
+                                    <span class="text-sm">Ashwin</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Naren" class="add-crew-checkbox">
+                                    <span class="text-sm">Naren</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Sandeep" class="add-crew-checkbox">
+                                    <span class="text-sm">Sandeep</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Coni" class="add-crew-checkbox">
+                                    <span class="text-sm">Coni</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Nikhil" class="add-crew-checkbox">
+                                    <span class="text-sm">Nikhil</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="NS" class="add-crew-checkbox">
+                                    <span class="text-sm">NS</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Aditya" class="add-crew-checkbox">
+                                    <span class="text-sm">Aditya</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Viraj" class="add-crew-checkbox">
+                                    <span class="text-sm">Viraj</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Shridhar" class="add-crew-checkbox">
+                                    <span class="text-sm">Shridhar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Nazar" class="add-crew-checkbox">
+                                    <span class="text-sm">Nazar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Omkar" class="add-crew-checkbox">
+                                    <span class="text-sm">Omkar</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="Akshay" class="add-crew-checkbox">
+                                    <span class="text-sm">Akshay</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC1" class="add-crew-checkbox">
+                                    <span class="text-sm">OC1</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC2" class="add-crew-checkbox">
+                                    <span class="text-sm">OC2</span>
+                                </label>
+                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
+                                    <input type="checkbox" name="crew[]" value="OC3" class="add-crew-checkbox">
+                                    <span class="text-sm">OC3</span>
+                                </label>
+                            </div>
+                            <input type="text" id="addCrewCustom" placeholder="Or type custom crew name (comma-separated for multiple)" 
+                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 text-sm">
+                            <p class="text-xs text-gray-500 mt-1">
+                                <i class="fas fa-info-circle mr-1"></i>
+                                Select multiple crew members or add custom names below
+                            </p>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
@@ -2224,7 +2272,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.0.1"></script>
+        <script src="/static/app.js?v=4.0.2"></script>
     </body>
     </html>
   `)

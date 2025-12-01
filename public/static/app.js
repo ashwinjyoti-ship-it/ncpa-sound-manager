@@ -436,6 +436,20 @@ function openAddShowModal() {
 
 function closeAddShowModal() {
   document.getElementById('addShowModal').classList.remove('active');
+  
+  // Reset the form
+  document.getElementById('addShowForm').reset();
+  
+  // Uncheck all crew checkboxes
+  document.querySelectorAll('.add-crew-checkbox').forEach(checkbox => {
+    checkbox.checked = false;
+  });
+  
+  // Clear custom crew input
+  const customCrewInput = document.getElementById('addCrewCustom');
+  if (customCrewInput) {
+    customCrewInput.value = '';
+  }
 }
 
 function toggleDateFields() {
@@ -468,6 +482,21 @@ async function handleAddShow(e) {
   const data = Object.fromEntries(formData.entries());
   const dateType = data.dateType;
   
+  // Collect selected crew from checkboxes
+  const selectedCrew = [];
+  document.querySelectorAll('.add-crew-checkbox:checked').forEach(checkbox => {
+    selectedCrew.push(checkbox.value);
+  });
+  
+  // Add custom crew if provided
+  const customCrewInput = document.getElementById('addCrewCustom');
+  if (customCrewInput && customCrewInput.value.trim()) {
+    const customCrew = customCrewInput.value.split(',').map(c => c.trim()).filter(c => c);
+    selectedCrew.push(...customCrew);
+  }
+  
+  const crewString = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
+  
   try {
     if (dateType === 'single') {
       // Single date event
@@ -478,7 +507,7 @@ async function handleAddShow(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: data.crew || null
+        crew: crewString
       });
       
       if (response.data.success) {
@@ -513,7 +542,7 @@ async function handleAddShow(e) {
           team: data.team || null,
           sound_requirements: data.sound_requirements || null,
           call_time: data.call_time || null,
-          crew: data.crew || null
+          crew: crewString
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }

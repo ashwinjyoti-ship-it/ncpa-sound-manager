@@ -213,12 +213,14 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // Vectorize is only used for relevance ranking, not filtering
     // This ensures SQL always returns results even if Vectorize metadata filter fails
     
-    // For aggregation queries (count/total), don't limit results - count ALL matching events
-    // For other queries, limit to max_results for performance
-    if (!is_aggregation) {
+    // For aggregation and availability queries, don't limit results
+    // - Aggregation: Need ALL events to count accurately
+    // - Availability: Need ALL events to calculate truly free dates
+    // - Other queries: Limit for performance
+    if (!is_aggregation && entities.intent !== 'availability') {
       sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
     } else {
-      sqlQuery += ` ORDER BY event_date ASC` // No limit for count queries
+      sqlQuery += ` ORDER BY event_date ASC` // No limit for aggregation/availability queries
     }
     
     console.log('📊 Executing SQL:', sqlQuery.substring(0, 200))
@@ -244,11 +246,13 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       console.log(`🎯 Boosted ${semanticEventIds.length} semantic matches in ranking`)
     }
     
-    // Limit to max_results (unless it's an aggregation query which needs accurate count)
-    if (!is_aggregation) {
+    // Limit to max_results (unless we need ALL events for accurate calculations)
+    // - Aggregation queries: Need ALL events to count accurately
+    // - Availability queries: Need ALL events to find truly free dates
+    if (!is_aggregation && entities.intent !== 'availability') {
       events = events.slice(0, max_results)
     }
-    console.log(`📋 Final result: ${events.length} events (is_aggregation: ${is_aggregation})`)
+    console.log(`📋 Final result: ${events.length} events (is_aggregation: ${is_aggregation}, intent: ${entities.intent})`)
     
     // ============================================
     // STEP 6: Generate Analytics (if requested)

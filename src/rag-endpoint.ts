@@ -18,7 +18,8 @@ import {
   getVenueStats,
   predictAvailability,
   formatRAGResponse,
-  resolveVenueName
+  resolveVenueName,
+  expandVenueQuery
 } from './rag-utils'
 
 export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
@@ -40,6 +41,12 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     const include_predictions = queryLower.includes('available') || 
                                 queryLower.includes('free') || 
                                 queryLower.includes('predict')
+    
+    // Detect aggregation queries (count, total, how many)
+    const is_aggregation = queryLower.includes('how many') ||
+                          queryLower.includes('count') ||
+                          queryLower.includes('total') ||
+                          queryLower.includes('number of')
     
     if (!query) {
       return c.json({ success: false, error: 'Query is required' }, 400)
@@ -74,6 +81,43 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       conversationHistory
     )
     console.log('✅ Entities:', JSON.stringify(entities))
+    
+    // ============================================
+    // STEP 2.5: Validation & Clarification (if confidence is low)
+    // ============================================
+    if (entities.confidence && entities.confidence < 0.7) {
+      console.log(`⚠️ Low confidence (${entities.confidence}) - requesting clarification`)
+      
+      // Generate clarification questions based on ambiguity
+      const clarifications = []
+      
+      if (!entities.date && !entities.start_date && !entities.month && !entities.year) {
+        clarifications.push("Which time period are you asking about? (e.g., this month, next week, specific date)")
+      }
+      
+      if (queryLower.includes('december 25') && !queryLower.includes('25th') && !queryLower.includes('december 25th')) {
+        clarifications.push("Did you mean: (1) December 25th (single day) or (2) December 2025 (entire month)?")
+      }
+      
+      if (entities.venue && !await resolveVenueName(entities.venue, c.env.DB)) {
+        clarifications.push(`I couldn't find a venue matching "${entities.venue}". Did you mean: Tata Theatre (TT), Jamshed Bhabha Theatre (JBT), or Experimental Theatre (TET)?`)
+      }
+      
+      if (clarifications.length > 0) {
+        return c.json({
+          success: true,
+          answer: `I need clarification to give you an accurate answer:\n\n${clarifications.map((q, i) => `${i + 1}. ${q}`).join('\n\n')}`,
+          events: [],
+          needs_clarification: true,
+          clarification_questions: clarifications,
+          metadata: {
+            query_intent: entities.intent,
+            entities_extracted: entities,
+            confidence: entities.confidence
+          }
+        })
+      }
+    }
     
     // ============================================
     // STEP 3: Resolve Venue Names
@@ -135,10 +179,20 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       )
     }
     
-    // Venue filter
+    // Venue filter (use ALL aliases for accurate matching)
     if (entities.venue) {
-      sqlQuery += ' AND venue LIKE ?'
-      sqlParams.push(`%${entities.venue}%`)
+      const venueAliases = await expandVenueQuery(entities.venue, c.env.DB)
+      if (venueAliases.length > 0) {
+        // Match ANY of the aliases (TT, TATA, Tata Theatre, etc.)
+        const venueConditions = venueAliases.map(() => 'venue LIKE ?').join(' OR ')
+        sqlQuery += ` AND (${venueConditions})`
+        venueAliases.forEach(alias => sqlParams.push(`%${alias}%`))
+        console.log(`🏛️ Venue filter expanded: ${entities.venue} → [${venueAliases.join(', ')}]`)
+      } else {
+        // Fallback to original venue name if no aliases found
+        sqlQuery += ' AND venue LIKE ?'
+        sqlParams.push(`%${entities.venue}%`)
+      }
     }
     
     // Crew filter
@@ -159,7 +213,13 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // Vectorize is only used for relevance ranking, not filtering
     // This ensures SQL always returns results even if Vectorize metadata filter fails
     
-    sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
+    // For aggregation queries (count/total), don't limit results - count ALL matching events
+    // For other queries, limit to max_results for performance
+    if (!is_aggregation) {
+      sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
+    } else {
+      sqlQuery += ` ORDER BY event_date ASC` // No limit for count queries
+    }
     
     console.log('📊 Executing SQL:', sqlQuery.substring(0, 200))
     const eventsResult = await c.env.DB.prepare(sqlQuery).bind(...sqlParams).all()
@@ -184,9 +244,11 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       console.log(`🎯 Boosted ${semanticEventIds.length} semantic matches in ranking`)
     }
     
-    // Limit to max_results
-    events = events.slice(0, max_results)
-    console.log(`📋 Final result: ${events.length} events`)
+    // Limit to max_results (unless it's an aggregation query which needs accurate count)
+    if (!is_aggregation) {
+      events = events.slice(0, max_results)
+    }
+    console.log(`📋 Final result: ${events.length} events (is_aggregation: ${is_aggregation})`)
     
     // ============================================
     // STEP 6: Generate Analytics (if requested)
@@ -295,6 +357,12 @@ ${conversationHistory.length > 0
 TASK:
 Answer the user's query in 1-2 sentences. If predictions show free dates, LIST THEM EXPLICITLY.
 
+CRITICAL RULES FOR COUNT/AGGREGATION QUERIES:
+1. ALWAYS use the exact count from "MATCHING EVENTS (${events.length} results)" above
+2. State the exact number: "**${events.length} events** scheduled in [time period]"
+3. DO NOT estimate or round numbers
+4. The event count above is 100% accurate from the database
+
 CRITICAL RULES FOR "FREE DATES" QUERIES:
 1. If predictions.free_dates exists and is non-empty → List the specific free dates
 2. If predictions.free_dates is empty → State "All dates are occupied"
@@ -302,11 +370,12 @@ CRITICAL RULES FOR "FREE DATES" QUERIES:
 4. Format dates clearly: "Dec 1, 5, 7-9, 15" (use ranges for consecutive dates)
 
 EXAMPLES:
+- "How many events in December?" → "**${events.length} events** scheduled in December 2025"
 - "Free dates at TATA in December" → "Tata Theatre free dates in December: 1-3, 7, 9-12, 15-20, 25-31 (18 free dates)"
 - "Show Ashwin's events" → "Ashwin has 11 events scheduled in December"
 - "Analyze crew workload" → [Provide detailed analysis]
 
-Be direct. No fluff.`
+Be direct. No fluff. Use EXACT numbers from the data above.`
 
     const request: ClaudeSonnetRequest = {
       model: 'claude-sonnet-4-20250514',

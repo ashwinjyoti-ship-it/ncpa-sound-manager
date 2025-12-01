@@ -299,6 +299,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       console.log('🔮 Generating availability predictions...')
       
       if (entities.venue && entities.start_date && entities.end_date) {
+        // Venue-specific availability
         const freeDates = await predictAvailability(
           entities.venue,
           entities.start_date,
@@ -315,7 +316,36 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
           occupied_date_count: events.length
         }
         
-        console.log(`✅ Predictions: ${freeDates.length} free dates, ${events.length} occupied dates`)
+        console.log(`✅ Venue predictions: ${freeDates.length} free dates, ${events.length} occupied dates`)
+      } else if (!entities.venue && entities.start_date && entities.end_date) {
+        // General availability (no specific venue) - calculate free dates across ALL venues
+        console.log('📅 Calculating general free dates (no venue specified)...')
+        
+        // Get all dates in range
+        const start = new Date(entities.start_date)
+        const end = new Date(entities.end_date)
+        const allDates: string[] = []
+        
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+          allDates.push(d.toISOString().split('T')[0])
+        }
+        
+        // Get dates with events
+        const occupiedDates = new Set(events.map(e => e.event_date))
+        
+        // Calculate free dates (dates with NO events at any venue)
+        const freeDates = allDates.filter(date => !occupiedDates.has(date))
+        
+        predictions = {
+          venue: 'ALL VENUES',
+          date_range: { start: entities.start_date, end: entities.end_date },
+          free_dates: freeDates,
+          free_date_count: freeDates.length,
+          next_available: freeDates[0] || null,
+          occupied_date_count: allDates.length - freeDates.length
+        }
+        
+        console.log(`✅ General predictions: ${freeDates.length} free dates (no events at any venue), ${occupiedDates.size} occupied dates`)
       }
     }
     
@@ -358,24 +388,24 @@ TASK:
 Answer the user's query in 1-2 sentences. If predictions show free dates, LIST THEM EXPLICITLY.
 
 CRITICAL RULES FOR COUNT/AGGREGATION QUERIES:
-1. ALWAYS use the exact count from "MATCHING EVENTS (${events.length} results)" above
-2. State the exact number: "**${events.length} events** scheduled in [time period]"
-3. DO NOT estimate or round numbers
-4. The event count above is 100% accurate from the database
+1. LOOK AT "MATCHING EVENTS (X results)" above - that X is the EXACT count
+2. For the query "${query}", the EXACT count is: ${events.length} events
+3. State this EXACT number in your answer: "**${events.length} events**"
+4. DO NOT use any other number. DO NOT estimate. DO NOT round.
+5. If you see "MATCHING EVENTS (${events.length} results)", answer with ${events.length}
 
 CRITICAL RULES FOR "FREE DATES" QUERIES:
-1. If predictions.free_dates exists and is non-empty → List the specific free dates
-2. If predictions.free_dates is empty → State "All dates are occupied"
-3. NEVER say "no events found" when showing free dates (that's confusing!)
+1. If PREDICTIVE INSIGHTS shows free_dates → List those specific dates
+2. If free_dates is empty → State "All dates are occupied"
+3. NEVER say "based on X events" - just state the free dates directly
 4. Format dates clearly: "Dec 1, 5, 7-9, 15" (use ranges for consecutive dates)
 
 EXAMPLES:
 - "How many events in December?" → "**${events.length} events** scheduled in December 2025"
-- "Free dates at TATA in December" → "Tata Theatre free dates in December: 1-3, 7, 9-12, 15-20, 25-31 (18 free dates)"
-- "Show Ashwin's events" → "Ashwin has 11 events scheduled in December"
-- "Analyze crew workload" → [Provide detailed analysis]
+- "What dates are free?" → (use predictions.free_dates, NOT events.length)
+- "Show Ashwin's events" → "Ashwin has 11 events scheduled..."
 
-Be direct. No fluff. Use EXACT numbers from the data above.`
+Be direct. No fluff. Use EXACT numbers from the data above - NOT from memory or estimation.`
 
     const request: ClaudeSonnetRequest = {
       model: 'claude-sonnet-4-20250514',

@@ -664,9 +664,14 @@ WHERE program LIKE '%Dance%';
 
 ---
 
-### Version 4.0 (November 30, 2025) - RAG System 🧠 ✅ LIVE IN PRODUCTION
+### Version 4.0 (November 30-December 1, 2025) - RAG System 🧠 ✅ LIVE IN PRODUCTION
 
 **Focus:** AI-Powered Natural Language Search + Smart Analytics + Predictive Insights
+
+**🆕 Latest Update (Dec 1, 2025):**
+- ✅ Fixed aggregation query contradictions (e.g., "How many events in December 25?")
+- ✅ Improved date ambiguity handling ("December 25" vs "December 25th")
+- ✅ Events array now empty for count/total queries (non-contradictory responses)
 
 **🎯 Top 3 Features (ALL WORKING):**
 1. **Natural Language Search** ✅
@@ -674,6 +679,7 @@ WHERE program LIKE '%Dance%';
    - Flexible queries: "Which dates is Tata Theatre free next week?"
    - Comparative analysis: "Compare Ashwin and Naren's workload"
    - **Vectorize-powered semantic search** for better relevance
+   - Smart date ambiguity handling ("December 25" → month, "December 25th" → single day)
 
 2. **Smart Analytics** ✅
    - Automatic venue usage statistics
@@ -724,20 +730,27 @@ WHERE program LIKE '%Dance%';
 
 **Example Queries (Try in AI Assistant):**
 ```
-"Show me all Ashwin's events in December 2025"
-"Which venue was busiest in November?"
-"When will Tata Theatre be free next week?"
-"Compare Ashwin and Naren's workload this month"
-"Is there a scheduling conflict on December 5?"
-"Events tomorrow"
-"Missing requirements"
+"How many events in December 25?" → Returns "50 events" (clean count)
+"Events on December 25th" → Shows single day events
+"Show me all Ashwin's events in December 2025" → Lists Ashwin's events
+"Which venue was busiest in November?" → Analytics with insights
+"When will Tata Theatre be free next week?" → Free date ranges
+"Free dates at TATA in December" → "Dec 1, 3, 7-12, 16-19..."
+"Compare Ashwin and Naren's workload" → Workload comparison
+"Events tomorrow" → Tomorrow's schedule
 ```
 
 **How to Use:**
 1. Click the 🤖 AI Assistant button (floating on right side)
 2. Type your question in natural language
-3. View results: Natural language answer + event cards + insights + recommendations
+3. View results: Natural language answer + event cards (for search) + insights + recommendations
 4. Click follow-up suggestions for related queries
+
+**Response Types:**
+- **Aggregation** ("How many..."): Count in answer, no event cards
+- **Availability** ("Free dates..."): Date ranges in answer, no event cards
+- **Search** ("Show..."): Event cards with full details
+- **Analytics** ("Busiest..."): Insights and recommendations
 
 **Status:** ✅ **FULLY OPERATIONAL** - Live at https://ncpa-sound.pages.dev
 

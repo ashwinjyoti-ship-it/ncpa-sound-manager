@@ -102,7 +102,16 @@ app.get('/api/events/search', async (c) => {
   }
 })
 
-// Get single event
+// ============================================
+// V4.1 ENHANCED API ENDPOINTS (Must be before /:id catch-all route)
+// ============================================
+setupFilteringEndpoints(app)
+setupConflictDetection(app)
+setupBulkAssignment(app)
+setupDashboardEndpoints(app)
+setupExportEndpoints(app)
+
+// Get single event (This must be AFTER specific routes like /filter-options)
 app.get('/api/events/:id', async (c) => {
   try {
     const id = c.req.param('id')
@@ -431,15 +440,6 @@ app.get('/api/analytics/stats', async (c) => {
     return c.json({ success: false, error: error.message }, 500)
   }
 })
-
-// ============================================
-// V4.1 ENHANCED API ENDPOINTS
-// ============================================
-setupFilteringEndpoints(app)
-setupConflictDetection(app)
-setupBulkAssignment(app)
-setupDashboardEndpoints(app)
-setupExportEndpoints(app)
 
 // ============================================
 // INTENT CLASSIFIER - Analyzes query intent

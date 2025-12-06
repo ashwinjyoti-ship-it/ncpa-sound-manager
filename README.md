@@ -4,10 +4,11 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 
 ## 🌐 URLs
 
-**Production (Live):**
-- 🚀 **Web App: https://ncpa-sound.pages.dev**
-- API Base: https://ncpa-sound.pages.dev/api
-- Short, memorable URL for easy access!
+**Production (Live - v4.1):**
+- 🚀 **Web App: https://6862a26b.ncpa-sound.pages.dev**
+- 🌐 **Permanent URL: https://ncpa-sound.pages.dev**
+- API Base: https://6862a26b.ncpa-sound.pages.dev/api
+- **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics
 
 **Development (Sandbox):**
 - Web App: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai
@@ -622,7 +623,120 @@ WHERE program LIKE '%Dance%';
 
 ## 📝 Changelog
 
-### Version 3.0 (Current - November 30, 2025) 🎉✨ **STABLE RELEASE**
+### Version 4.1 (December 6, 2025) 🎉✨ **PRODUCTION DEPLOYED**
+
+**Focus:** Advanced Event Management + Smart Crew Assignment + Real-time Analytics
+
+**🆕 Major Features in Version 4.1:**
+
+1. **Advanced Filtering & Sorting** 🔍
+   - Multi-select venue filter (108 venues)
+   - Multi-select crew filter (221 crew combinations)
+   - Status filter (confirmed, draft, in_progress, completed, cancelled)
+   - Date range filtering with calendar pickers
+   - Requirements filter (has/missing sound setup)
+   - Sort by: date, program, venue, crew, created_at, status
+   - Ascending/descending order
+   - Real-time filter application
+   - Filter results counter
+
+2. **Real-time Conflict Detection** ⚠️
+   - Automatic venue overlap detection (same date/time)
+   - Crew double-booking alerts (same person, multiple events)
+   - Visual conflict indicators with severity levels
+   - Conflict resolution suggestions
+   - Date range scanning (configurable)
+   - Conflict cache for performance
+
+3. **Bulk Crew Assignment with Smart Suggestions** 🎯
+   - **Pattern-Based Intelligence System** - Learns from historical assignments
+   - **Smart Crew Suggestions** with confidence scores (e.g., "Ashwin (85% - 35 JBT assignments)")
+   - **Solves "unknown capability" problem** - No need for crew capability database
+   - Bulk select events via checkboxes (Table view)
+   - Multi-event crew assignment (one-click)
+   - Historical pattern analysis
+   - Venue-based crew recommendations
+   - Assignment count tracking
+   - Confidence scoring algorithm
+   - Continuous learning from new assignments
+
+4. **Dashboard View with Analytics** 📊
+   - **Total Events** card (this month + 90 days) - **Fixed count: 841 events**
+   - **Upcoming Events** (next 7 days) with countdown
+   - **Needs Requirements** counter (missing sound setup)
+   - **Events by Venue** chart with bar graphs (top 7 venues)
+   - **Top Crew Workload** ranking with event counts
+   - Real-time metrics calculation
+   - Venue distribution visualization
+   - Crew workload analysis
+   - Date range filtering for analytics
+   - Responsive chart layouts
+
+5. **Mobile Optimization** 📱
+   - Responsive CSS for all breakpoints (320px - 1920px)
+   - Touch-friendly controls (44px minimum tap targets)
+   - Mobile-first filter panel design
+   - Swipe gestures support
+   - Optimized table view for small screens
+   - Collapsible navigation
+   - Adaptive dashboard cards
+
+6. **Customized Export with Change Tracking** 📤
+   - SHA-256 checksum generation for each export
+   - Google Sheets sync compatibility
+   - Change detection between exports
+   - Warning notifications for data changes
+   - Export log with timestamps
+   - CSV format with checksums in metadata
+   - Re-import protection
+
+7. **Advanced Calendar Features** 📅
+   - Multi-view support (Calendar, Table, Dashboard tabs)
+   - Color-coded event status indicators
+   - Bulk operations panel integration
+   - Event conflict visual warnings
+   - Quick filter access from calendar
+
+**Technical Implementation:**
+- ✅ **New Database Tables:**
+  - `crew_assignment_history` - Historical crew assignments
+  - `event_conflicts` - Conflict detection cache
+  - `export_log` - Export tracking with checksums
+  - `calendar_sync` - Google Calendar integration prep
+  - `user_preferences` - Filter/view preferences
+
+- ✅ **New API Endpoints (20+):**
+  - `POST /api/events/filter` - Advanced filtering
+  - `GET /api/events/filter-options` - Filter dropdown data
+  - `GET /api/conflicts/detect` - Conflict detection
+  - `POST /api/crew/suggestions` - Smart crew suggestions
+  - `POST /api/events/bulk-assign` - Bulk crew assignment
+  - `POST /api/events/update-status` - Bulk status update
+  - `GET /api/dashboard/stats` - Dashboard analytics
+  - `GET /api/dashboard/crew-workload` - Crew workload details
+  - `POST /api/export/tracked` - Export with change tracking
+
+- ✅ **Frontend Enhancements:**
+  - `v41-features.js` (1049 lines) - All v4.1 features
+  - `v41-endpoints.ts` (610 lines) - Backend API layer
+  - Filter panel UI with animations
+  - Conflict modal with severity indicators
+  - Bulk operations action bar
+  - Dashboard charts and metrics
+  - Mobile-responsive CSS
+
+**Deployment Details:**
+- ✅ **Production URL:** https://6862a26b.ncpa-sound.pages.dev
+- ✅ **Database:** Cloudflare D1 (841 events in production)
+- ✅ **Migrations Applied:** 0001-0005 (all v4.1 schema changes)
+- ✅ **New Columns:** `status`, `tags` added to events table
+- ✅ **Git Branch:** Merged `feature/enhancements-v4.1` → `main`
+
+**Status:** ✅ **FULLY OPERATIONAL** - Live in production with all features tested
+
+---
+
+### Version 3.0 (November 30, 2025) 🎉✨ **STABLE RELEASE**
 
 **🆕 Major Features in Version 3.0:**
 
@@ -869,12 +983,15 @@ Developed for: **NCPA Sound Crew**
 
 ---
 
-**Last Updated:** November 30, 2025
-**Status:** ✅ **Version 4.0 COMPLETE** - PRODUCTION DEPLOYED at https://ncpa-sound.pages.dev 🚀  
-**Latest:** 🎉 **RAG System LIVE** - AI-Powered Natural Language Search + Smart Analytics + Predictive Insights
+**Last Updated:** December 6, 2025
+**Status:** ✅ **Version 4.1 DEPLOYED** - LIVE at https://6862a26b.ncpa-sound.pages.dev 🚀  
+**Latest:** 🎉 **v4.1 Enhancements** - Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics
 
-**Latest Features (v3.0):** 
-- 📥 Excel Export (.xlsx) with professional formatting
-- 🎨 Warm orange/cream UI theme
-- 👥 Multiple crew selection with checkboxes
-- 🔍 Smart autocomplete dropdowns (Venue, Team, Crew)
+**Latest Features (v4.1):** 
+- 🔍 Advanced filtering & sorting (venue, crew, status, date range)
+- ⚠️ Real-time conflict detection (venue/crew overlaps)
+- 🎯 Bulk crew assignment with smart suggestions
+- 📊 Dashboard view with metrics, charts, analytics
+- 📱 Mobile-optimized responsive design
+- 📤 Export with change tracking (Google Sheets sync)
+- ✅ **841 events** in production database

@@ -29,6 +29,14 @@ console.log('🚀 v4.1 Features: Loading...');
 // ============================================
 
 function initializeFilters() {
+  console.log('🔧 initializeFilters: Starting...');
+  
+  // Check if already exists
+  if (document.getElementById('filterPanel')) {
+    console.log('✅ Filter panel already exists');
+    return;
+  }
+  
   // Create filter panel HTML
   const filterPanel = document.createElement('div');
   filterPanel.id = 'filterPanel';
@@ -108,13 +116,33 @@ function initializeFilters() {
     <div id="filterResults" class="mt-3 text-sm text-gray-600"></div>
   `;
   
-  // Insert after tab navigation
-  const container = document.querySelector('.container.mx-auto');
-  const tabNav = container.querySelector('.flex.justify-between.items-center.mb-6');
-  tabNav.parentNode.insertBefore(filterPanel, tabNav.nextSibling);
-  
-  // Load filter options
-  loadFilterOptions();
+  // Insert after tab navigation - with better error handling
+  try {
+    const container = document.querySelector('.container.mx-auto');
+    if (!container) {
+      console.error('❌ Container not found');
+      // Fallback: insert at body
+      document.body.insertBefore(filterPanel, document.body.firstChild);
+      console.log('✅ Filter panel inserted at body (fallback)');
+    } else {
+      const tabNav = container.querySelector('.flex.justify-between.items-center.mb-6');
+      if (!tabNav) {
+        console.error('❌ Tab nav not found, trying alternative');
+        // Try to insert after the first div
+        container.insertBefore(filterPanel, container.children[1]);
+        console.log('✅ Filter panel inserted (alternative)');
+      } else {
+        tabNav.parentNode.insertBefore(filterPanel, tabNav.nextSibling);
+        console.log('✅ Filter panel inserted after tab nav');
+      }
+    }
+    
+    // Load filter options
+    loadFilterOptions();
+    console.log('✅ Filter initialization complete');
+  } catch (error) {
+    console.error('❌ Filter initialization error:', error);
+  }
 }
 
 async function loadFilterOptions() {
@@ -152,7 +180,9 @@ async function loadFilterOptions() {
 }
 
 function toggleFilterPanel() {
+  console.log('🔘 toggleFilterPanel called');
   const panel = document.getElementById('filterPanel');
+  
   if (panel) {
     if (panel.classList.contains('hidden')) {
       panel.classList.remove('hidden');
@@ -162,14 +192,30 @@ function toggleFilterPanel() {
       console.log('✅ Filter panel closed');
     }
   } else {
-    console.error('❌ Filter panel not found! Initializing...');
-    initializeFilters();
-    setTimeout(() => toggleFilterPanel(), 100);
+    console.warn('⚠️ Filter panel not found! Initializing now...');
+    try {
+      initializeFilters();
+      console.log('✅ Initialization attempted, trying again...');
+      setTimeout(() => {
+        const panelRetry = document.getElementById('filterPanel');
+        if (panelRetry) {
+          panelRetry.classList.remove('hidden');
+          console.log('✅ Filter panel opened (after init)');
+        } else {
+          console.error('❌ Still cannot find filter panel after init');
+          alert('Filter panel initialization failed. Please refresh the page.');
+        }
+      }, 100);
+    } catch (error) {
+      console.error('❌ Error during initialization:', error);
+      alert('Error: ' + error.message);
+    }
   }
 }
 
 // Expose globally
 window.toggleFilterPanel = toggleFilterPanel;
+console.log('✅ toggleFilterPanel exposed globally');
 
 function closeFilterPanel() {
   document.getElementById('filterPanel').classList.add('hidden');

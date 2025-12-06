@@ -5,6 +5,13 @@ import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
 import { generateEventEmbedding } from './rag-utils'
 import { backfillEmbeddings } from './backfill-embeddings'
+import { 
+  setupFilteringEndpoints,
+  setupConflictDetection,
+  setupBulkAssignment,
+  setupDashboardEndpoints,
+  setupExportEndpoints
+} from './v41-endpoints'
 
 type Bindings = {
   DB: D1Database;
@@ -424,6 +431,15 @@ app.get('/api/analytics/stats', async (c) => {
     return c.json({ success: false, error: error.message }, 500)
   }
 })
+
+// ============================================
+// V4.1 ENHANCED API ENDPOINTS
+// ============================================
+setupFilteringEndpoints(app)
+setupConflictDetection(app)
+setupBulkAssignment(app)
+setupDashboardEndpoints(app)
+setupExportEndpoints(app)
 
 // ============================================
 // INTENT CLASSIFIER - Analyzes query intent
@@ -1545,6 +1561,66 @@ app.get('/', (c) => {
           @keyframes spin {
             to { transform: rotate(360deg); }
           }
+          
+          /* Mobile Responsiveness */
+          @media (max-width: 768px) {
+            .container {
+              padding: 1rem !important;
+            }
+            
+            .flex.space-x-3, .flex.space-x-6 {
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            }
+            
+            #searchInput {
+              width: 100% !important;
+              max-width: 200px;
+            }
+            
+            .calendar-day {
+              min-height: 80px !important;
+              font-size: 0.75rem;
+            }
+            
+            .event-card-green, .event-card-peach {
+              padding: 4px !important;
+              margin-bottom: 4px !important;
+            }
+            
+            table {
+              font-size: 0.75rem !important;
+            }
+            
+            .modal-content {
+              width: 95% !important;
+              margin: 1rem;
+              max-height: 90vh !important;
+            }
+            
+            button {
+              font-size: 0.75rem !important;
+              padding: 0.375rem 0.75rem !important;
+            }
+            
+            h1 {
+              font-size: 1.5rem !important;
+            }
+            
+            h2 {
+              font-size: 1.25rem !important;
+            }
+          }
+          
+          @media (max-width: 480px) {
+            .grid {
+              grid-template-columns: 1fr !important;
+            }
+            
+            .hidden-mobile {
+              display: none !important;
+            }
+          }
         </style>
     </head>
     <body style="background-color: #FFF8DC;">
@@ -1570,6 +1646,9 @@ app.get('/', (c) => {
                         <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
                             <i class="fas fa-table mr-2"></i>Table
                         </button>
+                        <button id="dashboardTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
+                            <i class="fas fa-chart-line mr-2"></i>Dashboard
+                        </button>
                     </div>
                     
                     <!-- Event Count Display -->
@@ -1587,6 +1666,18 @@ app.get('/', (c) => {
                                    class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 w-64">
                             <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                         </div>
+                        
+                        <!-- NEW: Advanced Filter Button -->
+                        <button onclick="toggleFilterPanel()" 
+                                class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                            <i class="fas fa-filter mr-1.5"></i>Filters
+                        </button>
+                        
+                        <!-- NEW: Conflict Detection -->
+                        <button onclick="checkConflicts()" 
+                                class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
+                            <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
+                        </button>
                         
                         <!-- WhatsApp Export -->
                         <button onclick="openWhatsAppExportModal()" 
@@ -1685,17 +1776,22 @@ app.get('/', (c) => {
                     <div class="overflow-auto" style="max-height: 70vh;">
                         <table class="w-full border-collapse table-fixed">
                             <colgroup>
+                                <col style="width: 5%;">   <!-- Select -->
                                 <col style="width: 10%;">  <!-- Date -->
-                                <col style="width: 25%;">  <!-- Program -->
+                                <col style="width: 23%;">  <!-- Program -->
                                 <col style="width: 10%;">  <!-- Venue -->
                                 <col style="width: 10%;">  <!-- Team -->
-                                <col style="width: 20%;">  <!-- Sound Requirements -->
+                                <col style="width: 18%;">  <!-- Sound Requirements -->
                                 <col style="width: 8%;">   <!-- Call Time -->
                                 <col style="width: 10%;">  <!-- Crew -->
-                                <col style="width: 7%;">   <!-- Actions -->
+                                <col style="width: 6%;">   <!-- Actions -->
                             </colgroup>
                             <thead>
                                 <tr style="background-color: #FF6B35;">
+                                    <th class="px-2 py-3 text-center text-white font-semibold text-sm">
+                                        <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)" 
+                                               class="cursor-pointer">
+                                    </th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Date</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Program/Event</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Venue</th>
@@ -2273,6 +2369,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
         <script src="/static/app.js?v=4.0.2"></script>
+        <script src="/static/v41-features.js?v=4.1.0"></script>
     </body>
     </html>
   `)

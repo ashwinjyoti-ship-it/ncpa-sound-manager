@@ -1,0 +1,933 @@
+// NCPA Sound Crew v4.1 - Enhanced Features
+// Advanced Filtering, Conflict Detection, Bulk Operations, Dashboard
+
+// ============================================
+// STATE MANAGEMENT FOR V4.1 FEATURES
+// ============================================
+
+let filterState = {
+  venues: [],
+  crews: [],
+  statuses: [],
+  dateFrom: null,
+  dateTo: null,
+  hasRequirements: null,
+  sortBy: 'event_date',
+  sortOrder: 'ASC'
+};
+
+let bulkSelection = new Set(); // Selected event IDs for bulk operations
+let conflictCache = {}; // Cache detected conflicts
+
+// ============================================
+// 1. ADVANCED FILTERING UI
+// ============================================
+
+function initializeFilters() {
+  // Create filter panel HTML
+  const filterPanel = document.createElement('div');
+  filterPanel.id = 'filterPanel';
+  filterPanel.className = 'bg-white rounded-lg shadow-md p-4 mb-4 hidden';
+  filterPanel.innerHTML = `
+    <div class="flex justify-between items-center mb-4">
+      <h3 class="text-lg font-semibold text-gray-800">
+        <i class="fas fa-filter mr-2"></i>Advanced Filters
+      </h3>
+      <button onclick="closeFilterPanel()" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Venue Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
+        <select id="filterVenue" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+          <option value="">All Venues</option>
+        </select>
+      </div>
+      
+      <!-- Crew Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Crew</label>
+        <select id="filterCrew" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+          <option value="">All Crew</option>
+        </select>
+      </div>
+      
+      <!-- Status Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select id="filterStatus" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+          <option value="confirmed">Confirmed</option>
+          <option value="draft">Draft</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      
+      <!-- Date Range -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+        <input type="date" id="filterDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+      </div>
+      
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+        <input type="date" id="filterDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+      </div>
+      
+      <!-- Requirements Filter -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
+        <select id="filterRequirements" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <option value="">All</option>
+          <option value="true">Has Requirements</option>
+          <option value="false">Missing Requirements</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+      <button onclick="clearFilters()" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+        <i class="fas fa-undo mr-1"></i>Clear Filters
+      </button>
+      <div class="space-x-2">
+        <button onclick="applyFilters()" class="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+          <i class="fas fa-check mr-1"></i>Apply Filters
+        </button>
+      </div>
+    </div>
+    
+    <div id="filterResults" class="mt-3 text-sm text-gray-600"></div>
+  `;
+  
+  // Insert after tab navigation
+  const container = document.querySelector('.container.mx-auto');
+  const tabNav = container.querySelector('.flex.justify-between.items-center.mb-6');
+  tabNav.parentNode.insertBefore(filterPanel, tabNav.nextSibling);
+  
+  // Load filter options
+  loadFilterOptions();
+}
+
+async function loadFilterOptions() {
+  try {
+    const response = await axios.get(`${API_BASE}/events/filter-options`);
+    if (response.data.success) {
+      const { venues, crews, statuses } = response.data.data;
+      
+      // Populate venue dropdown
+      const venueSelect = document.getElementById('filterVenue');
+      venues.forEach(venue => {
+        const option = document.createElement('option');
+        option.value = venue;
+        option.textContent = venue;
+        venueSelect.appendChild(option);
+      });
+      
+      // Populate crew dropdown
+      const crewSelect = document.getElementById('filterCrew');
+      // Parse crew members (they're comma-separated)
+      const uniqueCrew = new Set();
+      crews.forEach(crewStr => {
+        crewStr.split(',').forEach(c => uniqueCrew.add(c.trim()));
+      });
+      Array.from(uniqueCrew).sort().forEach(crew => {
+        const option = document.createElement('option');
+        option.value = crew;
+        option.textContent = crew;
+        crewSelect.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading filter options:', error);
+  }
+}
+
+function toggleFilterPanel() {
+  const panel = document.getElementById('filterPanel');
+  if (panel.classList.contains('hidden')) {
+    panel.classList.remove('hidden');
+  } else {
+    panel.classList.add('hidden');
+  }
+}
+
+function closeFilterPanel() {
+  document.getElementById('filterPanel').classList.add('hidden');
+}
+
+function clearFilters() {
+  filterState = {
+    venues: [],
+    crews: [],
+    statuses: [],
+    dateFrom: null,
+    dateTo: null,
+    hasRequirements: null,
+    sortBy: 'event_date',
+    sortOrder: 'ASC'
+  };
+  
+  // Clear UI
+  document.getElementById('filterVenue').selectedIndex = -1;
+  document.getElementById('filterCrew').selectedIndex = -1;
+  document.getElementById('filterStatus').selectedIndex = -1;
+  document.getElementById('filterDateFrom').value = '';
+  document.getElementById('filterDateTo').value = '';
+  document.getElementById('filterRequirements').value = '';
+  document.getElementById('filterResults').textContent = '';
+  
+  // Reload all events
+  loadEvents();
+}
+
+async function applyFilters() {
+  // Read filter values
+  const venueSelect = document.getElementById('filterVenue');
+  filterState.venues = Array.from(venueSelect.selectedOptions).map(o => o.value);
+  
+  const crewSelect = document.getElementById('filterCrew');
+  filterState.crews = Array.from(crewSelect.selectedOptions).map(o => o.value);
+  
+  const statusSelect = document.getElementById('filterStatus');
+  filterState.statuses = Array.from(statusSelect.selectedOptions).map(o => o.value);
+  
+  filterState.dateFrom = document.getElementById('filterDateFrom').value || null;
+  filterState.dateTo = document.getElementById('filterDateTo').value || null;
+  
+  const reqValue = document.getElementById('filterRequirements').value;
+  filterState.hasRequirements = reqValue === 'true' ? true : (reqValue === 'false' ? false : null);
+  
+  try {
+    const response = await axios.post(`${API_BASE}/events/filter`, filterState);
+    if (response.data.success) {
+      allEvents = response.data.data;
+      renderCurrentView();
+      
+      // Show results message
+      document.getElementById('filterResults').textContent = 
+        `Found ${response.data.count} event(s) matching filters`;
+    }
+  } catch (error) {
+    console.error('Error applying filters:', error);
+    showNotification('Failed to apply filters', 'error');
+  }
+}
+
+// ============================================
+// 2. CONFLICT DETECTION UI
+// ============================================
+
+async function checkConflicts() {
+  // Get date range for current month view or whole dataset
+  const today = new Date();
+  const dateFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const dateTo = new Date(today.getFullYear(), today.getMonth() + 3, 0).toISOString().split('T')[0];
+  
+  try {
+    showNotification('Checking for conflicts...', 'info');
+    
+    const response = await axios.get(`${API_BASE}/conflicts/detect`, {
+      params: { from: dateFrom, to: dateTo }
+    });
+    
+    if (response.data.success) {
+      const { conflicts, totalEvents, conflictCount } = response.data.data;
+      conflictCache = conflicts;
+      
+      if (conflictCount === 0) {
+        showNotification('✅ No conflicts detected!', 'success');
+      } else {
+        showConflictsModal(conflicts, totalEvents);
+      }
+    }
+  } catch (error) {
+    console.error('Error checking conflicts:', error);
+    showNotification('Failed to check conflicts', 'error');
+  }
+}
+
+function showConflictsModal(conflicts, totalEvents) {
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content max-w-4xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-red-600">
+          <i class="fas fa-exclamation-triangle mr-2"></i>
+          Conflicts Detected (${conflicts.length})
+        </h2>
+        <button onclick="this.closest('.modal').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      
+      <p class="text-gray-600 mb-4">
+        Found ${conflicts.length} conflict(s) in ${totalEvents} events. Review and resolve:
+      </p>
+      
+      <div class="space-y-4 max-h-96 overflow-y-auto">
+        ${conflicts.map((conflict, idx) => `
+          <div class="p-4 rounded-lg ${conflict.severity === 'error' ? 'bg-red-50 border-l-4 border-red-500' : 'bg-yellow-50 border-l-4 border-yellow-500'}">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <div class="font-semibold text-lg mb-2">
+                  ${conflict.severity === 'error' ? '🔴' : '⚠️'} ${conflict.type.replace('_', ' ').toUpperCase()}
+                </div>
+                <p class="text-gray-700 mb-2">${conflict.message}</p>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                  <div class="bg-white p-2 rounded">
+                    <div class="font-semibold text-gray-800">Event 1:</div>
+                    <div class="text-gray-600">${conflict.event1.program}</div>
+                    <div class="text-gray-500">${conflict.event1.venue}</div>
+                  </div>
+                  <div class="bg-white p-2 rounded">
+                    <div class="font-semibold text-gray-800">Event 2:</div>
+                    <div class="text-gray-600">${conflict.event2.program}</div>
+                    <div class="text-gray-500">${conflict.event2.venue}</div>
+                  </div>
+                </div>
+                ${conflict.overlappingCrew ? `
+                  <div class="mt-2 text-sm text-gray-700">
+                    <strong>Overlapping Crew:</strong> ${conflict.overlappingCrew.join(', ')}
+                  </div>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      
+      <div class="flex justify-end mt-6 pt-4 border-t border-gray-200">
+        <button onclick="this.closest('.modal').remove()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+// ============================================
+// 3. BULK OPERATIONS UI
+// ============================================
+
+function initializeBulkOperations() {
+  // Add bulk action bar to table view
+  const bulkBar = document.createElement('div');
+  bulkBar.id = 'bulkActionBar';
+  bulkBar.className = 'bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 hidden';
+  bulkBar.innerHTML = `
+    <div class="flex items-center justify-between">
+      <div class="flex items-center space-x-4">
+        <span class="text-blue-700 font-semibold">
+          <i class="fas fa-check-circle mr-2"></i>
+          <span id="bulkSelectedCount">0</span> event(s) selected
+        </span>
+        <button onclick="clearBulkSelection()" class="text-sm text-blue-600 hover:text-blue-800">
+          Clear Selection
+        </button>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <button onclick="bulkAssignCrew()" class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fas fa-users mr-1"></i>Assign Crew
+        </button>
+        <button onclick="bulkChangeStatus()" class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+          <i class="fas fa-tag mr-1"></i>Change Status
+        </button>
+        <button onclick="bulkExportSelected()" class="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700">
+          <i class="fas fa-file-export mr-1"></i>Export Selected
+        </button>
+        <button onclick="bulkDeleteSelected()" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700">
+          <i class="fas fa-trash mr-1"></i>Delete
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Insert into table view
+  const tableView = document.getElementById('tableView');
+  tableView.insertBefore(bulkBar, tableView.firstChild.nextSibling);
+  
+  // Add select all checkbox to table header
+  addBulkSelectCheckboxes();
+}
+
+function addBulkSelectCheckboxes() {
+  // This will be called when rendering table to add checkboxes
+  // Implementation in renderTable modification
+}
+
+function toggleBulkSelect(eventId, checked) {
+  if (checked) {
+    bulkSelection.add(eventId);
+  } else {
+    bulkSelection.delete(eventId);
+  }
+  
+  updateBulkActionBar();
+}
+
+function updateBulkActionBar() {
+  const bar = document.getElementById('bulkActionBar');
+  const count = document.getElementById('bulkSelectedCount');
+  
+  if (bulkSelection.size > 0) {
+    bar.classList.remove('hidden');
+    count.textContent = bulkSelection.size;
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function clearBulkSelection() {
+  bulkSelection.clear();
+  document.querySelectorAll('.bulk-select-checkbox').forEach(cb => cb.checked = false);
+  updateBulkActionBar();
+}
+
+async function bulkAssignCrew() {
+  if (bulkSelection.size === 0) return;
+  
+  // Get first event to determine venue for smart suggestions
+  const firstEventId = Array.from(bulkSelection)[0];
+  const firstEvent = allEvents.find(e => e.id === firstEventId);
+  
+  // Get smart suggestions
+  let suggestions = [];
+  try {
+    const response = await axios.post(`${API_BASE}/crew/suggestions`, {
+      venue: firstEvent.venue,
+      date: firstEvent.event_date
+    });
+    
+    if (response.data.success) {
+      suggestions = response.data.data.suggestions;
+    }
+  } catch (error) {
+    console.error('Error getting crew suggestions:', error);
+  }
+  
+  // Show modal with suggestions
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">
+          <i class="fas fa-users mr-2"></i>
+          Bulk Assign Crew (${bulkSelection.size} events)
+        </h2>
+        <button onclick="this.closest('.modal').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      
+      ${suggestions.length > 0 ? `
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg">
+          <h3 class="font-semibold text-blue-800 mb-2">
+            <i class="fas fa-lightbulb mr-2"></i>Smart Suggestions for ${firstEvent.venue}:
+          </h3>
+          <div class="grid grid-cols-2 gap-2">
+            ${suggestions.map(s => `
+              <button onclick="document.getElementById('bulkCrewInput').value='${s.name}'; this.style.background='#10b981'; this.style.color='white';" 
+                      class="px-3 py-2 text-left bg-white rounded border border-blue-200 hover:bg-blue-100 transition-all">
+                <div class="font-semibold">${s.name}</div>
+                <div class="text-xs text-gray-600">
+                  ${s.confidence}% confidence • ${s.assignmentCount} past assignments
+                </div>
+              </button>
+            `).join('')}
+          </div>
+          <p class="text-xs text-blue-600 mt-2">
+            <i class="fas fa-info-circle mr-1"></i>
+            Click a suggestion to use it, or type custom crew names below
+          </p>
+        </div>
+      ` : ''}
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Crew Assignment (comma-separated for multiple):
+        </label>
+        <input type="text" id="bulkCrewInput" 
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg"
+               placeholder="e.g., Ashwin, Naren, Sandeep">
+        <p class="text-xs text-gray-500 mt-1">
+          This will replace existing crew assignments for all selected events
+        </p>
+      </div>
+      
+      <div class="flex justify-end space-x-3">
+        <button onclick="this.closest('.modal').remove()" 
+                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+          Cancel
+        </button>
+        <button onclick="confirmBulkAssign()" 
+                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+          <i class="fas fa-check mr-1"></i>Assign to ${bulkSelection.size} Events
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+async function confirmBulkAssign() {
+  const crew = document.getElementById('bulkCrewInput').value.trim();
+  
+  if (!crew) {
+    showNotification('Please enter crew names', 'error');
+    return;
+  }
+  
+  try {
+    const response = await axios.post(`${API_BASE}/events/bulk-assign`, {
+      eventIds: Array.from(bulkSelection),
+      crew: crew
+    });
+    
+    if (response.data.success) {
+      showNotification(`✅ Assigned crew to ${response.data.updatedCount} events`, 'success');
+      document.querySelector('.modal.active').remove();
+      clearBulkSelection();
+      loadEvents(); // Reload to see changes
+    }
+  } catch (error) {
+    console.error('Error bulk assigning crew:', error);
+    showNotification('Failed to assign crew', 'error');
+  }
+}
+
+async function bulkChangeStatus() {
+  if (bulkSelection.size === 0) return;
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-gray-800">
+          <i class="fas fa-tag mr-2"></i>
+          Change Status (${bulkSelection.size} events)
+        </h2>
+        <button onclick="this.closest('.modal').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">New Status:</label>
+        <select id="bulkStatusSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+          <option value="draft">Draft</option>
+          <option value="confirmed" selected>Confirmed</option>
+          <option value="in_progress">In Progress</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      
+      <div class="flex justify-end space-x-3">
+        <button onclick="this.closest('.modal').remove()" 
+                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+          Cancel
+        </button>
+        <button onclick="confirmBulkStatus()" 
+                class="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700">
+          Update Status
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+}
+
+async function confirmBulkStatus() {
+  const status = document.getElementById('bulkStatusSelect').value;
+  
+  try {
+    const response = await axios.post(`${API_BASE}/events/update-status`, {
+      eventIds: Array.from(bulkSelection),
+      status: status
+    });
+    
+    if (response.data.success) {
+      showNotification(response.data.message, 'success');
+      document.querySelector('.modal.active').remove();
+      clearBulkSelection();
+      loadEvents();
+    }
+  } catch (error) {
+    console.error('Error changing status:', error);
+    showNotification('Failed to change status', 'error');
+  }
+}
+
+function bulkExportSelected() {
+  if (bulkSelection.size === 0) return;
+  
+  // Export selected events as CSV
+  const selectedEvents = allEvents.filter(e => bulkSelection.has(e.id));
+  exportEventsToCSV(selectedEvents, 'selected_events');
+  showNotification(`Exported ${bulkSelection.size} events`, 'success');
+}
+
+async function bulkDeleteSelected() {
+  if (bulkSelection.size === 0) return;
+  
+  if (!confirm(`Are you sure you want to delete ${bulkSelection.size} event(s)? This cannot be undone.`)) {
+    return;
+  }
+  
+  try {
+    const deletePromises = Array.from(bulkSelection).map(id => 
+      axios.delete(`${API_BASE}/events/${id}`)
+    );
+    
+    await Promise.all(deletePromises);
+    
+    showNotification(`Deleted ${bulkSelection.size} events`, 'success');
+    clearBulkSelection();
+    loadEvents();
+  } catch (error) {
+    console.error('Error deleting events:', error);
+    showNotification('Failed to delete some events', 'error');
+  }
+}
+
+// ============================================
+// 4. DASHBOARD VIEW
+// ============================================
+
+function showDashboard() {
+  // Create dashboard tab if it doesn't exist
+  let dashboardTab = document.getElementById('dashboardTab');
+  if (!dashboardTab) {
+    const tabContainer = document.querySelector('.flex.space-x-6.border-b');
+    dashboardTab = document.createElement('button');
+    dashboardTab.id = 'dashboardTab';
+    dashboardTab.className = 'px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all';
+    dashboardTab.innerHTML = '<i class="fas fa-chart-line mr-2"></i>Dashboard';
+    dashboardTab.onclick = () => showTab('dashboard');
+    tabContainer.insertBefore(dashboardTab, tabContainer.children[2]);
+  }
+  
+  // Create dashboard view if it doesn't exist
+  let dashboardView = document.getElementById('dashboardView');
+  if (!dashboardView) {
+    dashboardView = document.createElement('div');
+    dashboardView.id = 'dashboardView';
+    dashboardView.className = 'bg-white rounded-lg shadow-lg p-6';
+    dashboardView.style.display = 'none';
+    
+    const container = document.querySelector('.container.mx-auto');
+    container.appendChild(dashboardView);
+  }
+  
+  // Load dashboard data
+  loadDashboardData();
+}
+
+async function loadDashboardData() {
+  const dashboardView = document.getElementById('dashboardView');
+  dashboardView.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i></div>';
+  
+  try {
+    const today = new Date();
+    const dateFrom = today.toISOString().split('T')[0];
+    const dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const response = await axios.get(`${API_BASE}/dashboard/stats`, {
+      params: { from: dateFrom, to: dateTo }
+    });
+    
+    if (response.data.success) {
+      renderDashboard(response.data.data);
+    }
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+    dashboardView.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load dashboard data</div>';
+  }
+}
+
+function renderDashboard(data) {
+  const dashboardView = document.getElementById('dashboardView');
+  
+  const html = `
+    <h2 class="text-2xl font-bold text-gray-800 mb-6">
+      <i class="fas fa-chart-line mr-2"></i>Dashboard Overview
+    </h2>
+    
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-md">
+        <div class="text-sm font-semibold mb-1">Total Events</div>
+        <div class="text-3xl font-bold">${data.total}</div>
+        <div class="text-xs mt-2 opacity-90">Next 90 days</div>
+      </div>
+      
+      <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-md">
+        <div class="text-sm font-semibold mb-1">Upcoming (7 days)</div>
+        <div class="text-3xl font-bold">${data.upcomingEvents.length}</div>
+        <div class="text-xs mt-2 opacity-90">Events this week</div>
+      </div>
+      
+      <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-lg shadow-md">
+        <div class="text-sm font-semibold mb-1">Needs Requirements</div>
+        <div class="text-3xl font-bold">${data.needsRequirements}</div>
+        <div class="text-xs mt-2 opacity-90">Missing sound setup</div>
+      </div>
+      
+      <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-md">
+        <div class="text-sm font-semibold mb-1">Active Venues</div>
+        <div class="text-3xl font-bold">${data.venueDistribution.length}</div>
+        <div class="text-xs mt-2 opacity-90">With scheduled events</div>
+      </div>
+    </div>
+    
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <!-- Venue Distribution -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Events by Venue</h3>
+        <div class="space-y-3">
+          ${data.venueDistribution.slice(0, 8).map(v => `
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-700 font-medium">${v.venue}</span>
+                <span class="text-gray-600">${v.count} events</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-blue-500 h-2 rounded-full" style="width: ${(v.count / data.total * 100)}%"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      
+      <!-- Crew Workload -->
+      <div class="bg-white border border-gray-200 rounded-lg p-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Crew Workload</h3>
+        <div class="space-y-3">
+          ${data.crewWorkload.slice(0, 8).map((c, idx) => `
+            <div>
+              <div class="flex justify-between text-sm mb-1">
+                <span class="text-gray-700 font-medium">
+                  ${idx + 1}. ${c.crew}
+                </span>
+                <span class="text-gray-600">${c.count} events</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2">
+                <div class="bg-green-500 h-2 rounded-full" style="width: ${(c.count / data.total * 100)}%"></div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+    
+    <!-- Upcoming Events Table -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">Upcoming Events (Next 7 Days)</h3>
+      ${data.upcomingEvents.length === 0 ? `
+        <p class="text-gray-500 text-center py-8">No events scheduled in the next 7 days</p>
+      ` : `
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-3 py-2 text-left font-semibold text-gray-700">Date</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-700">Program</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-700">Venue</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-700">Crew</th>
+                <th class="px-3 py-2 text-left font-semibold text-gray-700">Call Time</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+              ${data.upcomingEvents.map(e => `
+                <tr class="hover:bg-gray-50">
+                  <td class="px-3 py-2">${formatDate(e.event_date)}</td>
+                  <td class="px-3 py-2 font-medium">${e.program}</td>
+                  <td class="px-3 py-2">${e.venue}</td>
+                  <td class="px-3 py-2">${e.crew || '-'}</td>
+                  <td class="px-3 py-2">${e.call_time || '-'}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      `}
+    </div>
+    
+    <!-- Status Breakdown -->
+    ${data.statusBreakdown.length > 0 ? `
+      <div class="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Breakdown</h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+          ${data.statusBreakdown.map(s => `
+            <div class="text-center p-4 bg-gray-50 rounded-lg">
+              <div class="text-2xl font-bold text-gray-800">${s.count}</div>
+              <div class="text-sm text-gray-600 capitalize">${s.status}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    ` : ''}
+  `;
+  
+  dashboardView.innerHTML = html;
+}
+
+function formatDate(dateStr) {
+  const date = new Date(dateStr);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+// ============================================
+// 5. ENHANCED EXPORT WITH CHANGE TRACKING
+// ============================================
+
+let lastExportChecksum = null;
+
+async function exportWithTracking(format = 'csv') {
+  try {
+    const response = await axios.post(`${API_BASE}/export/tracked`, {
+      eventIds: allEvents.map(e => e.id),
+      format: format,
+      includeMetadata: true
+    });
+    
+    if (response.data.success) {
+      lastExportChecksum = response.data.checksum;
+      const events = response.data.data.events;
+      
+      if (format === 'csv') {
+        exportEventsToCSV(events, `ncpa_events_tracked_${new Date().toISOString().split('T')[0]}`);
+      } else if (format === 'excel') {
+        exportEventsToExcel(events, `ncpa_events_tracked_${new Date().toISOString().split('T')[0]}`);
+      }
+      
+      showNotification(`Exported ${events.length} events with tracking`, 'success');
+      
+      // Store checksum in localStorage for Google Sheets sync
+      localStorage.setItem('lastExportChecksum', lastExportChecksum);
+      localStorage.setItem('lastExportDate', new Date().toISOString());
+    }
+  } catch (error) {
+    console.error('Error exporting with tracking:', error);
+    showNotification('Export failed', 'error');
+  }
+}
+
+async function checkExportChanges() {
+  const lastChecksum = localStorage.getItem('lastExportChecksum');
+  
+  if (!lastChecksum) {
+    showNotification('No previous export found', 'info');
+    return false;
+  }
+  
+  try {
+    const response = await axios.post(`${API_BASE}/export/check-changes`, {
+      lastChecksum: lastChecksum,
+      eventIds: allEvents.map(e => e.id)
+    });
+    
+    if (response.data.success) {
+      const { hasChanges, eventCount } = response.data.data;
+      
+      if (hasChanges) {
+        showNotification(`⚠️ ${eventCount} events have changed since last export`, 'warning');
+        return true;
+      } else {
+        showNotification('✅ No changes since last export', 'success');
+        return false;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking changes:', error);
+    return false;
+  }
+}
+
+// Enhanced CSV export for Google Sheets compatibility
+function exportEventsToCSV(events, filename) {
+  if (!events || events.length === 0) {
+    showNotification('No events to export', 'error');
+    return;
+  }
+  
+  // CSV Headers with all fields
+  const headers = [
+    'ID',
+    'Date',
+    'Program',
+    'Venue',
+    'Team',
+    'Sound Requirements',
+    'Call Time',
+    'Crew',
+    'Status',
+    'Tags',
+    'Created At',
+    'Updated At'
+  ];
+  
+  // Convert events to CSV rows
+  const rows = events.map(event => [
+    event.id || '',
+    event.event_date || '',
+    `"${(event.program || '').replace(/"/g, '""')}"`,
+    `"${(event.venue || '').replace(/"/g, '""')}"`,
+    `"${(event.team || '').replace(/"/g, '""')}"`,
+    `"${(event.sound_requirements || '').replace(/"/g, '""')}"`,
+    event.call_time || '',
+    `"${(event.crew || '').replace(/"/g, '""')}"`,
+    event.status || 'confirmed',
+    event.tags || '',
+    event.created_at || '',
+    event.updated_at || ''
+  ]);
+  
+  // Combine headers and rows
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(row => row.join(','))
+  ].join('\n');
+  
+  // Create blob and download
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+// ============================================
+// INITIALIZE V4.1 FEATURES ON PAGE LOAD
+// ============================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  // Wait for main app to initialize, then add v4.1 features
+  setTimeout(() => {
+    initializeFilters();
+    initializeBulkOperations();
+    showDashboard(); // Create dashboard tab
+    
+    console.log('✅ NCPA Sound Crew v4.1 Features Loaded');
+    
+    // Check for export changes on load
+    const lastExportDate = localStorage.getItem('lastExportDate');
+    if (lastExportDate) {
+      console.log(`📊 Last export: ${new Date(lastExportDate).toLocaleString()}`);
+    }
+  }, 100);
+});

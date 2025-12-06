@@ -64,17 +64,29 @@ function showTab(tab) {
   // Update tab buttons
   document.getElementById('calendarTab').classList.remove('tab-active');
   document.getElementById('tableTab').classList.remove('tab-active');
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (dashboardTab) dashboardTab.classList.remove('tab-active');
+  
+  // Hide all views
+  document.getElementById('calendarView').style.display = 'none';
+  document.getElementById('tableView').style.display = 'none';
+  const dashboardView = document.getElementById('dashboardView');
+  if (dashboardView) dashboardView.style.display = 'none';
   
   if (tab === 'calendar') {
     document.getElementById('calendarTab').classList.add('tab-active');
     document.getElementById('calendarView').style.display = 'block';
-    document.getElementById('tableView').style.display = 'none';
     renderCalendar();
-  } else {
+  } else if (tab === 'table') {
     document.getElementById('tableTab').classList.add('tab-active');
-    document.getElementById('calendarView').style.display = 'none';
     document.getElementById('tableView').style.display = 'block';
     renderTable();
+  } else if (tab === 'dashboard') {
+    if (dashboardTab) dashboardTab.classList.add('tab-active');
+    if (dashboardView) {
+      dashboardView.style.display = 'block';
+      loadDashboardData();
+    }
   }
 }
 
@@ -214,12 +226,28 @@ function changeMonth(delta) {
 // TABLE VIEW
 // ============================================
 
+function toggleSelectAll(checked) {
+  document.querySelectorAll('.bulk-select-checkbox').forEach(cb => {
+    cb.checked = checked;
+    const eventId = parseInt(cb.dataset.eventId);
+    if (checked) {
+      bulkSelection.add(eventId);
+    } else {
+      bulkSelection.delete(eventId);
+    }
+  });
+  
+  if (typeof updateBulkActionBar === 'function') {
+    updateBulkActionBar();
+  }
+}
+
 function renderTable() {
   const tbody = document.getElementById('tableBody');
   tbody.innerHTML = '';
   
   if (allEvents.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-8 text-gray-500">No events found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-8 text-gray-500">No events found</td></tr>';
     return;
   }
   
@@ -229,6 +257,10 @@ function renderTable() {
     row.className = 'border-b hover:bg-gray-50 transition-colors duration-200';
     
     row.innerHTML = `
+      <td class="px-2 py-2 text-center">
+        <input type="checkbox" class="bulk-select-checkbox" data-event-id="${event.id}" 
+               onchange="toggleBulkSelect(${event.id}, this.checked)">
+      </td>
       <td class="px-2 py-2 text-sm">${formatDate(event.event_date)}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="program" data-id="${event.id}">${event.program || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="venue" data-id="${event.id}">${event.venue || ''}</td>

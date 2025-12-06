@@ -710,7 +710,9 @@ async function loadDashboardData() {
   
   try {
     const today = new Date();
-    const dateFrom = today.toISOString().split('T')[0];
+    // Show all events: start from beginning of current month to +90 days
+    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const dateFrom = firstOfMonth.toISOString().split('T')[0];
     const dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     const response = await axios.get(`${API_BASE}/dashboard/stats`, {
@@ -739,7 +741,7 @@ function renderDashboard(data) {
       <div class="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-lg shadow-md">
         <div class="text-sm font-semibold mb-1">Total Events</div>
         <div class="text-3xl font-bold">${data.total}</div>
-        <div class="text-xs mt-2 opacity-90">Next 90 days</div>
+        <div class="text-xs mt-2 opacity-90">This month + 90 days</div>
       </div>
       
       <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-md">

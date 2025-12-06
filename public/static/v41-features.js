@@ -5,6 +5,9 @@
 // STATE MANAGEMENT FOR V4.1 FEATURES
 // ============================================
 
+// Make functions globally accessible
+window.v41Features = {};
+
 let filterState = {
   venues: [],
   crews: [],
@@ -18,6 +21,8 @@ let filterState = {
 
 let bulkSelection = new Set(); // Selected event IDs for bulk operations
 let conflictCache = {}; // Cache detected conflicts
+
+console.log('🚀 v4.1 Features: Loading...');
 
 // ============================================
 // 1. ADVANCED FILTERING UI
@@ -148,12 +153,23 @@ async function loadFilterOptions() {
 
 function toggleFilterPanel() {
   const panel = document.getElementById('filterPanel');
-  if (panel.classList.contains('hidden')) {
-    panel.classList.remove('hidden');
+  if (panel) {
+    if (panel.classList.contains('hidden')) {
+      panel.classList.remove('hidden');
+      console.log('✅ Filter panel opened');
+    } else {
+      panel.classList.add('hidden');
+      console.log('✅ Filter panel closed');
+    }
   } else {
-    panel.classList.add('hidden');
+    console.error('❌ Filter panel not found! Initializing...');
+    initializeFilters();
+    setTimeout(() => toggleFilterPanel(), 100);
   }
 }
+
+// Expose globally
+window.toggleFilterPanel = toggleFilterPanel;
 
 function closeFilterPanel() {
   document.getElementById('filterPanel').classList.add('hidden');
@@ -222,33 +238,46 @@ async function applyFilters() {
 // ============================================
 
 async function checkConflicts() {
+  console.log('🔍 Checking conflicts...');
+  
   // Get date range for current month view or whole dataset
   const today = new Date();
   const dateFrom = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
   const dateTo = new Date(today.getFullYear(), today.getMonth() + 3, 0).toISOString().split('T')[0];
   
   try {
-    showNotification('Checking for conflicts...', 'info');
+    if (typeof showNotification === 'function') {
+      showNotification('Checking for conflicts...', 'info');
+    }
     
     const response = await axios.get(`${API_BASE}/conflicts/detect`, {
       params: { from: dateFrom, to: dateTo }
     });
+    
+    console.log('✅ Conflicts API response:', response.data);
     
     if (response.data.success) {
       const { conflicts, totalEvents, conflictCount } = response.data.data;
       conflictCache = conflicts;
       
       if (conflictCount === 0) {
-        showNotification('✅ No conflicts detected!', 'success');
+        if (typeof showNotification === 'function') {
+          showNotification('✅ No conflicts detected!', 'success');
+        } else {
+          alert('✅ No conflicts detected!');
+        }
       } else {
         showConflictsModal(conflicts, totalEvents);
       }
     }
   } catch (error) {
-    console.error('Error checking conflicts:', error);
-    showNotification('Failed to check conflicts', 'error');
+    console.error('❌ Error checking conflicts:', error);
+    alert('Failed to check conflicts: ' + error.message);
   }
 }
+
+// Expose globally
+window.checkConflicts = checkConflicts;
 
 function showConflictsModal(conflicts, totalEvents) {
   const modal = document.createElement('div');
@@ -911,23 +940,62 @@ function exportEventsToCSV(events, filename) {
   document.body.removeChild(link);
 }
 
+// Expose all functions globally
+window.toggleFilterPanel = toggleFilterPanel;
+window.closeFilterPanel = closeFilterPanel;
+window.clearFilters = clearFilters;
+window.applyFilters = applyFilters;
+window.checkConflicts = checkConflicts;
+window.toggleBulkSelect = toggleBulkSelect;
+window.clearBulkSelection = clearBulkSelection;
+window.bulkAssignCrew = bulkAssignCrew;
+window.bulkChangeStatus = bulkChangeStatus;
+window.bulkExportSelected = bulkExportSelected;
+window.bulkDeleteSelected = bulkDeleteSelected;
+window.confirmBulkAssign = confirmBulkAssign;
+window.confirmBulkStatus = confirmBulkStatus;
+window.loadDashboardData = loadDashboardData;
+window.exportWithTracking = exportWithTracking;
+window.checkExportChanges = checkExportChanges;
+
 // ============================================
 // INITIALIZE V4.1 FEATURES ON PAGE LOAD
 // ============================================
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Wait for main app to initialize, then add v4.1 features
-  setTimeout(() => {
+function initializeV41Features() {
+  console.log('🚀 Initializing v4.1 features...');
+  
+  try {
     initializeFilters();
+    console.log('✅ Filters initialized');
+  } catch (e) {
+    console.error('❌ Filter init failed:', e);
+  }
+  
+  try {
     initializeBulkOperations();
-    showDashboard(); // Create dashboard tab
-    
-    console.log('✅ NCPA Sound Crew v4.1 Features Loaded');
-    
-    // Check for export changes on load
-    const lastExportDate = localStorage.getItem('lastExportDate');
-    if (lastExportDate) {
-      console.log(`📊 Last export: ${new Date(lastExportDate).toLocaleString()}`);
-    }
-  }, 100);
-});
+    console.log('✅ Bulk operations initialized');
+  } catch (e) {
+    console.error('❌ Bulk ops init failed:', e);
+  }
+  
+  console.log('✅ NCPA Sound Crew v4.1 Features Loaded');
+  
+  // Check for export changes on load
+  const lastExportDate = localStorage.getItem('lastExportDate');
+  if (lastExportDate) {
+    console.log(`📊 Last export: ${new Date(lastExportDate).toLocaleString()}`);
+  }
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(initializeV41Features, 200);
+  });
+} else {
+  // DOM already loaded
+  setTimeout(initializeV41Features, 200);
+}
+
+console.log('✅ v4.1 Features script loaded');

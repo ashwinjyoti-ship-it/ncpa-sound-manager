@@ -1808,6 +1808,14 @@ app.get('/', (c) => {
                         </table>
                     </div>
                 </div>
+                
+                <!-- Dashboard View -->
+                <div id="dashboardView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
+                    <div class="text-center py-12">
+                        <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+                        <p class="mt-4 text-gray-600">Loading dashboard...</p>
+                    </div>
+                </div>
             </div>
         </div>
 

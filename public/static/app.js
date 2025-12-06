@@ -1717,6 +1717,131 @@ function convertEventsToCSV(events) {
 }
 
 // ============================================
+// iCALENDAR EXPORT FOR CALENDAR APPS
+// ============================================
+
+function convertEventsToICalendar(events) {
+  // iCalendar header
+  const icsLines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//NCPA Sound Crew//Event Schedule//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:NCPA Sound Crew Events',
+    'X-WR-TIMEZONE:Asia/Kolkata'
+  ];
+  
+  // Convert each event to VEVENT
+  events.forEach(event => {
+    const eventDate = event.event_date; // Format: YYYY-MM-DD
+    const callTime = event.call_time || '09:00'; // Default to 9 AM if no call time
+    
+    // Parse date and time
+    const [year, month, day] = eventDate.split('-');
+    const [hours, minutes] = callTime.split(':');
+    
+    // Create datetime stamps (iCalendar format: YYYYMMDDTHHmmss)
+    const dtStart = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
+    const dtEnd = `${year}${month}${day}T${(parseInt(hours) + 2).toString().padStart(2, '0')}${minutes.padStart(2, '0')}00`; // +2 hours duration
+    
+    // Create unique ID
+    const uid = `${event.id}-${eventDate}@ncpa-sound.pages.dev`;
+    
+    // Create timestamp (now)
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    
+    // Build description
+    let description = [];
+    if (event.venue) description.push(`Venue: ${event.venue}`);
+    if (event.team) description.push(`Team: ${event.team}`);
+    if (event.crew) description.push(`Crew: ${event.crew}`);
+    if (event.sound_requirements) description.push(`Sound Requirements: ${event.sound_requirements}`);
+    if (event.call_time) description.push(`Call Time: ${event.call_time}`);
+    
+    const descText = description.join('\\n').replace(/,/g, '\\,');
+    
+    // Build VEVENT
+    icsLines.push(
+      'BEGIN:VEVENT',
+      `UID:${uid}`,
+      `DTSTAMP:${timestamp}`,
+      `DTSTART:${dtStart}`,
+      `DTEND:${dtEnd}`,
+      `SUMMARY:${event.program.replace(/,/g, '\\,')}`,
+      `DESCRIPTION:${descText}`,
+      `LOCATION:${(event.venue || '').replace(/,/g, '\\,')}`,
+      'STATUS:CONFIRMED',
+      'TRANSP:OPAQUE',
+      'END:VEVENT'
+    );
+  });
+  
+  // iCalendar footer
+  icsLines.push('END:VCALENDAR');
+  
+  return icsLines.join('\r\n');
+}
+
+async function generateICalendarExport() {
+  const month = document.getElementById('csvExportMonth').value;
+  const year = document.getElementById('csvExportYear').value;
+  
+  if (!month || !year) {
+    showNotification('Please select month and year', 'error');
+    return;
+  }
+  
+  try {
+    // Calculate date range for the month
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const lastDay = new Date(year, month, 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+    
+    // Fetch events for this month
+    showNotification('Fetching events for calendar...', 'info');
+    const response = await axios.get(`${API_BASE}/events/range?start=${startDate}&end=${endDate}`);
+    
+    if (!response.data.success || !response.data.data || response.data.data.length === 0) {
+      showNotification('No events found for this month', 'warning');
+      return;
+    }
+    
+    const events = response.data.data;
+    
+    // Convert to iCalendar format
+    const icsContent = convertEventsToICalendar(events);
+    
+    // Create download link
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+    const monthName = monthNames[parseInt(month) - 1];
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `NCPA_Events_${monthName}_${year}.ics`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification(`✅ Downloaded ${events.length} events as calendar file (.ics)`, 'success');
+    closeCSVExportModal();
+    
+  } catch (error) {
+    console.error('iCalendar export error:', error);
+    showNotification(`Failed to export calendar: ${error.message}`, 'error');
+  }
+}
+
+// Expose iCalendar export globally
+window.generateICalendarExport = generateICalendarExport;
+
+// ============================================
 // EXCEL EXPORT
 // ============================================
 

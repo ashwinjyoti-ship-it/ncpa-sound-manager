@@ -2291,15 +2291,26 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3">
-                        <button onclick="generateCSVExport()" 
-                                class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all">
-                            <i class="fas fa-file-csv mr-2"></i>CSV
-                        </button>
-                        <button onclick="generateExcelExport()" 
-                                class="px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
-                            <i class="fas fa-file-excel mr-2"></i>Excel
-                        </button>
+                    <div class="space-y-2">
+                        <p class="text-sm font-medium text-gray-700 mb-2">Export Format:</p>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="generateCSVExport()" 
+                                    class="px-3 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all text-sm">
+                                <i class="fas fa-file-csv mr-1"></i>CSV
+                            </button>
+                            <button onclick="generateExcelExport()" 
+                                    class="px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all text-sm">
+                                <i class="fas fa-file-excel mr-1"></i>Excel
+                            </button>
+                            <button onclick="generateICalendarExport()" 
+                                    class="px-3 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all text-sm">
+                                <i class="fas fa-calendar mr-1"></i>Calendar
+                            </button>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            <i class="fas fa-info-circle mr-1"></i>
+                            Use <strong>Calendar</strong> (.ics) for Google Calendar, Apple Calendar, Outlook
+                        </p>
                     </div>
                 </div>
             </div>

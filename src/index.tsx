@@ -12,6 +12,7 @@ import {
   setupDashboardEndpoints,
   setupExportEndpoints
 } from './v41-endpoints'
+import { setupCrewAssignmentEngine } from './crew-assignment-engine'
 
 type Bindings = {
   DB: D1Database;
@@ -110,6 +111,7 @@ setupConflictDetection(app)
 setupBulkAssignment(app)
 setupDashboardEndpoints(app)
 setupExportEndpoints(app)
+setupCrewAssignmentEngine(app)
 
 // Get single event (This must be AFTER specific routes like /filter-options)
 app.get('/api/events/:id', async (c) => {

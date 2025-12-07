@@ -31,28 +31,57 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       }
       
       // Step 1: Get crew expertise at this venue
-      const { results: expertiseData } = await c.env.DB.prepare(`
-        SELECT 
-          crew_name,
-          COUNT(*) as assignment_count,
-          MAX(event_date) as last_assignment
+      // Parse comma-separated crew field and get expertise per crew member
+      const { results: venueEvents } = await c.env.DB.prepare(`
+        SELECT crew, event_date
         FROM events
         WHERE venue = ? AND crew IS NOT NULL AND crew != ""
-        GROUP BY crew_name
-        ORDER BY assignment_count DESC
       `).bind(venue).all()
+      
+      const expertiseMap = new Map<string, { count: number, lastDate: string }>()
+      venueEvents.forEach((row: any) => {
+        const crewMembers = row.crew.split(',').map((c: string) => c.trim())
+        crewMembers.forEach((member: string) => {
+          if (member) {
+            const existing = expertiseMap.get(member)
+            if (!existing || row.event_date > existing.lastDate) {
+              expertiseMap.set(member, {
+                count: (existing?.count || 0) + 1,
+                lastDate: row.event_date
+              })
+            }
+          }
+        })
+      })
+      
+      const expertiseData = Array.from(expertiseMap.entries()).map(([name, data]) => ({
+        crew_name: name,
+        assignment_count: data.count,
+        last_assignment: data.lastDate
+      }))
       
       // Step 2: Get current month workload for fairness
       const month = event_date.substring(0, 7) // YYYY-MM
-      const { results: workloadData } = await c.env.DB.prepare(`
-        SELECT 
-          crew_name,
-          COUNT(*) as current_workload
+      const { results: monthEvents } = await c.env.DB.prepare(`
+        SELECT crew
         FROM events
         WHERE strftime('%Y-%m', event_date) = ? AND crew IS NOT NULL AND crew != ""
-        GROUP BY crew_name
-        ORDER BY current_workload ASC
       `).bind(month).all()
+      
+      const workloadMap = new Map<string, number>()
+      monthEvents.forEach((row: any) => {
+        const crewMembers = row.crew.split(',').map((c: string) => c.trim())
+        crewMembers.forEach((member: string) => {
+          if (member) {
+            workloadMap.set(member, (workloadMap.get(member) || 0) + 1)
+          }
+        })
+      })
+      
+      const workloadData = Array.from(workloadMap.entries()).map(([name, count]) => ({
+        crew_name: name,
+        current_workload: count
+      }))
       
       // Step 3: Check for conflicts (crew already assigned on this date)
       const { results: conflictData } = await c.env.DB.prepare(`
@@ -70,23 +99,23 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       
       // Step 4: Calculate scores for each crew member
       const crewScores: any[] = []
-      const expertiseMap = new Map(expertiseData.map((e: any) => [e.crew_name, e.assignment_count]))
-      const workloadMap = new Map(workloadData.map((w: any) => [w.crew_name, w.current_workload]))
+      const expertiseScoreMap = new Map(expertiseData.map((e: any) => [e.crew_name, e.assignment_count]))
+      const workloadScoreMap = new Map(workloadData.map((w: any) => [w.crew_name, w.current_workload]))
       
       // Get all unique crew members
-      const allCrew = new Set([...expertiseMap.keys(), ...workloadMap.keys()])
+      const allCrew = new Set([...expertiseScoreMap.keys(), ...workloadScoreMap.keys()])
       
       for (const crewMember of allCrew) {
         if (busyCrewMembers.has(crewMember)) {
           continue // Skip crew members already assigned on this date
         }
         
-        const expertiseCount = expertiseMap.get(crewMember) || 0
-        const currentWorkload = workloadMap.get(crewMember) || 0
+        const expertiseCount = expertiseScoreMap.get(crewMember) || 0
+        const currentWorkload = workloadScoreMap.get(crewMember) || 0
         
         // Calculate scores (0.0 to 1.0)
-        const maxExpertise = Math.max(...Array.from(expertiseMap.values()))
-        const maxWorkload = Math.max(...Array.from(workloadMap.values()), 1)
+        const maxExpertise = Math.max(...Array.from(expertiseScoreMap.values()))
+        const maxWorkload = Math.max(...Array.from(workloadScoreMap.values()), 1)
         
         const expertiseScore = maxExpertise > 0 ? expertiseCount / maxExpertise : 0
         const fairnessScore = 1 - (currentWorkload / maxWorkload) // Lower workload = higher score

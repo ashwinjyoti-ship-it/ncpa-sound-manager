@@ -9,6 +9,31 @@ type Bindings = {
   DB: D1Database;
 }
 
+// VALID CREW MEMBERS - Only learn from these crew members
+// Ashwin is team head and assigned selectively - excluded from auto-suggestions
+const VALID_CREW_MEMBERS = new Set([
+  'Naren',
+  'Sandeep', 
+  'Coni',
+  'Nikhil',
+  'NS',
+  'Aditya',
+  'Viraj',
+  'Shridhar',
+  'Nazar',
+  'Omkar',
+  'Akshay',
+  'OC1',
+  'OC2',
+  'OC3'
+])
+
+// Filter crew member to only include valid crew
+function isValidCrewMember(name: string): boolean {
+  const trimmedName = name.trim()
+  return VALID_CREW_MEMBERS.has(trimmedName)
+}
+
 export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
   
   // ============================================
@@ -42,7 +67,8 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       venueEvents.forEach((row: any) => {
         const crewMembers = row.crew.split(',').map((c: string) => c.trim())
         crewMembers.forEach((member: string) => {
-          if (member) {
+          // Only learn from valid crew members (exclude Ashwin and invalid names)
+          if (member && isValidCrewMember(member)) {
             const existing = expertiseMap.get(member)
             if (!existing || row.event_date > existing.lastDate) {
               expertiseMap.set(member, {
@@ -72,7 +98,8 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       monthEvents.forEach((row: any) => {
         const crewMembers = row.crew.split(',').map((c: string) => c.trim())
         crewMembers.forEach((member: string) => {
-          if (member) {
+          // Only track workload for valid crew members
+          if (member && isValidCrewMember(member)) {
             workloadMap.set(member, (workloadMap.get(member) || 0) + 1)
           }
         })
@@ -93,7 +120,13 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       const busyCrewMembers = new Set<string>()
       conflictData.forEach((row: any) => {
         if (row.crew) {
-          row.crew.split(',').forEach((c: string) => busyCrewMembers.add(c.trim()))
+          row.crew.split(',').forEach((c: string) => {
+            const trimmed = c.trim()
+            // Only track conflicts for valid crew members
+            if (isValidCrewMember(trimmed)) {
+              busyCrewMembers.add(trimmed)
+            }
+          })
         }
       })
       
@@ -168,7 +201,7 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
       const month = c.req.query('month') || new Date().toISOString().substring(0, 7)
       
       // Get all crew members and their workload
-      const { results: workloadData } = await c.env.DB.prepare(`
+      const { results: rawWorkloadData } = await c.env.DB.prepare(`
         SELECT 
           crew_name,
           COUNT(*) as assignment_count,
@@ -185,6 +218,9 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
         GROUP BY crew_name
         ORDER BY assignment_count DESC
       `).bind(month).all()
+      
+      // Filter to only include valid crew members
+      const workloadData = rawWorkloadData.filter((w: any) => isValidCrewMember(w.crew_name))
       
       // Calculate balance metrics
       const assignments = workloadData.map((w: any) => w.assignment_count)
@@ -249,10 +285,15 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
         ORDER BY crew_name, assignments DESC
       `).all()
       
-      // Organize by crew member
+      // Organize by crew member (only valid crew)
       const expertiseByMember: Record<string, any> = {}
       
       expertiseData.forEach((row: any) => {
+        // Only include valid crew members
+        if (!isValidCrewMember(row.crew_name)) {
+          return
+        }
+        
         if (!expertiseByMember[row.crew_name]) {
           expertiseByMember[row.crew_name] = {
             crew_name: row.crew_name,
@@ -298,10 +339,21 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
   
   app.get('/api/crew/learning-stats', async (c) => {
     try {
-      // Get total assignments analyzed
-      const { results: totalEvents } = await c.env.DB.prepare(`
-        SELECT COUNT(*) as count FROM events WHERE crew IS NOT NULL AND crew != ""
+      // Get all events with crew
+      const { results: allEvents } = await c.env.DB.prepare(`
+        SELECT crew, event_date FROM events WHERE crew IS NOT NULL AND crew != ""
       `).all()
+      
+      // Count only valid crew assignments
+      let totalValidAssignments = 0
+      allEvents.forEach((event: any) => {
+        const crewMembers = event.crew.split(',').map((c: string) => c.trim())
+        crewMembers.forEach((member: string) => {
+          if (isValidCrewMember(member)) {
+            totalValidAssignments++
+          }
+        })
+      })
       
       // Get date range
       const { results: dateRange } = await c.env.DB.prepare(`
@@ -311,7 +363,7 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
         FROM events
       `).all()
       
-      const totalAssignments = totalEvents[0]?.count || 0
+      const totalAssignments = totalValidAssignments
       const firstDate = dateRange[0]?.first_date
       const lastDate = dateRange[0]?.last_date
       const daysOfLearning = firstDate && lastDate ? 

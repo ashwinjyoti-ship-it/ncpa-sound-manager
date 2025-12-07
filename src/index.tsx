@@ -1485,6 +1485,41 @@ app.get('/', (c) => {
             background-color: #FFFFFF;
           }
           
+          /* Mobile-optimized event cards */
+          @media (max-width: 768px) {
+            .calendar-day {
+              min-height: 100px;
+            }
+            
+            .event-card-green, .event-card-peach {
+              font-size: 0.75rem;
+              padding: 0.5rem;
+              margin-bottom: 0.25rem;
+            }
+            
+            /* Larger touch targets */
+            button, .event-card-green, .event-card-peach {
+              min-height: 44px;
+            }
+            
+            /* Hide Dashboard tab on mobile */
+            #dashboardTab {
+              display: none !important;
+            }
+            
+            /* More readable event text on mobile */
+            .event-card-green p, .event-card-peach p {
+              line-height: 1.4;
+              margin-bottom: 0.25rem;
+            }
+            
+            /* Better icon spacing on mobile */
+            .event-card-green i, .event-card-peach i {
+              width: 14px;
+              text-align: center;
+            }
+          }
+          
           .modal {
             display: none;
             position: fixed;
@@ -1637,118 +1672,145 @@ app.get('/', (c) => {
             </header>
 
             <!-- Tab Navigation -->
-            <div class="container mx-auto px-4 md:px-6 py-4">
-                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-6">
-                    <div class="flex space-x-3 md:space-x-6 border-b border-gray-300 overflow-x-auto">
-                        <button id="calendarTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base tab-active transition-all whitespace-nowrap" onclick="showTab('calendar')">
-                            <i class="fas fa-calendar-alt mr-1 md:mr-2"></i><span class="hidden sm:inline">Calendar</span>
+            <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
+                <!-- MOBILE: Minimal header with just tabs and event count -->
+                <div class="md:hidden flex justify-between items-center mb-3">
+                    <!-- Tabs -->
+                    <div class="flex space-x-1">
+                        <button id="calendarTab" class="px-4 py-2 font-semibold text-sm tab-active transition-all" onclick="showTab('calendar')">
+                            <i class="fas fa-calendar-alt"></i>
                         </button>
-                        <button id="tableTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base text-gray-600 hover:text-gray-800 transition-all whitespace-nowrap" onclick="showTab('table')">
-                            <i class="fas fa-table mr-1 md:mr-2"></i><span class="hidden sm:inline">Table</span>
-                        </button>
-                        <button id="dashboardTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base text-gray-600 hover:text-gray-800 transition-all whitespace-nowrap" onclick="showTab('dashboard')">
-                            <i class="fas fa-chart-line mr-1 md:mr-2"></i><span class="hidden sm:inline">Dashboard</span>
+                        <button id="tableTab" class="px-4 py-2 font-semibold text-sm text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
+                            <i class="fas fa-list"></i>
                         </button>
                     </div>
                     
-                    <!-- Event Count Display -->
-                    <div id="eventCountDisplay" class="flex items-center px-3 md:px-4 py-2 rounded-lg text-sm" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
-                        <i class="fas fa-calendar-check mr-2" style="color: #FF6B35;"></i>
+                    <!-- Event Count -->
+                    <div id="eventCountDisplay" class="flex items-center px-3 py-1.5 rounded-lg text-xs" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
+                        <i class="fas fa-calendar-check mr-1.5 text-xs" style="color: #FF6B35;"></i>
                         <span class="font-semibold whitespace-nowrap" style="color: #FF6B35;">
-                            <span id="eventCount">0</span> events
+                            <span id="eventCount">0</span>
                         </span>
                     </div>
-                    
-                    <!-- Mobile-optimized toolbar -->
-                    <div class="flex flex-col md:flex-row gap-2 md:space-x-3">
-                        <!-- Search - Full width on mobile -->
-                        <div class="relative flex-1 md:flex-initial">
-                            <input type="text" id="searchInput" placeholder="Search events..." 
-                                   class="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
-                            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                </div>
+                
+                <!-- MOBILE: Simple search bar only -->
+                <div class="md:hidden mb-3">
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Search by name, venue, crew..." 
+                               class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                    </div>
+                </div>
+                
+                <!-- DESKTOP: Full toolbar with all features -->
+                <div class="hidden md:block">
+                    <div class="flex justify-between items-center mb-6">
+                        <div class="flex space-x-6 border-b border-gray-300">
+                            <button id="calendarTab" class="px-4 py-2 font-semibold tab-active transition-all" onclick="showTab('calendar')">
+                                <i class="fas fa-calendar-alt mr-2"></i>Calendar
+                            </button>
+                            <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
+                                <i class="fas fa-table mr-2"></i>Table
+                            </button>
+                            <button id="dashboardTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
+                                <i class="fas fa-chart-line mr-2"></i>Dashboard
+                            </button>
                         </div>
                         
-                        <!-- Primary Actions - Grid on mobile -->
-                        <div class="grid grid-cols-2 md:flex gap-2 md:space-x-2">
-                            <!-- NEW: Advanced Filter Button -->
+                        <!-- Event Count Display -->
+                        <div id="eventCountDisplay" class="flex items-center px-4 py-2 rounded-lg" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
+                            <i class="fas fa-calendar-check mr-2" style="color: #FF6B35;"></i>
+                            <span class="text-sm font-semibold" style="color: #FF6B35;">
+                                <span id="eventCount">0</span> events this month
+                            </span>
+                        </div>
+                        
+                        <!-- Desktop toolbar -->
+                        <div class="flex gap-2">
+                            <!-- Search -->
+                            <div class="relative">
+                                <input type="text" id="searchInput" placeholder="Search events..." 
+                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+                            </div>
+                            
+                            <!-- Advanced Filter Button -->
                             <button onclick="toggleFilterPanel()" 
-                                    class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all whitespace-nowrap">
-                                <i class="fas fa-filter mr-1"></i><span class="hidden sm:inline">Filters</span>
+                                    class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                                <i class="fas fa-filter mr-1.5"></i>Filters
                             </button>
                             
-                            <!-- NEW: Conflict Detection -->
+                            <!-- Conflict Detection -->
                             <button onclick="checkConflicts()" 
-                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all whitespace-nowrap">
-                                <i class="fas fa-exclamation-triangle mr-1"></i><span class="hidden sm:inline">Conflicts</span>
+                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
+                                <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
                             </button>
                             
                             <!-- Export -->
                             <button onclick="openCSVExportModal()" 
-                                    class="px-3 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all whitespace-nowrap">
-                                <i class="fas fa-file-download mr-1"></i><span class="hidden sm:inline">Export</span>
+                                    class="px-3 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                                <i class="fas fa-file-download mr-1.5"></i>Export
                             </button>
                             
-                            <!-- Add Show -->
-                            <button onclick="openAddShowModal()" 
-                                class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-all whitespace-nowrap" 
-                                style="background-color: #FF6B35;">
-                                <i class="fas fa-plus mr-1"></i><span class="hidden sm:inline">Add Show</span>
-                            </button>
-                        </div>
-                        
-                        <!-- More Options - Hidden on mobile, shown in menu -->
-                        <div class="hidden md:flex gap-2">
                             <!-- WhatsApp Export -->
                             <button onclick="openWhatsAppExportModal()" 
-                                    class="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all whitespace-nowrap">
-                                <i class="fab fa-whatsapp mr-1"></i>WhatsApp
+                                    class="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
+                                <i class="fab fa-whatsapp mr-1.5"></i>WhatsApp
                             </button>
                             
                             <!-- Word Upload -->
                             <button onclick="document.getElementById('wordInput').click()" 
-                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all whitespace-nowrap">
-                                <i class="fas fa-file-word mr-1"></i>Upload Word
+                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
+                                <i class="fas fa-file-word mr-1.5"></i>Upload Word
                             </button>
                             <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
                             
                             <!-- CSV Upload -->
                             <button onclick="document.getElementById('csvInput').click()" 
-                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all whitespace-nowrap">
-                                <i class="fas fa-file-csv mr-1"></i>Upload CSV
+                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
+                                <i class="fas fa-file-csv mr-1.5"></i>Upload CSV
                             </button>
                             <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                            
+                            <!-- Add Show -->
+                            <button onclick="openAddShowModal()" 
+                                class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
+                                style="background-color: #FF6B35;">
+                                <i class="fas fa-plus mr-1.5"></i>Add Show
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 <!-- Calendar View -->
-                <div id="calendarView" class="rounded-lg p-6" style="background-color: #FFFFFF;">
+                <div id="calendarView" class="rounded-lg p-3 md:p-6" style="background-color: #FFFFFF;">
                     <!-- Calendar controls -->
-                    <div class="flex justify-between items-center mb-6">
-                        <button onclick="changeMonth(-1)" class="px-3 py-1.5 text-sm rounded-lg" style="background-color: #FFE4B5; color: #8B4513;">
-                            <i class="fas fa-chevron-left"></i> Previous
+                    <div class="flex justify-between items-center mb-4 md:mb-6">
+                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
+                            <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
                         </button>
-                        <h2 id="currentMonthYear" class="text-2xl font-bold" style="color: #FF6B35;"></h2>
-                        <button onclick="changeMonth(1)" class="px-3 py-1.5 text-sm rounded-lg" style="background-color: #FFE4B5; color: #8B4513;">
-                            Next <i class="fas fa-chevron-right"></i>
+                        <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #FF6B35;"></h2>
+                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
+                            <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
                     
-                    <!-- Calendar grid -->
-                    <div class="grid grid-cols-7 gap-2">
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">SUN</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">MON</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">TUE</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">WED</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">THU</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">FRI</div>
-                        <div class="font-bold text-center py-2" style="background-color: #FFF8DC; color: #8B4513;">SAT</div>
+                    <!-- Calendar grid - Mobile optimized -->
+                    <div class="grid grid-cols-7 gap-1 md:gap-2">
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">SUN</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">MON</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">TUE</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">WED</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">THU</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">FRI</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">SAT</div>
                     </div>
-                    <div id="calendarGrid" class="grid grid-cols-7 gap-2 mt-2"></div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2 mt-2"></div>
                 </div>
 
                 <!-- Table View -->
-                <div id="tableView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
+                <div id="tableView" class="bg-white rounded-lg shadow-lg p-3 md:p-6" style="display: none;">
                     <!-- Bulk Actions Bar -->
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center space-x-3">

@@ -2,7 +2,7 @@
 # Crew Assignment AI - Live Demo Script
 # Production URL: https://a6b15877.ncpa-sound.pages.dev
 
-API_BASE="https://f913eb31.ncpa-sound.pages.dev/api"
+API_BASE="https://c87c620e.ncpa-sound.pages.dev/api"
 
 echo "================================================"
 echo "🤖 NCPA Sound Crew - AI Assignment Demo"
@@ -79,6 +79,6 @@ echo ""
 echo "✅ Demo Complete!"
 echo "================================================"
 echo "📖 Full API documentation: CREW_AI_USAGE_GUIDE.md"
-echo "🌐 Production: https://f913eb31.ncpa-sound.pages.dev"
+echo "🌐 Production: https://c87c620e.ncpa-sound.pages.dev"
 echo "📦 GitHub: https://github.com/ashwinjyoti-ship-it/ncpa-sound-manager"
 echo "================================================"

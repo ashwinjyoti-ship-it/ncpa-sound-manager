@@ -330,5 +330,5 @@ If you encounter any issues or have questions about the Crew AI:
 3. Review this guide for proper API usage
 4. Contact development team for assistance
 
-**Production URL:** https://f913eb31.ncpa-sound.pages.dev (or https://ncpa-sound.pages.dev)  
+**Production URL:** https://c87c620e.ncpa-sound.pages.dev (or https://ncpa-sound.pages.dev)  
 **GitHub:** https://github.com/ashwinjyoti-ship-it/ncpa-sound-manager

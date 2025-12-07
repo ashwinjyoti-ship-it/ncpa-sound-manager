@@ -2,7 +2,7 @@
 
 **Deployment Date:** December 7, 2025  
 **Status:** ✅ **PRODUCTION LIVE**  
-**Production URL:** https://f913eb31.ncpa-sound.pages.dev
+**Production URL:** https://c87c620e.ncpa-sound.pages.dev
 
 ---
 

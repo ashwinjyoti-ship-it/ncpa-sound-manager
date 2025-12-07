@@ -1637,80 +1637,87 @@ app.get('/', (c) => {
             </header>
 
             <!-- Tab Navigation -->
-            <div class="container mx-auto px-6 py-4">
-                <div class="flex justify-between items-center mb-6">
-                    <div class="flex space-x-6 border-b border-gray-300">
-                        <button id="calendarTab" class="px-4 py-2 font-semibold tab-active transition-all" onclick="showTab('calendar')">
-                            <i class="fas fa-calendar-alt mr-2"></i>Calendar
+            <div class="container mx-auto px-4 md:px-6 py-4">
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center gap-3 mb-6">
+                    <div class="flex space-x-3 md:space-x-6 border-b border-gray-300 overflow-x-auto">
+                        <button id="calendarTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base tab-active transition-all whitespace-nowrap" onclick="showTab('calendar')">
+                            <i class="fas fa-calendar-alt mr-1 md:mr-2"></i><span class="hidden sm:inline">Calendar</span>
                         </button>
-                        <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
-                            <i class="fas fa-table mr-2"></i>Table
+                        <button id="tableTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base text-gray-600 hover:text-gray-800 transition-all whitespace-nowrap" onclick="showTab('table')">
+                            <i class="fas fa-table mr-1 md:mr-2"></i><span class="hidden sm:inline">Table</span>
                         </button>
-                        <button id="dashboardTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
-                            <i class="fas fa-chart-line mr-2"></i>Dashboard
+                        <button id="dashboardTab" class="px-3 md:px-4 py-2 font-semibold text-sm md:text-base text-gray-600 hover:text-gray-800 transition-all whitespace-nowrap" onclick="showTab('dashboard')">
+                            <i class="fas fa-chart-line mr-1 md:mr-2"></i><span class="hidden sm:inline">Dashboard</span>
                         </button>
                     </div>
                     
                     <!-- Event Count Display -->
-                    <div id="eventCountDisplay" class="flex items-center px-4 py-2 rounded-lg" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
+                    <div id="eventCountDisplay" class="flex items-center px-3 md:px-4 py-2 rounded-lg text-sm" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
                         <i class="fas fa-calendar-check mr-2" style="color: #FF6B35;"></i>
-                        <span class="text-sm font-semibold" style="color: #FF6B35;">
-                            <span id="eventCount">0</span> events this month
+                        <span class="font-semibold whitespace-nowrap" style="color: #FF6B35;">
+                            <span id="eventCount">0</span> events
                         </span>
                     </div>
                     
-                    <div class="flex space-x-3">
-                        <!-- Search -->
-                        <div class="relative">
+                    <!-- Mobile-optimized toolbar -->
+                    <div class="flex flex-col md:flex-row gap-2 md:space-x-3">
+                        <!-- Search - Full width on mobile -->
+                        <div class="relative flex-1 md:flex-initial">
                             <input type="text" id="searchInput" placeholder="Search events..." 
-                                   class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 w-64">
+                                   class="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
                             <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                         </div>
                         
-                        <!-- NEW: Advanced Filter Button -->
-                        <button onclick="toggleFilterPanel()" 
-                                class="px-3 py-1.5 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
-                            <i class="fas fa-filter mr-1.5"></i>Filters
-                        </button>
-                        
-                        <!-- NEW: Conflict Detection -->
-                        <button onclick="checkConflicts()" 
-                                class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
-                            <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
-                        </button>
-                        
-                        <!-- WhatsApp Export -->
-                        <button onclick="openWhatsAppExportModal()" 
-                                class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
-                            <i class="fab fa-whatsapp mr-1.5"></i>Export
-                        </button>
-                        
-                        <!-- Export -->
-                        <button onclick="openCSVExportModal()" 
-                                class="px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
-                            <i class="fas fa-file-download mr-1.5"></i>Export
-                        </button>
-                        
-                        <!-- Word Upload -->
-                        <button onclick="document.getElementById('wordInput').click()" 
-                                class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
-                            <i class="fas fa-file-word mr-1.5"></i>Upload Word
-                        </button>
-                        <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
-                        
-                        <!-- CSV Upload -->
-                        <button onclick="document.getElementById('csvInput').click()" 
-                                class="px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
-                            <i class="fas fa-file-csv mr-1.5"></i>Upload CSV
-                        </button>
-                        <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
-                        
-                        <!-- Add Show -->
-                        <button onclick="openAddShowModal()" 
-                                class="px-3 py-1.5 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
+                        <!-- Primary Actions - Grid on mobile -->
+                        <div class="grid grid-cols-2 md:flex gap-2 md:space-x-2">
+                            <!-- NEW: Advanced Filter Button -->
+                            <button onclick="toggleFilterPanel()" 
+                                    class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all whitespace-nowrap">
+                                <i class="fas fa-filter mr-1"></i><span class="hidden sm:inline">Filters</span>
+                            </button>
+                            
+                            <!-- NEW: Conflict Detection -->
+                            <button onclick="checkConflicts()" 
+                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all whitespace-nowrap">
+                                <i class="fas fa-exclamation-triangle mr-1"></i><span class="hidden sm:inline">Conflicts</span>
+                            </button>
+                            
+                            <!-- Export -->
+                            <button onclick="openCSVExportModal()" 
+                                    class="px-3 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all whitespace-nowrap">
+                                <i class="fas fa-file-download mr-1"></i><span class="hidden sm:inline">Export</span>
+                            </button>
+                            
+                            <!-- Add Show -->
+                            <button onclick="openAddShowModal()" 
+                                class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-all whitespace-nowrap" 
                                 style="background-color: #FF6B35;">
-                            <i class="fas fa-plus mr-1.5"></i>Add Show
-                        </button>
+                                <i class="fas fa-plus mr-1"></i><span class="hidden sm:inline">Add Show</span>
+                            </button>
+                        </div>
+                        
+                        <!-- More Options - Hidden on mobile, shown in menu -->
+                        <div class="hidden md:flex gap-2">
+                            <!-- WhatsApp Export -->
+                            <button onclick="openWhatsAppExportModal()" 
+                                    class="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all whitespace-nowrap">
+                                <i class="fab fa-whatsapp mr-1"></i>WhatsApp
+                            </button>
+                            
+                            <!-- Word Upload -->
+                            <button onclick="document.getElementById('wordInput').click()" 
+                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all whitespace-nowrap">
+                                <i class="fas fa-file-word mr-1"></i>Upload Word
+                            </button>
+                            <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
+                            
+                            <!-- CSV Upload -->
+                            <button onclick="document.getElementById('csvInput').click()" 
+                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all whitespace-nowrap">
+                                <i class="fas fa-file-csv mr-1"></i>Upload CSV
+                            </button>
+                            <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
+                        </div>
                     </div>
                 </div>
 

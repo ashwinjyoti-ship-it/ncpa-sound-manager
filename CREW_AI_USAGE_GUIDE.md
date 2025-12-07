@@ -12,10 +12,20 @@ The Crew Assignment AI learns from your historical crew assignments to provide i
 ## System Status
 
 **Current Production Stats (Dec 2025):**
-- ✅ **Ready for Use**: 95% confidence level
-- 📊 **673 assignments** analyzed over **337 days**
-- 👥 **39 crew members** tracked
+- ✅ **Ready for Use**: 91% confidence level
+- 📊 **301 valid assignments** analyzed over **337 days** (filters out Ashwin and invalid names)
+- 👥 **14 valid crew members** tracked (from dropdown menu)
 - 🎯 **System Recommendation**: "You can start using smart suggestions now!"
+
+**Valid Crew Members (14):**
+The AI only learns from these crew members in the dropdown:
+- Naren, Sandeep, Coni, Nikhil, NS
+- Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay
+- OC1, OC2, OC3 (on-call crew)
+
+**Excluded from AI Learning:**
+- **Ashwin**: Team head, assigned selectively on custom basis (not included in auto-suggestions)
+- **Invalid names**: BBK, AGN, AK, LD GD GD LD, etc. (data quality filtering)
 
 ---
 
@@ -320,5 +330,5 @@ If you encounter any issues or have questions about the Crew AI:
 3. Review this guide for proper API usage
 4. Contact development team for assistance
 
-**Production URL:** https://a6b15877.ncpa-sound.pages.dev  
+**Production URL:** https://f913eb31.ncpa-sound.pages.dev (or https://ncpa-sound.pages.dev)  
 **GitHub:** https://github.com/ashwinjyoti-ship-it/ncpa-sound-manager

@@ -5,10 +5,10 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 ## 🌐 URLs
 
 **Production (Live - v4.1 + Crew AI):**
-- 🚀 **Web App: https://a6b15877.ncpa-sound.pages.dev**
+- 🚀 **Web App: https://f913eb31.ncpa-sound.pages.dev**
 - 🌐 **Permanent URL: https://ncpa-sound.pages.dev**
-- API Base: https://a6b15877.ncpa-sound.pages.dev/api
-- **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics, **Crew Assignment AI Learning Backend**
+- API Base: https://f913eb31.ncpa-sound.pages.dev/api
+- **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics, **Crew Assignment AI Learning Backend (14 valid crew)**
 
 **Development (Sandbox):**
 - Web App: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai
@@ -706,7 +706,9 @@ WHERE program LIKE '%Dance%';
    
    - `GET /api/crew/learning-stats` - System learning progress
      - Returns: Total assignments, days of learning, confidence level, readiness
-     - Current: 673 assignments over 337 days = 95% confidence (READY!)
+     - Current: 301 valid assignments over 337 days = 91% confidence (READY!)
+     - Only learns from 14 valid crew (excludes Ashwin and invalid names)
+     - Valid crew: Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3
      - Recommendation: "You can start using smart suggestions now!"
    
    **Learning Algorithm:**
@@ -717,9 +719,15 @@ WHERE program LIKE '%Dance%';
    - Provides reasoning for each recommendation
    
    **Intelligence Growth Timeline:**
-   - ✅ Month 1 (Target: 30-40%) → **ACHIEVED: 64%** (77 assignments)
-   - ✅ Month 2 (Target: 50-70%) → **SURPASSED: 95%** (673 assignments)
+   - ✅ Month 1 (Target: 30-40%) → **ACHIEVED: 64%** (143 valid assignments in Dec)
+   - ✅ Month 2+ (Target: 50-70%) → **SURPASSED: 91%** (301 valid assignments over 337 days)
    - ✅ **PRODUCTION READY**: System has learned from 337 days of data!
+   
+   **Crew Filtering (Important):**
+   - Only learns from 14 valid crew members in dropdown menu
+   - Ashwin excluded (team head, assigned selectively on custom basis)
+   - Invalid names filtered out (BBK, AGN, AK, LD GD GD LD, etc.)
+   - Ensures clean, accurate learning from core team assignments
    
    **Production Status:**
    - 🟢 **LIVE**: All 4 AI endpoints deployed and working

@@ -11,6 +11,33 @@ type Bindings = {
   ANTHROPIC_API_KEY: string;
 }
 
+// VALID CREW MEMBERS - Only learn from these crew members
+// 11 In-House Crew (excluding Ashwin who is team head) + 3 Outside Crew (OC)
+const VALID_CREW_MEMBERS = new Set([
+  // In-House Crew (11)
+  'Naren',
+  'Sandeep', 
+  'Coni',
+  'Nikhil',
+  'NS',
+  'Aditya',
+  'Viraj',
+  'Shridhar',
+  'Nazar',
+  'Omkar',
+  'Akshay',
+  // Outside Crew - Hired on Need Basis (3)
+  'OC1',
+  'OC2',
+  'OC3'
+])
+
+// Filter crew member to only include valid crew
+function isValidCrewMember(name: string): boolean {
+  const trimmedName = name.trim()
+  return VALID_CREW_MEMBERS.has(trimmedName)
+}
+
 // ============================================
 // 1. ADVANCED FILTERING & SORTING
 // ============================================
@@ -296,14 +323,18 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
         LIMIT 10
       `).bind(venue).all()
       
-      // Parse crew members and calculate confidence scores
+      // Parse crew members and calculate confidence scores (ONLY VALID CREW)
       const crewScores: Record<string, number> = {}
-      const totalAssignments = history.reduce((sum: number, h: any) => sum + h.count, 0)
+      let validTotalAssignments = 0
       
       for (const record of history as any[]) {
         const crewMembers = record.crew.split(',').map((c: string) => c.trim())
         crewMembers.forEach(member => {
-          crewScores[member] = (crewScores[member] || 0) + record.count
+          // Only include valid crew members (exclude Ashwin and invalid names)
+          if (isValidCrewMember(member)) {
+            crewScores[member] = (crewScores[member] || 0) + record.count
+            validTotalAssignments += record.count
+          }
         })
       }
       
@@ -311,7 +342,7 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
       const suggestions = Object.entries(crewScores)
         .map(([name, count]) => ({
           name,
-          confidence: Math.round((count / totalAssignments) * 100),
+          confidence: Math.round((count / validTotalAssignments) * 100),
           assignmentCount: count,
           reason: `Worked ${count} time(s) at ${venue}`
         }))
@@ -323,7 +354,7 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
         data: {
           venue,
           suggestions,
-          totalHistory: totalAssignments
+          totalHistory: validTotalAssignments
         }
       })
     } catch (error: any) {

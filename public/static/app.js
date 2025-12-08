@@ -102,13 +102,6 @@ function renderCurrentView() {
 // CALENDAR VIEW
 // ============================================
 
-function updateEventCount(count) {
-  const countElement = document.getElementById('eventCount');
-  if (countElement) {
-    countElement.textContent = count;
-  }
-}
-
 function renderCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -153,7 +146,6 @@ function renderCalendar() {
   console.log(`  - Filtered monthEvents: ${monthEvents.length}`);
   console.log(`  - Unique monthEvents: ${uniqueMonthEvents.length}`);
   console.log(`  - Date range: ${startDate} to ${endDate}`);
-  updateEventCount(uniqueMonthEvents.length);
   
   // Group events by date
   const eventsByDate = {};

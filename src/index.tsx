@@ -1720,14 +1720,6 @@ app.get('/', (c) => {
                             </button>
                         </div>
                         
-                        <!-- Event Count Display -->
-                        <div id="eventCountDisplay" class="flex items-center px-4 py-2 rounded-lg" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
-                            <i class="fas fa-calendar-check mr-2" style="color: #FF6B35;"></i>
-                            <span class="text-sm font-semibold" style="color: #FF6B35;">
-                                <span id="eventCount">0</span> events this month
-                            </span>
-                        </div>
-                        
                         <!-- Desktop toolbar -->
                         <div class="flex gap-2">
                             <!-- Search -->

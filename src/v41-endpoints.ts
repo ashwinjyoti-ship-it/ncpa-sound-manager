@@ -136,15 +136,42 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Get unique filter values (for dropdown population)
   app.get('/api/events/filter-options', async (c) => {
     try {
-      const venues = await c.env.DB.prepare('SELECT DISTINCT venue FROM events WHERE venue IS NOT NULL ORDER BY venue').all()
+      // Define main venues (without time variations or combinations)
+      const MAIN_VENUES = [
+        'JBT',
+        'TET', 
+        'GDT',
+        'LT',
+        'TT',
+        'DPAG',
+        'SVR',
+        'TATA',
+        'Zakir',
+        'Expl ZCB',
+        'Stuart Liff'
+      ]
+      
+      // Get all crews and filter to only valid crew members
       const crews = await c.env.DB.prepare('SELECT DISTINCT crew FROM events WHERE crew IS NOT NULL AND crew != "" ORDER BY crew').all()
+      
+      // Parse comma-separated crew and filter to valid crew only
+      const validCrewSet = new Set<string>()
+      crews.results.forEach((row: any) => {
+        const crewMembers = row.crew.split(',').map((c: string) => c.trim())
+        crewMembers.forEach((member: string) => {
+          if (isValidCrewMember(member)) {
+            validCrewSet.add(member)
+          }
+        })
+      })
+      
       const statuses = await c.env.DB.prepare('SELECT DISTINCT status FROM events WHERE status IS NOT NULL ORDER BY status').all()
       
       return c.json({
         success: true,
         data: {
-          venues: venues.results.map((v: any) => v.venue),
-          crews: crews.results.map((c: any) => c.crew),
+          venues: MAIN_VENUES,
+          crews: Array.from(validCrewSet).sort(),
           statuses: statuses.results.map((s: any) => s.status)
         }
       })

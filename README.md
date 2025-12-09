@@ -5,9 +5,9 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 ## 🌐 URLs
 
 **Production (Live - v4.1 + Crew AI):**
-- 🚀 **Web App: https://564d31bd.ncpa-sound.pages.dev**
+- 🚀 **Web App: https://8ad1ee31.ncpa-sound.pages.dev**
 - 🌐 **Permanent URL: https://ncpa-sound.pages.dev**
-- API Base: https://564d31bd.ncpa-sound.pages.dev/api
+- API Base: https://8ad1ee31.ncpa-sound.pages.dev/api
 - **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics, **Crew Assignment AI Learning Backend (14 valid crew)**
 
 **Development (Sandbox):**

@@ -143,12 +143,8 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
         'GDT',
         'LT',
         'TT',
-        'DPAG',
-        'SVR',
-        'TATA',
-        'Zakir',
-        'Expl ZCB',
-        'Stuart Liff'
+        'DP Art Gallery',
+        'SVR'
       ]
       
       // Get all crews and filter to only valid crew members

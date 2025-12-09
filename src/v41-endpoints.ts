@@ -482,16 +482,42 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         ORDER BY count DESC
       `).bind(dateFrom, dateTo).all()
       
-      // Crew workload (events per crew member)
-      const crewWorkload = await c.env.DB.prepare(`
-        SELECT crew, COUNT(*) as count
-        FROM events
+      // Individual crew workload (parse comma-separated crew field)
+      const crewEvents = await c.env.DB.prepare(`
+        SELECT crew FROM events
         WHERE event_date >= ? AND event_date <= ?
           AND crew IS NOT NULL AND crew != ""
-        GROUP BY crew
-        ORDER BY count DESC
-        LIMIT 10
       `).bind(dateFrom, dateTo).all()
+      
+      // Parse and count individual crew members
+      const crewWorkloadMap = new Map<string, number>()
+      crewEvents.results.forEach((row: any) => {
+        const crewMembers = row.crew.split(',').map((c: string) => c.trim())
+        crewMembers.forEach((member: string) => {
+          if (isValidCrewMember(member)) {
+            crewWorkloadMap.set(member, (crewWorkloadMap.get(member) || 0) + 1)
+          }
+        })
+      })
+      
+      // Convert to array and sort
+      const crewWorkloadArray = Array.from(crewWorkloadMap.entries())
+        .map(([crew, count]) => ({ crew, count }))
+        .sort((a, b) => b.count - a.count)
+      
+      // Calculate workload statistics
+      const assignments = crewWorkloadArray.map(c => c.count)
+      const avgAssignments = assignments.length > 0 
+        ? assignments.reduce((a, b) => a + b, 0) / assignments.length 
+        : 0
+      const maxAssignments = assignments.length > 0 ? Math.max(...assignments) : 0
+      
+      // Categorize crew by workload status
+      const crewWorkload = crewWorkloadArray.map(item => {
+        const status = item.count > avgAssignments * 1.5 ? 'overloaded' :
+                      item.count < avgAssignments * 0.5 ? 'underutilized' : 'balanced'
+        return { ...item, status }
+      })
       
       // Upcoming events (next 7 days)
       const today = new Date().toISOString().split('T')[0]
@@ -516,7 +542,13 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
           total: totalResult?.total || 0,
           statusBreakdown: statusStats.results,
           venueDistribution: venueStats.results,
-          crewWorkload: crewWorkload.results,
+          crewWorkload: crewWorkload,
+          crewWorkloadStats: {
+            average: Math.round(avgAssignments * 10) / 10,
+            max: maxAssignments,
+            overloaded: crewWorkload.filter(c => c.status === 'overloaded').map(c => c.crew),
+            underutilized: crewWorkload.filter(c => c.status === 'underutilized').map(c => c.crew)
+          },
           upcomingEvents: upcomingEvents.results,
           needsRequirements: needsRequirements?.count || 0,
           dateRange: { from: dateFrom, to: dateTo }

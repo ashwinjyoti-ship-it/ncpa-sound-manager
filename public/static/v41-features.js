@@ -696,6 +696,11 @@ function showDashboard() {
     dashboardView.className = 'bg-white rounded-lg shadow-lg p-6';
     dashboardView.style.display = 'none';
     
+    // Add loading placeholder
+    const loadingDiv = document.createElement('div');
+    loadingDiv.id = 'dashboardLoading';
+    dashboardView.appendChild(loadingDiv);
+    
     const container = document.querySelector('.container.mx-auto');
     container.appendChild(dashboardView);
   }
@@ -704,37 +709,61 @@ function showDashboard() {
   loadDashboardData();
 }
 
-async function loadDashboardData() {
+async function loadDashboardData(period = 'current_month') {
   const dashboardView = document.getElementById('dashboardView');
-  dashboardView.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i></div>';
+  const loadingPlaceholder = document.getElementById('dashboardLoading');
+  if (loadingPlaceholder) {
+    loadingPlaceholder.innerHTML = '<div class="text-center py-12"><i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i></div>';
+  }
   
   try {
     const today = new Date();
-    // Show all events: start from beginning of current month to +90 days
-    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const dateFrom = firstOfMonth.toISOString().split('T')[0];
-    const dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    let dateFrom, dateTo;
+    
+    if (period === 'current_month') {
+      // Current month only
+      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      dateFrom = firstOfMonth.toISOString().split('T')[0];
+      dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    } else if (period === 'last_3_months') {
+      // Last 3 months
+      const threeMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 3, 1);
+      dateFrom = threeMonthsAgo.toISOString().split('T')[0];
+      dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    }
     
     const response = await axios.get(`${API_BASE}/dashboard/stats`, {
       params: { from: dateFrom, to: dateTo }
     });
     
     if (response.data.success) {
-      renderDashboard(response.data.data);
+      renderDashboard(response.data.data, period);
     }
   } catch (error) {
     console.error('Error loading dashboard:', error);
-    dashboardView.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load dashboard data</div>';
+    if (loadingPlaceholder) {
+      loadingPlaceholder.innerHTML = '<div class="text-center py-12 text-red-600">Failed to load dashboard data</div>';
+    }
   }
 }
 
-function renderDashboard(data) {
+function renderDashboard(data, period = 'current_month') {
   const dashboardView = document.getElementById('dashboardView');
+  const loadingPlaceholder = document.getElementById('dashboardLoading');
   
   const html = `
-    <h2 class="text-2xl font-bold text-gray-800 mb-6">
-      <i class="fas fa-chart-line mr-2"></i>Dashboard Overview
-    </h2>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-800">
+        <i class="fas fa-chart-line mr-2"></i>Dashboard Overview
+      </h2>
+      <div>
+        <label class="text-sm text-gray-600 mr-2">Crew Workload Period:</label>
+        <select id="periodSelector" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+          <option value="current_month" ${period === 'current_month' ? 'selected' : ''}>Current Month</option>
+          <option value="last_3_months" ${period === 'last_3_months' ? 'selected' : ''}>Last 3 Months</option>
+        </select>
+      </div>
+    </div>
     
     <!-- Key Metrics -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -783,23 +812,51 @@ function renderDashboard(data) {
         </div>
       </div>
       
-      <!-- Crew Workload -->
+      <!-- Individual Crew Workload -->
       <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Top Crew Workload</h3>
-        <div class="space-y-3">
-          ${data.crewWorkload.slice(0, 8).map((c, idx) => `
-            <div>
-              <div class="flex justify-between text-sm mb-1">
-                <span class="text-gray-700 font-medium">
-                  ${idx + 1}. ${c.crew}
-                </span>
-                <span class="text-gray-600">${c.count} events</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-green-500 h-2 rounded-full" style="width: ${(c.count / data.total * 100)}%"></div>
-              </div>
+        <h3 class="text-lg font-semibold text-gray-800 mb-4">
+          <i class="fas fa-users mr-2"></i>Individual Crew Workload
+        </h3>
+        
+        <!-- Workload Summary -->
+        <div class="mb-4 p-3 bg-gray-50 rounded-lg text-sm">
+          <div class="flex justify-between mb-2">
+            <span class="text-gray-600">Average:</span>
+            <span class="font-semibold">${data.crewWorkloadStats.average} events</span>
+          </div>
+          ${data.crewWorkloadStats.overloaded.length > 0 ? `
+            <div class="flex justify-between mb-1">
+              <span class="text-red-600">⚠️ Overloaded:</span>
+              <span class="font-medium text-red-600">${data.crewWorkloadStats.overloaded.join(', ')}</span>
             </div>
-          `).join('')}
+          ` : ''}
+          ${data.crewWorkloadStats.underutilized.length > 0 ? `
+            <div class="flex justify-between">
+              <span class="text-blue-600">💡 Available:</span>
+              <span class="font-medium text-blue-600">${data.crewWorkloadStats.underutilized.join(', ')}</span>
+            </div>
+          ` : ''}
+        </div>
+        
+        <!-- Individual Crew List -->
+        <div class="space-y-2">
+          ${data.crewWorkload.slice(0, 10).map((c, idx) => {
+            const statusColor = c.status === 'overloaded' ? 'text-red-600' : 
+                               c.status === 'underutilized' ? 'text-blue-600' : 
+                               'text-green-600';
+            const statusIcon = c.status === 'overloaded' ? '⚠️' : 
+                              c.status === 'underutilized' ? '💡' : 
+                              '✓';
+            return `
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+              <span class="text-sm font-medium text-gray-700">
+                ${idx + 1}. ${c.crew}
+              </span>
+              <span class="text-sm font-semibold ${statusColor}">
+                ${statusIcon} ${c.count} events
+              </span>
+            </div>
+          `}).join('')}
         </div>
       </div>
     </div>
@@ -854,6 +911,17 @@ function renderDashboard(data) {
   `;
   
   dashboardView.innerHTML = html;
+  if (loadingPlaceholder) {
+    loadingPlaceholder.style.display = 'none';
+  }
+  
+  // Add event listener for period selector
+  const periodSelector = document.getElementById('periodSelector');
+  if (periodSelector) {
+    periodSelector.addEventListener('change', (e) => {
+      loadDashboardData(e.target.value);
+    });
+  }
 }
 
 function formatDate(dateStr) {

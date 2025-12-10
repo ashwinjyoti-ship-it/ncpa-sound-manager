@@ -612,6 +612,35 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       // Default to current month if not specified
       const targetMonth = month || new Date().toISOString().slice(0, 7)
       
+      // Main venues to normalize to
+      const MAIN_VENUES = ['JBT', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+      
+      // Function to normalize venue names (remove times, variations)
+      function normalizeVenue(venueName: string): string {
+        if (!venueName) return 'Unknown'
+        
+        const upper = venueName.toUpperCase()
+        
+        // Check for main venues (case-insensitive, partial match)
+        for (const mainVenue of MAIN_VENUES) {
+          if (upper.includes(mainVenue.toUpperCase()) || 
+              mainVenue.toUpperCase().includes(upper)) {
+            return mainVenue
+          }
+        }
+        
+        // Special cases
+        if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
+        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
+        if (upper.includes('GODREJ') || upper.includes('DANCE')) return 'GDT'
+        if (upper.includes('LITTLE')) return 'LT'
+        if (upper.includes('EXPERIMENTAL')) return 'TT'
+        if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
+        
+        // If no match, return original (for filtering out later)
+        return venueName
+      }
+      
       const venueStats = await c.env.DB.prepare(`
         SELECT venue, COUNT(*) as count
         FROM events
@@ -620,11 +649,27 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         ORDER BY count DESC
       `).bind(targetMonth).all()
       
+      // Normalize and aggregate venues
+      const venueMap = new Map<string, number>()
+      
+      venueStats.results.forEach((v: any) => {
+        const normalized = normalizeVenue(v.venue)
+        // Only include main venues
+        if (MAIN_VENUES.includes(normalized)) {
+          venueMap.set(normalized, (venueMap.get(normalized) || 0) + v.count)
+        }
+      })
+      
+      // Convert to array and sort by count
+      const aggregatedVenues = Array.from(venueMap.entries())
+        .map(([venue, count]) => ({ venue, count }))
+        .sort((a, b) => b.count - a.count)
+      
       // Calculate total for percentage
-      const total = venueStats.results.reduce((sum: number, v: any) => sum + v.count, 0)
+      const total = aggregatedVenues.reduce((sum, v) => sum + v.count, 0)
       
       // Add percentage to each venue
-      const venueStatsWithPercent = venueStats.results.map((v: any) => ({
+      const venueStatsWithPercent = aggregatedVenues.map((v) => ({
         venue: v.venue,
         count: v.count,
         percentage: total > 0 ? Math.round((v.count / total) * 100) : 0

@@ -769,10 +769,10 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
   const dashboardView = document.getElementById('dashboardView');
   const loadingPlaceholder = document.getElementById('dashboardLoading');
   
-  // Generate month/year options for venue selector
+  // Generate month/year options for venue selector (6 months back, current month only - no future)
   const today = new Date();
   const monthOptions = [];
-  for (let i = -6; i <= 6; i++) {
+  for (let i = -6; i <= 0; i++) {
     const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
     const value = date.toISOString().slice(0, 7);
     const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });

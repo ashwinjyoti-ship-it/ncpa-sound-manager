@@ -1677,13 +1677,13 @@ app.get('/', (c) => {
             <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
                 <!-- MOBILE: Minimal header with just tabs and event count -->
                 <div class="md:hidden flex justify-between items-center mb-3">
-                    <!-- Tabs -->
+                    <!-- Tabs (Calendar + Dashboard only on mobile) -->
                     <div class="flex space-x-1">
                         <button id="calendarTab" class="px-4 py-2 font-semibold text-sm tab-active transition-all" onclick="showTab('calendar')">
                             <i class="fas fa-calendar-alt"></i>
                         </button>
-                        <button id="tableTab" class="px-4 py-2 font-semibold text-sm text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
-                            <i class="fas fa-list"></i>
+                        <button id="dashboardTab" class="px-4 py-2 font-semibold text-sm text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
+                            <i class="fas fa-chart-line"></i>
                         </button>
                     </div>
                     

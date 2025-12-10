@@ -536,6 +536,16 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
           AND (sound_requirements IS NULL OR sound_requirements = "")
       `).bind(dateFrom, dateTo).first()
       
+      // Missing sound requirements in next 4 days (for urgency alert)
+      const fourDaysFromNow = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const missingSoundNext4Days = await c.env.DB.prepare(`
+        SELECT id, event_date, venue, program, crew
+        FROM events
+        WHERE event_date >= ? AND event_date <= ?
+          AND (sound_requirements IS NULL OR sound_requirements = "")
+        ORDER BY event_date ASC
+      `).bind(today, fourDaysFromNow).all()
+      
       return c.json({
         success: true,
         data: {
@@ -551,6 +561,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
           },
           upcomingEvents: upcomingEvents.results,
           needsRequirements: needsRequirements?.count || 0,
+          missingSoundNext4Days: missingSoundNext4Days.results,
           dateRange: { from: dateFrom, to: dateTo }
         }
       })
@@ -587,6 +598,121 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       return c.json({
         success: true,
         data: results
+      })
+    } catch (error: any) {
+      return c.json({ success: false, error: error.message }, 500)
+    }
+  })
+  
+  // Get venue statistics with month/year filtering
+  app.get('/api/dashboard/venue-stats', async (c) => {
+    try {
+      const month = c.req.query('month') // Format: YYYY-MM (e.g., "2025-01")
+      
+      // Default to current month if not specified
+      const targetMonth = month || new Date().toISOString().slice(0, 7)
+      
+      const venueStats = await c.env.DB.prepare(`
+        SELECT venue, COUNT(*) as count
+        FROM events
+        WHERE strftime("%Y-%m", event_date) = ?
+        GROUP BY venue
+        ORDER BY count DESC
+      `).bind(targetMonth).all()
+      
+      // Calculate total for percentage
+      const total = venueStats.results.reduce((sum: number, v: any) => sum + v.count, 0)
+      
+      // Add percentage to each venue
+      const venueStatsWithPercent = venueStats.results.map((v: any) => ({
+        venue: v.venue,
+        count: v.count,
+        percentage: total > 0 ? Math.round((v.count / total) * 100) : 0
+      }))
+      
+      return c.json({
+        success: true,
+        data: {
+          month: targetMonth,
+          total: total,
+          venues: venueStatsWithPercent
+        }
+      })
+    } catch (error: any) {
+      return c.json({ success: false, error: error.message }, 500)
+    }
+  })
+  
+  // Get AI confidence levels by venue
+  app.get('/api/crew/ai-confidence', async (c) => {
+    try {
+      const VALID_CREW_MEMBERS = new Set([
+        'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya', 
+        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'
+      ])
+      
+      // Get all events with crew assignments
+      const allEvents = await c.env.DB.prepare(`
+        SELECT venue, crew, event_date FROM events
+        WHERE crew IS NOT NULL AND crew != ""
+        ORDER BY event_date ASC
+      `).all()
+      
+      // Calculate venue-by-venue confidence
+      const venueAssignments = new Map<string, number>()
+      let totalValidAssignments = 0
+      let firstDate = ''
+      let lastDate = ''
+      
+      allEvents.results.forEach((event: any) => {
+        const crewMembers = event.crew.split(',').map((c: string) => c.trim())
+        const hasValidCrew = crewMembers.some((name: string) => VALID_CREW_MEMBERS.has(name))
+        
+        if (hasValidCrew) {
+          totalValidAssignments++
+          const venue = event.venue
+          venueAssignments.set(venue, (venueAssignments.get(venue) || 0) + 1)
+          
+          if (!firstDate) firstDate = event.event_date
+          lastDate = event.event_date
+        }
+      })
+      
+      // Calculate days of learning
+      const daysOfLearning = firstDate && lastDate 
+        ? Math.ceil((new Date(lastDate).getTime() - new Date(firstDate).getTime()) / (1000 * 60 * 60 * 24))
+        : 0
+      
+      // Calculate overall confidence (based on assignments and time)
+      const assignmentScore = Math.min(totalValidAssignments / 350, 1) * 100 // 350 assignments = 100%
+      const timeScore = Math.min(daysOfLearning / 365, 1) * 100 // 1 year = 100%
+      const overallConfidence = Math.round((assignmentScore * 0.7 + timeScore * 0.3))
+      
+      // Calculate venue-specific confidence
+      const venueConfidence = Array.from(venueAssignments.entries()).map(([venue, count]) => {
+        const confidence = Math.min(Math.round((count / 50) * 100), 100) // 50 assignments = 100%
+        const status = confidence >= 85 ? 'ready' : confidence >= 70 ? 'good' : confidence >= 50 ? 'learning' : 'needs_data'
+        return { venue, assignments: count, confidence, status }
+      }).sort((a, b) => b.confidence - a.confidence)
+      
+      return c.json({
+        success: true,
+        data: {
+          overall: {
+            confidence: overallConfidence,
+            totalAssignments: totalValidAssignments,
+            daysOfLearning: daysOfLearning,
+            status: overallConfidence >= 85 ? 'ready' : overallConfidence >= 70 ? 'good' : 'learning',
+            dateRange: { first: firstDate, last: lastDate }
+          },
+          byVenue: venueConfidence,
+          nextGoal: {
+            target: 350,
+            current: totalValidAssignments,
+            remaining: Math.max(0, 350 - totalValidAssignments),
+            targetConfidence: 95
+          }
+        }
       })
     } catch (error: any) {
       return c.json({ success: false, error: error.message }, 500)

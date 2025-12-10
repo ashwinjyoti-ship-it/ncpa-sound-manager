@@ -709,7 +709,7 @@ function showDashboard() {
   loadDashboardData();
 }
 
-async function loadDashboardData(period = 'current_month') {
+async function loadDashboardData(period = 'current_month', venueMonth = null) {
   const dashboardView = document.getElementById('dashboardView');
   const loadingPlaceholder = document.getElementById('dashboardLoading');
   if (loadingPlaceholder) {
@@ -732,12 +732,30 @@ async function loadDashboardData(period = 'current_month') {
       dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     }
     
-    const response = await axios.get(`${API_BASE}/dashboard/stats`, {
+    // Default venue month to current month if not specified
+    if (!venueMonth) {
+      venueMonth = today.toISOString().slice(0, 7); // YYYY-MM
+    }
+    
+    // Fetch main dashboard stats
+    const statsResponse = await axios.get(`${API_BASE}/dashboard/stats`, {
       params: { from: dateFrom, to: dateTo }
     });
     
-    if (response.data.success) {
-      renderDashboard(response.data.data, period);
+    // Fetch venue stats for selected month
+    const venueResponse = await axios.get(`${API_BASE}/dashboard/venue-stats`, {
+      params: { month: venueMonth }
+    });
+    
+    // Fetch AI confidence data
+    const aiConfidenceResponse = await axios.get(`${API_BASE}/crew/ai-confidence`);
+    
+    if (statsResponse.data.success && venueResponse.data.success && aiConfidenceResponse.data.success) {
+      renderDashboard({
+        ...statsResponse.data.data,
+        venueStats: venueResponse.data.data,
+        aiConfidence: aiConfidenceResponse.data.data
+      }, period, venueMonth);
     }
   } catch (error) {
     console.error('Error loading dashboard:', error);
@@ -747,9 +765,19 @@ async function loadDashboardData(period = 'current_month') {
   }
 }
 
-function renderDashboard(data, period = 'current_month') {
+function renderDashboard(data, period = 'current_month', venueMonth = null) {
   const dashboardView = document.getElementById('dashboardView');
   const loadingPlaceholder = document.getElementById('dashboardLoading');
+  
+  // Generate month/year options for venue selector
+  const today = new Date();
+  const monthOptions = [];
+  for (let i = -6; i <= 6; i++) {
+    const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+    const value = date.toISOString().slice(0, 7);
+    const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    monthOptions.push({ value, label, selected: value === (venueMonth || today.toISOString().slice(0, 7)) });
+  }
   
   const html = `
     <div class="flex justify-between items-center mb-6">
@@ -794,22 +822,39 @@ function renderDashboard(data, period = 'current_month') {
     
     <!-- Charts -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-      <!-- Venue Distribution -->
+      <!-- Shows Per Venue (with month/year selector) -->
       <div class="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-gray-800 mb-4">Events by Venue</h3>
-        <div class="space-y-3">
-          ${data.venueDistribution.slice(0, 8).map(v => `
-            <div>
-              <div class="flex justify-between text-sm mb-1">
-                <span class="text-gray-700 font-medium">${v.venue}</span>
-                <span class="text-gray-600">${v.count} events</span>
-              </div>
-              <div class="w-full bg-gray-200 rounded-full h-2">
-                <div class="bg-blue-500 h-2 rounded-full" style="width: ${(v.count / data.total * 100)}%"></div>
-              </div>
-            </div>
-          `).join('')}
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-lg font-semibold text-gray-800">
+            <i class="fas fa-map-marker-alt mr-2"></i>Shows Per Venue
+          </h3>
+          <select id="venueMonthSelector" class="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600">
+            ${monthOptions.map(opt => `
+              <option value="${opt.value}" ${opt.selected ? 'selected' : ''}>${opt.label}</option>
+            `).join('')}
+          </select>
         </div>
+        <div class="space-y-3">
+          ${data.venueStats && data.venueStats.venues && data.venueStats.venues.length > 0 ? 
+            data.venueStats.venues.slice(0, 7).map((v, idx) => `
+              <div>
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-gray-700 font-medium">${idx + 1}. ${v.venue}</span>
+                  <span class="text-gray-600 font-semibold">${v.count} events</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all" style="width: ${v.percentage}%"></div>
+                </div>
+              </div>
+            `).join('') : 
+            '<p class="text-gray-500 text-center py-4">No events in selected month</p>'
+          }
+        </div>
+        ${data.venueStats && data.venueStats.total > 0 ? `
+          <div class="mt-4 pt-4 border-t border-gray-200 text-sm text-gray-600">
+            Total: <span class="font-semibold">${data.venueStats.total} events</span> in ${data.venueStats.month}
+          </div>
+        ` : ''}
       </div>
       
       <!-- Individual Crew Workload -->
@@ -861,37 +906,114 @@ function renderDashboard(data, period = 'current_month') {
       </div>
     </div>
     
-    <!-- Upcoming Events Table -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6">
-      <h3 class="text-lg font-semibold text-gray-800 mb-4">Upcoming Events (Next 7 Days)</h3>
-      ${data.upcomingEvents.length === 0 ? `
-        <p class="text-gray-500 text-center py-8">No events scheduled in the next 7 days</p>
+    <!-- Missing Sound Requirements (Next 4 Days) -->
+    <div class="bg-white border border-red-100 rounded-lg p-6 mb-6">
+      <h3 class="text-lg font-semibold text-red-600 mb-4">
+        <i class="fas fa-exclamation-triangle mr-2"></i>
+        Missing Sound Requirements (Next 4 Days)
+      </h3>
+      ${data.missingSoundNext4Days && data.missingSoundNext4Days.length === 0 ? `
+        <p class="text-green-600 text-center py-8">
+          <i class="fas fa-check-circle mr-2"></i>
+          All upcoming events have sound requirements defined
+        </p>
       ` : `
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-3 py-2 text-left font-semibold text-gray-700">Date</th>
-                <th class="px-3 py-2 text-left font-semibold text-gray-700">Program</th>
-                <th class="px-3 py-2 text-left font-semibold text-gray-700">Venue</th>
-                <th class="px-3 py-2 text-left font-semibold text-gray-700">Crew</th>
-                <th class="px-3 py-2 text-left font-semibold text-gray-700">Call Time</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-gray-200">
-              ${data.upcomingEvents.map(e => `
-                <tr class="hover:bg-gray-50">
-                  <td class="px-3 py-2">${formatDate(e.event_date)}</td>
-                  <td class="px-3 py-2 font-medium">${e.program}</td>
-                  <td class="px-3 py-2">${e.venue}</td>
-                  <td class="px-3 py-2">${e.crew || '-'}</td>
-                  <td class="px-3 py-2">${e.call_time || '-'}</td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
+        <div class="space-y-3">
+          ${data.missingSoundNext4Days.map(e => `
+            <div class="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-red-500 p-4 rounded cursor-pointer hover:shadow-md transition-all" 
+                 onclick="openEditModal(${e.id})">
+              <div class="flex justify-between items-start">
+                <div class="flex-1">
+                  <div class="font-semibold text-gray-800 mb-1">
+                    ${formatDate(e.event_date)} - ${e.venue}
+                  </div>
+                  <div class="text-gray-700">${e.program}</div>
+                  ${e.crew ? `<div class="text-sm text-gray-600 mt-1">Crew: ${e.crew}</div>` : ''}
+                </div>
+                <div class="text-red-600 ml-4">
+                  <i class="fas fa-edit text-xl"></i>
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+        <div class="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+          <i class="fas fa-info-circle mr-2"></i>
+          <strong>${data.missingSoundNext4Days.length} event(s)</strong> need sound requirements urgently. Click to edit.
         </div>
       `}
+    </div>
+    
+    <!-- AI Confidence Section -->
+    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+      <h3 class="text-lg font-semibold text-gray-800 mb-4">
+        <i class="fas fa-brain mr-2 text-purple-600"></i>
+        AI Assignment Confidence
+      </h3>
+      
+      <!-- Overall Confidence -->
+      <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-gray-700 font-semibold">Overall System:</span>
+          <span class="text-3xl font-bold ${data.aiConfidence.overall.confidence >= 85 ? 'text-green-600' : data.aiConfidence.overall.confidence >= 70 ? 'text-blue-600' : 'text-orange-600'}">
+            ${data.aiConfidence.overall.confidence}%
+            ${data.aiConfidence.overall.status === 'ready' ? '✅' : data.aiConfidence.overall.status === 'good' ? '👍' : '📚'}
+          </span>
+        </div>
+        <div class="text-sm text-gray-600 space-y-1">
+          <div>📊 ${data.aiConfidence.overall.totalAssignments} assignments analyzed</div>
+          <div>📅 ${data.aiConfidence.overall.daysOfLearning} days of learning</div>
+          <div class="font-medium ${data.aiConfidence.overall.status === 'ready' ? 'text-green-600' : 'text-blue-600'}">
+            ${data.aiConfidence.overall.status === 'ready' ? '✅ System ready for automatic assignments!' : '📚 System is learning - use with manual review'}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Venue-by-Venue Confidence -->
+      <div class="space-y-2">
+        <h4 class="text-sm font-semibold text-gray-700 mb-3">Confidence by Venue:</h4>
+        ${data.aiConfidence.byVenue.map(v => {
+          const confidenceColor = v.confidence >= 85 ? 'text-green-600' : 
+                                  v.confidence >= 70 ? 'text-blue-600' : 
+                                  v.confidence >= 50 ? 'text-yellow-600' : 'text-red-600';
+          const icon = v.status === 'ready' ? '✅' : 
+                       v.status === 'good' ? '✅' : 
+                       v.status === 'learning' ? '⚠️' : '❌';
+          const statusText = v.status === 'ready' ? 'Ready' :
+                            v.status === 'good' ? 'Good' :
+                            v.status === 'learning' ? 'Learning' : 'Needs Data';
+          return `
+            <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
+              <div class="flex items-center">
+                <span class="font-medium text-gray-700 mr-2">${v.venue}</span>
+                <span class="text-xs text-gray-500">(${v.assignments} assignments)</span>
+              </div>
+              <div class="flex items-center">
+                <span class="text-sm font-semibold ${confidenceColor} mr-2">
+                  ${v.confidence}%
+                </span>
+                <span class="text-sm">${icon}</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+      
+      <!-- Learning Progress -->
+      ${data.aiConfidence.nextGoal.remaining > 0 ? `
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+          <div class="flex justify-between items-center mb-2">
+            <span class="text-blue-800 font-medium">🎯 Next Goal:</span>
+            <span class="text-blue-900 font-semibold">${data.aiConfidence.nextGoal.target} assignments → ${data.aiConfidence.nextGoal.targetConfidence}% confidence</span>
+          </div>
+          <div class="w-full bg-blue-200 rounded-full h-2">
+            <div class="bg-blue-600 h-2 rounded-full transition-all" style="width: ${(data.aiConfidence.nextGoal.current / data.aiConfidence.nextGoal.target * 100)}%"></div>
+          </div>
+          <div class="text-xs text-blue-700 mt-1">
+            ${data.aiConfidence.nextGoal.remaining} more assignments needed
+          </div>
+        </div>
+      ` : ''}
     </div>
     
     <!-- Status Breakdown -->
@@ -915,12 +1037,32 @@ function renderDashboard(data, period = 'current_month') {
     loadingPlaceholder.style.display = 'none';
   }
   
-  // Add event listener for period selector
+  // Add event listener for crew workload period selector
   const periodSelector = document.getElementById('periodSelector');
   if (periodSelector) {
     periodSelector.addEventListener('change', (e) => {
-      loadDashboardData(e.target.value);
+      const currentVenueMonth = document.getElementById('venueMonthSelector')?.value;
+      loadDashboardData(e.target.value, currentVenueMonth);
     });
+  }
+  
+  // Add event listener for venue month selector
+  const venueMonthSelector = document.getElementById('venueMonthSelector');
+  if (venueMonthSelector) {
+    venueMonthSelector.addEventListener('change', (e) => {
+      const currentPeriod = document.getElementById('periodSelector')?.value || 'current_month';
+      loadDashboardData(currentPeriod, e.target.value);
+    });
+  }
+}
+
+// Helper function to open edit modal from dashboard
+function openEditModal(eventId) {
+  if (typeof editEventFromModal === 'function') {
+    editEventFromModal(eventId);
+  } else {
+    console.error('editEventFromModal function not found');
+    alert('Please go to Table view to edit this event');
   }
 }
 

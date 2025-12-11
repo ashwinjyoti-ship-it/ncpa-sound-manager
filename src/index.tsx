@@ -236,8 +236,18 @@ app.get('/api/export/csv', async (c) => {
     
     // Add data rows
     results.forEach((row: any) => {
+      // Format date as DD/MM/YYYY for Google Sheets auto-recognition
+      let formattedDate = row.Date
+      if (row.Date) {
+        const dateMatch = row.Date.match(/^(\d{4})-(\d{2})-(\d{2})/)
+        if (dateMatch) {
+          const [, year, month, day] = dateMatch
+          formattedDate = `${day}/${month}/${year}` // DD/MM/YYYY format
+        }
+      }
+      
       const values = [
-        escapeCSV(row.Date),
+        escapeCSV(formattedDate),
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),

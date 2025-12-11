@@ -1835,7 +1835,7 @@ app.get('/', (c) => {
 
             <!-- Tab Navigation -->
             <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
-                <!-- MOBILE: Minimal header with just tabs and event count -->
+                <!-- MOBILE: Minimal header with tabs and Add Show button -->
                 <div class="md:hidden flex justify-between items-center mb-3">
                     <!-- Tabs (Calendar + Dashboard only on mobile) -->
                     <div class="flex space-x-1">
@@ -1847,13 +1847,10 @@ app.get('/', (c) => {
                         </button>
                     </div>
                     
-                    <!-- Event Count -->
-                    <div id="eventCountDisplay" class="flex items-center px-3 py-1.5 rounded-lg text-xs" style="background-color: #FFFFFF; border: 1px solid #FFE4B5;">
-                        <i class="fas fa-calendar-check mr-1.5 text-xs" style="color: #FF6B35;"></i>
-                        <span class="font-semibold whitespace-nowrap" style="color: #FF6B35;">
-                            <span id="eventCount">0</span>
-                        </span>
-                    </div>
+                    <!-- Add Show Button (Mobile) -->
+                    <button onclick="openAddEventModal()" class="px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+                        <i class="fas fa-plus mr-1"></i>Add Show
+                    </button>
                 </div>
                 
                 <!-- MOBILE: Simple search bar only -->

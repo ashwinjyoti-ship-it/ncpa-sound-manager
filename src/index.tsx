@@ -104,6 +104,83 @@ app.get('/api/events/search', async (c) => {
 })
 
 // ============================================
+// GOOGLE SHEETS AUTO-SYNC: CSV EXPORT ENDPOINT
+// ============================================
+// Permanent URL for Google Sheets IMPORTDATA() function
+// Usage in Google Sheets: =IMPORTDATA("https://ncpa-sound.pages.dev/api/export/latest-csv")
+// Auto-refreshes every hour
+app.get('/api/export/latest-csv', async (c) => {
+  try {
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        event_date as "Date",
+        program as "Program",
+        venue as "Venue",
+        team as "Team",
+        crew as "Crew",
+        sound_requirements as "Sound Requirements",
+        call_time as "Call Time",
+        status as "Status"
+      FROM events 
+      ORDER BY event_date ASC
+    `).all()
+    
+    if (!results || results.length === 0) {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status\n', {
+        headers: {
+          'Content-Type': 'text/csv; charset=utf-8',
+          'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
+          'Cache-Control': 'no-cache, no-store, must-revalidate'
+        }
+      })
+    }
+    
+    // Helper to escape CSV values
+    const escapeCSV = (val: any): string => {
+      if (val === null || val === undefined) return ''
+      const str = String(val)
+      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+    
+    // Build CSV header
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status']
+    const csvRows = [headers.join(',')]
+    
+    // Add data rows
+    results.forEach((row: any) => {
+      const values = [
+        escapeCSV(row.Date),
+        escapeCSV(row.Program),
+        escapeCSV(row.Venue),
+        escapeCSV(row.Team),
+        escapeCSV(row.Crew),
+        escapeCSV(row['Sound Requirements']),
+        escapeCSV(row['Call Time']),
+        escapeCSV(row.Status || 'confirmed')
+      ]
+      csvRows.push(values.join(','))
+    })
+    
+    const csv = csvRows.join('\n')
+    
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*'
+      }
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
 // V4.1 ENHANCED API ENDPOINTS (Must be before /:id catch-all route)
 // ============================================
 setupFilteringEndpoints(app)

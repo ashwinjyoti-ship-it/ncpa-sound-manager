@@ -181,6 +181,89 @@ app.get('/api/export/latest-csv', async (c) => {
 })
 
 // ============================================
+// MONTHLY CSV EXPORT (Manual month selection)
+// ============================================
+// For early month preparation (e.g., upload Jan data in Dec, populate sheet in Dec)
+// Usage: =IMPORTDATA("https://ncpa-sound.pages.dev/api/export/csv?month=2026-01")
+// Column order: Date, Crew, Program, Venue, Team, Sound Requirements, Call Time
+app.get('/api/export/csv', async (c) => {
+  try {
+    const month = c.req.query('month') // Format: YYYY-MM (e.g., "2026-01")
+    
+    if (!month) {
+      return c.json({ 
+        success: false, 
+        error: 'Month parameter required. Use: ?month=YYYY-MM (e.g., ?month=2026-01)' 
+      }, 400)
+    }
+    
+    // Validate format
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return c.json({ 
+        success: false, 
+        error: 'Invalid month format. Use: YYYY-MM (e.g., 2026-01)' 
+      }, 400)
+    }
+    
+    const { results } = await c.env.DB.prepare(`
+      SELECT 
+        event_date as "Date",
+        crew as "Crew",
+        program as "Program",
+        venue as "Venue",
+        team as "Team",
+        sound_requirements as "Sound Requirements",
+        call_time as "Call Time"
+      FROM events 
+      WHERE strftime('%Y-%m', event_date) = ?
+      ORDER BY event_date ASC
+    `).bind(month).all()
+    
+    // Helper to escape CSV values
+    const escapeCSV = (val: any): string => {
+      if (val === null || val === undefined) return ''
+      const str = String(val)
+      // Escape quotes and wrap in quotes if contains comma, quote, or newline
+      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+        return `"${str.replace(/"/g, '""')}"`
+      }
+      return str
+    }
+    
+    // Build CSV with custom column order
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time']
+    const csvRows = [headers.join(',')]
+    
+    // Add data rows
+    results.forEach((row: any) => {
+      const values = [
+        escapeCSV(row.Date),
+        escapeCSV(row.Crew),
+        escapeCSV(row.Program),
+        escapeCSV(row.Venue),
+        escapeCSV(row.Team),
+        escapeCSV(row['Sound Requirements']),
+        escapeCSV(row['Call Time'])
+      ]
+      csvRows.push(values.join(','))
+    })
+    
+    const csv = csvRows.join('\n')
+    
+    return new Response(csv, {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `inline; filename="ncpa-events-${month}.csv"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*'
+      }
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
 // V4.1 ENHANCED API ENDPOINTS (Must be before /:id catch-all route)
 // ============================================
 setupFilteringEndpoints(app)

@@ -619,25 +619,39 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       function normalizeVenue(venueName: string): string {
         if (!venueName) return 'Unknown'
         
-        const upper = venueName.toUpperCase()
+        // Remove time variations (e.g., "TET 7pm", "GDT 6.30pm", "JBT 7:29pm")
+        // Match patterns like: "7pm", "6.30pm", "7:29pm", "Sat 4:32pm", etc.
+        let cleaned = venueName.replace(/\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
+                               .replace(/\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
+                               .trim()
         
-        // Check for main venues (case-insensitive, partial match)
-        for (const mainVenue of MAIN_VENUES) {
-          if (upper.includes(mainVenue.toUpperCase()) || 
-              mainVenue.toUpperCase().includes(upper)) {
+        const upper = cleaned.toUpperCase()
+        
+        // Exact match first (after cleaning)
+        if (upper === 'JBT') return 'JBT'
+        if (upper === 'TET') return 'TET'
+        if (upper === 'GDT') return 'GDT'
+        if (upper === 'LT') return 'LT'
+        if (upper === 'TT') return 'TT'
+        if (upper === 'SVR') return 'SVR'
+        if (upper === 'DPAG' || upper === 'DP ART GALLERY') return 'DP Art Gallery'
+        
+        // Partial matches for full names
+        if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
+        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
+        if (upper.includes('GODREJ') || (upper.includes('DANCE') && upper.includes('THEATRE'))) return 'GDT'
+        if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
+        if (upper.includes('EXPERIMENTAL')) return 'TT'
+        if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
+        
+        // If still no match, check if it starts with main venue codes
+        for (const mainVenue of ['JBT', 'TET', 'GDT', 'LT', 'TT', 'SVR']) {
+          if (upper.startsWith(mainVenue + ' ') || upper.startsWith(mainVenue)) {
             return mainVenue
           }
         }
         
-        // Special cases
-        if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
-        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
-        if (upper.includes('GODREJ') || upper.includes('DANCE')) return 'GDT'
-        if (upper.includes('LITTLE')) return 'LT'
-        if (upper.includes('EXPERIMENTAL')) return 'TT'
-        if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
-        
-        // If no match, return original (for filtering out later)
+        // If no match, return original (will be filtered out)
         return venueName
       }
       

@@ -236,8 +236,8 @@ app.get('/api/export/csv', async (c) => {
     
     // Add data rows
     results.forEach((row: any) => {
-      // Format date as DD-MMM-YYYY for Google Sheets (e.g., 02-Dec-2025)
-      // This format is more reliably recognized and won't convert to serial numbers
+      // Format date as DD-MMM-YYYY and force text format for Google Sheets
+      // Using ="date" format prevents conversion to serial numbers
       let formattedDate = row.Date
       if (row.Date) {
         const dateMatch = row.Date.match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -246,12 +246,12 @@ app.get('/api/export/csv', async (c) => {
           const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                               'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
           const monthName = monthNames[parseInt(month) - 1]
-          formattedDate = `${day}-${monthName}-${year}` // DD-MMM-YYYY format
+          formattedDate = `="${day}-${monthName}-${year}"` // Force text with ="..." format
         }
       }
       
       const values = [
-        escapeCSV(formattedDate),
+        formattedDate, // Don't escape - we need the = sign to stay
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),

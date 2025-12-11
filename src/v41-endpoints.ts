@@ -51,7 +51,7 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
       const { 
         venues, 
         crews, 
-        statuses, 
+        teams, 
         dateFrom, 
         dateTo, 
         tags,
@@ -79,11 +79,11 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
         params.push(...crews.map((c: string) => `%${c}%`))
       }
       
-      // Status filter
-      if (statuses && statuses.length > 0) {
-        const placeholders = statuses.map(() => '?').join(',')
-        query += ` AND (status IN (${placeholders}) OR status IS NULL)`
-        params.push(...statuses)
+      // Team filter
+      if (teams && teams.length > 0) {
+        const placeholders = teams.map(() => '?').join(',')
+        query += ` AND team IN (${placeholders})`
+        params.push(...teams)
       }
       
       // Date range filter
@@ -161,14 +161,14 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
         })
       })
       
-      const statuses = await c.env.DB.prepare('SELECT DISTINCT status FROM events WHERE status IS NOT NULL ORDER BY status').all()
+      const teams = await c.env.DB.prepare('SELECT DISTINCT team FROM events WHERE team IS NOT NULL AND team != "" ORDER BY team').all()
       
       return c.json({
         success: true,
         data: {
           venues: MAIN_VENUES,
           crews: Array.from(validCrewSet).sort(),
-          statuses: statuses.results.map((s: any) => s.status)
+          teams: teams.results.map((t: any) => t.team)
         }
       })
     } catch (error: any) {

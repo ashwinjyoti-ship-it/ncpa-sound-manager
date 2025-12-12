@@ -473,14 +473,67 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         GROUP BY status
       `).bind(dateFrom, dateTo).all()
       
-      // Events by venue
-      const venueStats = await c.env.DB.prepare(`
+      // Events by venue (with normalization)
+      const venueStatsRaw = await c.env.DB.prepare(`
         SELECT venue, COUNT(*) as count
         FROM events
         WHERE event_date >= ? AND event_date <= ?
         GROUP BY venue
         ORDER BY count DESC
       `).bind(dateFrom, dateTo).all()
+      
+      // Define main venues and normalization function
+      const MAIN_VENUES = ['JBT', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+      
+      function normalizeVenue(venueName: string): string {
+        if (!venueName) return 'Unknown'
+        
+        // Remove time variations
+        let cleaned = venueName.replace(/\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
+                               .replace(/\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
+                               .trim()
+        
+        const upper = cleaned.toUpperCase()
+        
+        // Exact match first
+        if (upper === 'JBT') return 'JBT'
+        if (upper === 'TET') return 'TET'
+        if (upper === 'GDT') return 'GDT'
+        if (upper === 'LT') return 'LT'
+        if (upper === 'TT') return 'TT'
+        if (upper === 'SVR') return 'SVR'
+        if (upper === 'DPAG' || upper === 'DP ART GALLERY') return 'DP Art Gallery'
+        
+        // Partial matches
+        if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
+        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
+        if (upper.includes('GODREJ') || (upper.includes('DANCE') && upper.includes('THEATRE'))) return 'GDT'
+        if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
+        if (upper.includes('EXPERIMENTAL')) return 'TT'
+        if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
+        
+        // Check if starts with main venue codes
+        for (const mainVenue of MAIN_VENUES) {
+          if (upper.startsWith(mainVenue + ' ') || upper.startsWith(mainVenue)) {
+            return mainVenue
+          }
+        }
+        
+        return venueName
+      }
+      
+      // Aggregate normalized venues
+      const venueMap = new Map<string, number>()
+      venueStatsRaw.results.forEach((v: any) => {
+        const normalized = normalizeVenue(v.venue)
+        if (MAIN_VENUES.includes(normalized)) {
+          venueMap.set(normalized, (venueMap.get(normalized) || 0) + v.count)
+        }
+      })
+      
+      const venueStats = Array.from(venueMap.entries())
+        .map(([venue, count]) => ({ venue, count }))
+        .sort((a, b) => b.count - a.count)
       
       // Individual crew workload (parse comma-separated crew field)
       const crewEvents = await c.env.DB.prepare(`
@@ -551,7 +604,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         data: {
           total: totalResult?.total || 0,
           statusBreakdown: statusStats.results,
-          venueDistribution: venueStats.results,
+          venueDistribution: venueStats,
           crewWorkload: crewWorkload,
           crewWorkloadStats: {
             average: Math.round(avgAssignments * 10) / 10,

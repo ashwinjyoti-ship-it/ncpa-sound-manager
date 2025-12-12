@@ -61,17 +61,13 @@ async function loadEvents() {
 function showTab(tab) {
   currentView = tab;
   
-  // Update tab buttons
+  // Update tab buttons (dashboard removed)
   document.getElementById('calendarTab').classList.remove('tab-active');
   document.getElementById('tableTab').classList.remove('tab-active');
-  const dashboardTab = document.getElementById('dashboardTab');
-  if (dashboardTab) dashboardTab.classList.remove('tab-active');
   
   // Hide all views
   document.getElementById('calendarView').style.display = 'none';
   document.getElementById('tableView').style.display = 'none';
-  const dashboardView = document.getElementById('dashboardView');
-  if (dashboardView) dashboardView.style.display = 'none';
   
   if (tab === 'calendar') {
     document.getElementById('calendarTab').classList.add('tab-active');
@@ -81,12 +77,6 @@ function showTab(tab) {
     document.getElementById('tableTab').classList.add('tab-active');
     document.getElementById('tableView').style.display = 'block';
     renderTable();
-  } else if (tab === 'dashboard') {
-    if (dashboardTab) dashboardTab.classList.add('tab-active');
-    if (dashboardView) {
-      dashboardView.style.display = 'block';
-      loadDashboardData();
-    }
   }
 }
 
@@ -141,6 +131,11 @@ function renderCalendar() {
   });
   
   // Update event count display with unique count
+  const eventCountEl = document.getElementById('monthEventCount');
+  if (eventCountEl) {
+    eventCountEl.textContent = `${uniqueMonthEvents.length} events`;
+  }
+  
   console.log(`📊 Event Count Debug - Month: ${monthNames[month]} ${year}`);
   console.log(`  - Total allEvents: ${allEvents.length}`);
   console.log(`  - Filtered monthEvents: ${monthEvents.length}`);

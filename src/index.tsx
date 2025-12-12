@@ -1847,18 +1847,9 @@ app.get('/', (c) => {
 
             <!-- Tab Navigation -->
             <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
-                <!-- MOBILE: Minimal header with tabs and Add Show button -->
+                <!-- MOBILE: Simple header with Add Show button only -->
                 <div class="md:hidden flex justify-between items-center mb-3">
-                    <!-- Tabs (Calendar + Dashboard only on mobile) -->
-                    <div class="flex space-x-1">
-                        <button id="calendarTab" class="px-4 py-2 font-semibold text-sm tab-active transition-all" onclick="showTab('calendar')">
-                            <i class="fas fa-calendar-alt"></i>
-                        </button>
-                        <button id="dashboardTab" class="px-4 py-2 font-semibold text-sm text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
-                            <i class="fas fa-chart-line"></i>
-                        </button>
-                    </div>
-                    
+                    <div></div>
                     <!-- Add Show Button (Mobile) -->
                     <button onclick="openAddShowModal()" class="px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all">
                         <i class="fas fa-plus mr-1"></i>Add Show
@@ -1883,9 +1874,6 @@ app.get('/', (c) => {
                             </button>
                             <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
                                 <i class="fas fa-table mr-2"></i>Table
-                            </button>
-                            <button id="dashboardTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('dashboard')">
-                                <i class="fas fa-chart-line mr-2"></i>Dashboard
                             </button>
                         </div>
                         
@@ -1948,12 +1936,15 @@ app.get('/', (c) => {
 
                 <!-- Calendar View -->
                 <div id="calendarView" class="rounded-lg p-3 md:p-6" style="background-color: #FFFFFF;">
-                    <!-- Calendar controls -->
+                    <!-- Calendar controls with event count -->
                     <div class="flex justify-between items-center mb-4 md:mb-6">
                         <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
                             <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
                         </button>
-                        <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #FF6B35;"></h2>
+                        <div class="text-center">
+                            <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #FF6B35;"></h2>
+                            <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
+                        </div>
                         <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
                             <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
                         </button>
@@ -2042,12 +2033,7 @@ app.get('/', (c) => {
                 </div>
                 
                 <!-- Dashboard View -->
-                <div id="dashboardView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
-                    <div class="text-center py-12">
-                        <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
-                        <p class="mt-4 text-gray-600">Loading dashboard...</p>
-                    </div>
-                </div>
+                <!-- Dashboard removed - using simple event count in calendar header instead -->
             </div>
         </div>
 

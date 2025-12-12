@@ -732,9 +732,10 @@ async function loadDashboardData(period = 'current_month', venueMonth = null) {
       dateTo = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     }
     
-    // Default venue month to current month if not specified
-    if (!venueMonth) {
-      venueMonth = today.toISOString().slice(0, 7); // YYYY-MM
+    // ALWAYS default venue month to current month if not specified
+    // This ensures the dropdown always starts at current month
+    if (!venueMonth || venueMonth === 'null' || venueMonth === 'undefined') {
+      venueMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`; // YYYY-MM
     }
     
     // Fetch main dashboard stats

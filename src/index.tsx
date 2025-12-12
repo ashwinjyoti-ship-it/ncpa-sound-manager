@@ -236,22 +236,20 @@ app.get('/api/export/csv', async (c) => {
     
     // Add data rows
     results.forEach((row: any) => {
-      // Format date as DD-MMM-YYYY and force text format for Google Sheets
-      // Using ="date" format prevents conversion to serial numbers
+      // Format date as DD/MM/YYYY with leading apostrophe to force text display
+      // This prevents conversion to serial numbers while keeping clean DD/MM/YYYY format
       let formattedDate = row.Date
       if (row.Date) {
         const dateMatch = row.Date.match(/^(\d{4})-(\d{2})-(\d{2})/)
         if (dateMatch) {
           const [, year, month, day] = dateMatch
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                              'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-          const monthName = monthNames[parseInt(month) - 1]
-          formattedDate = `="${day}-${monthName}-${year}"` // Force text with ="..." format
+          // Use single quote prefix to force text (doesn't show in cell)
+          formattedDate = `'${day}/${month}/${year}` // 'DD/MM/YYYY format
         }
       }
       
       const values = [
-        formattedDate, // Don't escape - we need the = sign to stay
+        formattedDate, // Don't escape - we need the ' prefix to stay
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),

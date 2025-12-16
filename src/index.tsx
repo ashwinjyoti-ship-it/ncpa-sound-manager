@@ -1841,11 +1841,49 @@ app.get('/', (c) => {
             <!-- Header -->
             <header class="shadow-md" style="background-color: #FFF8DC; border-bottom: 2px solid #FFE4B5;">
                 <div class="container mx-auto px-6 py-4">
-                    <h1 class="text-3xl font-bold text-center" style="color: #FF6B35;">
-                        <i class="fas fa-music mr-2"></i>
-                        NCPA Sound Crew
-                    </h1>
-                    <p class="text-center text-gray-600 mt-1">Event Schedule & Technical Dashboard</p>
+                    <div class="flex justify-between items-center">
+                        <div class="flex-1"></div>
+                        <div class="flex-1 text-center">
+                            <h1 class="text-3xl font-bold" style="color: #FF6B35;">
+                                <i class="fas fa-music mr-2"></i>
+                                NCPA Sound Crew
+                            </h1>
+                            <p class="text-gray-600 mt-1">Event Schedule & Technical Dashboard</p>
+                        </div>
+                        <div class="flex-1 flex justify-end items-center gap-3">
+                            <!-- User Menu (shown when logged in) -->
+                            <div id="userMenu" style="display: none;">
+                                <div class="relative">
+                                    <button onclick="toggleUserDropdown()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-yellow-100 transition-all">
+                                        <i class="fas fa-user-circle text-2xl" style="color: #FF6B35;"></i>
+                                        <span id="userEmailDisplay" class="text-sm font-medium text-gray-700"></span>
+                                        <!-- Admin badge -->
+                                        <span id="adminBadge" style="display: none;" class="relative">
+                                            <i class="fas fa-user-shield text-lg text-orange-600"></i>
+                                            <span id="pendingCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style="display: none;"></span>
+                                        </span>
+                                    </button>
+                                    <!-- Dropdown -->
+                                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                        <button onclick="openChangePasswordModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">
+                                            <i class="fas fa-key mr-2"></i>Change Password
+                                        </button>
+                                        <button id="adminPanelBtn" onclick="openAdminPanel()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm" style="display: none;">
+                                            <i class="fas fa-users-cog mr-2"></i>Admin Panel
+                                        </button>
+                                        <hr class="my-1">
+                                        <button onclick="logout()" class="w-full text-left px-4 py-2 hover:bg-red-50 text-sm text-red-600">
+                                            <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Login Button (shown when not logged in) -->
+                            <button id="loginBtn" onclick="openLoginModal()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                                <i class="fas fa-sign-in-alt mr-2"></i>Login
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -1878,6 +1916,9 @@ app.get('/', (c) => {
                             </button>
                             <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
                                 <i class="fas fa-table mr-2"></i>Table
+                            </button>
+                            <button id="crewTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('crew')">
+                                <i class="fas fa-users mr-2"></i>Crew
                             </button>
                         </div>
                         
@@ -2038,6 +2079,16 @@ app.get('/', (c) => {
                 
                 <!-- Dashboard View -->
                 <!-- Dashboard removed - using simple event count in calendar header instead -->
+                
+                <!-- Crew Tab -->
+                <div id="crewView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
+                    <div id="crewContent">
+                        <div class="text-center py-12">
+                            <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+                            <p class="mt-4 text-gray-600">Loading crew statistics...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -2606,11 +2657,137 @@ app.get('/', (c) => {
           });
         </script>
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js" crossorigin="anonymous"></script>
+        <!-- Login Modal -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Login</h2>
+                    <button onclick="closeLoginModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="loginEmail" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="loginPassword" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div id="loginError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                            Login
+                        </button>
+                        <button type="button" onclick="openSignupModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
+                            Sign Up
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Signup Modal -->
+        <div id="signupModal" class="modal">
+            <div class="modal-content max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Sign Up</h2>
+                    <button onclick="closeSignupModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-600 mb-4">Your account will require admin approval before you can login.</p>
+                <form id="signupForm" onsubmit="handleSignup(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                        <input type="email" id="signupEmail" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                        <input type="password" id="signupPassword" required minlength="6"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
+                        <input type="password" id="signupPasswordConfirm" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div id="signupError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
+                    <div id="signupSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                            Sign Up
+                        </button>
+                        <button type="button" onclick="openLoginModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
+                            Back to Login
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Change Password Modal -->
+        <div id="changePasswordModal" class="modal">
+            <div class="modal-content max-w-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Change Password</h2>
+                    <button onclick="closeChangePasswordModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <form id="changePasswordForm" onsubmit="handleChangePassword(event)">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
+                        <input type="password" id="currentPassword" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+                        <input type="password" id="newPassword" required minlength="6"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
+                        <input type="password" id="newPasswordConfirm" required 
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div id="changePasswordError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
+                    <div id="changePasswordSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
+                    <div class="flex gap-3">
+                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                            Change Password
+                        </button>
+                        <button type="button" onclick="closeChangePasswordModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Admin Panel Modal -->
+        <div id="adminPanelModal" class="modal">
+            <div class="modal-content max-w-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                        <i class="fas fa-users-cog mr-2"></i>Admin Panel
+                    </h2>
+                    <button onclick="closeAdminPanel()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <div id="adminPanelContent">
+                    <div class="text-center py-8">
+                        <i class="fas fa-spinner fa-spin text-3xl text-gray-400"></i>
+                        <p class="mt-3 text-gray-600">Loading pending approvals...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
         <script src="/static/app.js?v=4.0.2"></script>
         <script src="/static/v41-features.js?v=4.1.0"></script>
+        <script src="/static/auth.js?v=1.0.0"></script>
     </body>
     </html>
   `)

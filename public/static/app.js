@@ -61,13 +61,17 @@ async function loadEvents() {
 function showTab(tab) {
   currentView = tab;
   
-  // Update tab buttons (dashboard removed)
+  // Update tab buttons
   document.getElementById('calendarTab').classList.remove('tab-active');
   document.getElementById('tableTab').classList.remove('tab-active');
+  const crewTab = document.getElementById('crewTab');
+  if (crewTab) crewTab.classList.remove('tab-active');
   
   // Hide all views
   document.getElementById('calendarView').style.display = 'none';
   document.getElementById('tableView').style.display = 'none';
+  const crewView = document.getElementById('crewView');
+  if (crewView) crewView.style.display = 'none';
   
   if (tab === 'calendar') {
     document.getElementById('calendarTab').classList.add('tab-active');
@@ -77,6 +81,14 @@ function showTab(tab) {
     document.getElementById('tableTab').classList.add('tab-active');
     document.getElementById('tableView').style.display = 'block';
     renderTable();
+  } else if (tab === 'crew') {
+    if (crewTab) crewTab.classList.add('tab-active');
+    if (crewView) {
+      crewView.style.display = 'block';
+      if (typeof loadCrewStats === 'function') {
+        loadCrewStats();
+      }
+    }
   }
 }
 

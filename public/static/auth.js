@@ -38,6 +38,10 @@ function showUserMenu() {
     document.getElementById('adminBadge').style.display = 'inline';
     document.getElementById('adminPanelBtn').style.display = 'block';
   }
+  
+  // Show Crew tab for authenticated users
+  const crewTab = document.getElementById('crewTab');
+  if (crewTab) crewTab.style.display = 'block';
 }
 
 // Show login button
@@ -45,6 +49,10 @@ function showLoginButton() {
   document.getElementById('loginBtn').style.display = 'block';
   document.getElementById('userMenu').style.display = 'none';
   currentUser = null;
+  
+  // Hide Crew tab for non-authenticated users
+  const crewTab = document.getElementById('crewTab');
+  if (crewTab) crewTab.style.display = 'none';
 }
 
 // Toggle user dropdown

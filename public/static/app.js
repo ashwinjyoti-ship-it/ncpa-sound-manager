@@ -371,10 +371,34 @@ function openEventModal(event) {
   const modal = document.getElementById('eventModal');
   const content = document.getElementById('eventModalContent');
   
+  // Check if user is authenticated (currentUser is set by auth.js)
+  const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
+  
   // Format sound requirements with clickable links
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 
     : 'Not specified';
+  
+  // Show action buttons only for authenticated users
+  const actionButtons = isAuthenticated ? `
+    <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
+      <button onclick="editEventFromModal(${event.id})" 
+              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center">
+        <i class="fas fa-edit mr-2"></i>Edit
+      </button>
+      <button onclick="deleteEventFromModal(${event.id})" 
+              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
+        <i class="fas fa-trash mr-2"></i>Delete
+      </button>
+    </div>
+  ` : `
+    <div class="mt-6 pt-4 border-t border-gray-200">
+      <p class="text-center text-gray-500 text-sm">
+        <i class="fas fa-lock mr-2"></i>
+        Please <a href="#" onclick="closeEventModal(); openLoginModal(); return false;" class="text-orange-500 hover:text-orange-600 font-semibold">login</a> to edit events
+      </p>
+    </div>
+  `;
   
   content.innerHTML = `
     <div class="space-y-4">
@@ -411,17 +435,7 @@ function openEventModal(event) {
         <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
       </div>
       
-      <!-- Action Buttons -->
-      <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-        <button onclick="editEventFromModal(${event.id})" 
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center">
-          <i class="fas fa-edit mr-2"></i>Edit
-        </button>
-        <button onclick="deleteEventFromModal(${event.id})" 
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
-          <i class="fas fa-trash mr-2"></i>Delete
-        </button>
-      </div>
+      ${actionButtons}
     </div>
   `;
   
@@ -461,6 +475,16 @@ async function deleteEventFromModal(eventId) {
 // ============================================
 
 function openAddShowModal() {
+  // Check authentication
+  const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
+  
+  if (!isAuthenticated) {
+    // Show login modal instead
+    openLoginModal();
+    showNotification('⚠️ Please login to add events', 'warning');
+    return;
+  }
+  
   document.getElementById('addShowModal').classList.add('active');
   document.getElementById('addShowForm').reset();
 }

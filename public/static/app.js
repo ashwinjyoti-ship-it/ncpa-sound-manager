@@ -2088,3 +2088,25 @@ async function askAI(predefinedQuery) {
     showNotification('AI query failed', 'error');
   }
 }
+
+// ============================================
+// TOOLBAR DROPDOWN MENU
+// ============================================
+
+function toggleActionsDropdown() {
+  const dropdown = document.getElementById('actionsDropdown');
+  dropdown.classList.toggle('hidden');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('actionsDropdown');
+  const button = e.target.closest('button[onclick*="toggleActionsDropdown"]');
+  
+  if (dropdown && !dropdown.contains(e.target) && !button) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+// Expose globally
+window.toggleActionsDropdown = toggleActionsDropdown;

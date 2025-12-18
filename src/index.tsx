@@ -1923,59 +1923,87 @@ app.get('/', (c) => {
                         </div>
                         
                         <!-- Desktop toolbar -->
-                        <div class="flex gap-2">
+                        <div class="flex items-center gap-3">
                             <!-- Search -->
                             <div class="relative">
                                 <input type="text" id="searchInput" placeholder="Search events..." 
-                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                                 <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                             </div>
                             
-                            <!-- Advanced Filter Button -->
-                            <button onclick="toggleFilterPanel()" 
-                                    class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
-                                <i class="fas fa-filter mr-1.5"></i>Filters
-                            </button>
+                            <!-- Divider -->
+                            <div class="h-8 w-px bg-gray-300"></div>
                             
-                            <!-- Conflict Detection -->
-                            <button onclick="checkConflicts()" 
-                                    class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
-                                <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
-                            </button>
+                            <!-- Analysis Tools Group -->
+                            <div class="flex gap-2">
+                                <button onclick="toggleFilterPanel()" 
+                                        class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                                    <i class="fas fa-filter mr-1.5"></i>Filters
+                                </button>
+                                
+                                <button onclick="checkConflicts()" 
+                                        class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
+                                    <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
+                                </button>
+                                
+                                <button onclick="checkShortNotice()" 
+                                        class="px-3 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all">
+                                    <i class="fas fa-clock mr-1.5"></i>Short Notice
+                                </button>
+                            </div>
                             
-                            <!-- Short Notice Detection -->
-                            <button onclick="checkShortNotice()" 
-                                    class="px-3 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all">
-                                <i class="fas fa-clock mr-1.5"></i>Short Notice
-                            </button>
+                            <!-- Divider -->
+                            <div class="h-8 w-px bg-gray-300"></div>
                             
-                            <!-- Export -->
-                            <button onclick="openCSVExportModal()" 
-                                    class="px-3 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
-                                <i class="fas fa-file-download mr-1.5"></i>Export
-                            </button>
+                            <!-- Import/Export Dropdown -->
+                            <div class="relative">
+                                <button onclick="toggleActionsDropdown()" 
+                                        class="px-4 py-2 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                    <span>More Actions</span>
+                                    <i class="fas fa-chevron-down text-xs"></i>
+                                </button>
+                                
+                                <!-- Dropdown Menu -->
+                                <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <div class="py-2">
+                                        <!-- Export Section -->
+                                        <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Export</div>
+                                        <button onclick="openCSVExportModal(); toggleActionsDropdown();" 
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fas fa-file-csv text-orange-500 w-5"></i>
+                                            <span class="text-sm text-gray-700">Export CSV</span>
+                                        </button>
+                                        <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();" 
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fab fa-whatsapp text-green-600 w-5"></i>
+                                            <span class="text-sm text-gray-700">WhatsApp Export</span>
+                                        </button>
+                                        
+                                        <!-- Divider -->
+                                        <div class="my-2 border-t border-gray-200"></div>
+                                        
+                                        <!-- Import Section -->
+                                        <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Import</div>
+                                        <button onclick="document.getElementById('wordInput').click(); toggleActionsDropdown();" 
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fas fa-file-word text-blue-600 w-5"></i>
+                                            <span class="text-sm text-gray-700">Upload Word</span>
+                                        </button>
+                                        <button onclick="document.getElementById('csvInput').click(); toggleActionsDropdown();" 
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fas fa-file-upload text-teal-600 w-5"></i>
+                                            <span class="text-sm text-gray-700">Upload CSV</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <!-- WhatsApp Export -->
-                            <button onclick="openWhatsAppExportModal()" 
-                                    class="px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all">
-                                <i class="fab fa-whatsapp mr-1.5"></i>WhatsApp
-                            </button>
-                            
-                            <!-- Word Upload -->
-                            <button onclick="document.getElementById('wordInput').click()" 
-                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
-                                <i class="fas fa-file-word mr-1.5"></i>Upload Word
-                            </button>
+                            <!-- Hidden file inputs -->
                             <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
-                            
-                            <!-- CSV Upload -->
-                            <button onclick="document.getElementById('csvInput').click()" 
-                                    class="px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all">
-                                <i class="fas fa-file-csv mr-1.5"></i>Upload CSV
-                            </button>
                             <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
                             
-                            <!-- Add Show -->
+                            <!-- Add Show Button -->
                             <button onclick="openAddShowModal()" 
                                 class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
                                 style="background-color: #FF6B35;">

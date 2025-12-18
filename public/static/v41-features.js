@@ -348,8 +348,9 @@ async function checkShortNotice() {
     }
     
     // Fetch all events for current month
-    const response = await axios.get(`${API_BASE}/events/filter`, {
-      params: { dateFrom, dateTo }
+    const response = await axios.post(`${API_BASE}/events/filter`, {
+      dateFrom,
+      dateTo
     });
     
     console.log('✅ Events fetched:', response.data);

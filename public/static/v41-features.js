@@ -325,6 +325,308 @@ async function checkConflicts() {
 // Expose globally
 window.checkConflicts = checkConflicts;
 
+// ============================================
+// SHORT NOTICE DETECTION
+// ============================================
+
+async function checkShortNotice() {
+  console.log('⏰ Checking short notice events...');
+  
+  // Get current month
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+  
+  // Date range for current month
+  const dateFrom = new Date(year, month, 1).toISOString().split('T')[0];
+  const dateTo = new Date(year, month + 1, 0).toISOString().split('T')[0];
+  
+  try {
+    if (typeof showNotification === 'function') {
+      showNotification('Analyzing short notice events...', 'info');
+    }
+    
+    // Fetch all events for current month
+    const response = await axios.get(`${API_BASE}/events/filter`, {
+      params: { dateFrom, dateTo }
+    });
+    
+    console.log('✅ Events fetched:', response.data);
+    
+    if (response.data.success) {
+      const events = response.data.data;
+      
+      // Analyze short notice events
+      const analysis = analyzeShortNotice(events, year, month);
+      
+      if (analysis.total === 0) {
+        if (typeof showNotification === 'function') {
+          showNotification('✅ No short notice events found!', 'success');
+        } else {
+          alert('✅ No short notice events found!');
+        }
+      } else {
+        showShortNoticeModal(analysis, monthStr);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Error checking short notice:', error);
+    alert('Failed to check short notice: ' + error.message);
+  }
+}
+
+function analyzeShortNotice(events, year, month) {
+  const results = {
+    addedAfter5th: [],
+    lessThan10Days: [],
+    critical: [], // <3 days
+    warning: [], // 3-7 days
+    total: 0
+  };
+  
+  events.forEach(event => {
+    const eventDate = new Date(event.event_date);
+    const createdDate = new Date(event.created_at);
+    
+    // Calculate days difference
+    const daysDiff = Math.floor((eventDate - createdDate) / (1000 * 60 * 60 * 24));
+    
+    // Check if created after 5th
+    const createdDay = createdDate.getDate();
+    const createdMonth = createdDate.getMonth();
+    const eventMonth = eventDate.getMonth();
+    
+    const isAddedAfter5th = (createdMonth === eventMonth && createdDay > 5);
+    
+    // Check if less than 10 days notice
+    const isShortNotice = daysDiff < 10;
+    
+    if (isShortNotice || isAddedAfter5th) {
+      const eventData = {
+        ...event,
+        daysDiff,
+        createdDay,
+        isAddedAfter5th,
+        isShortNotice,
+        severity: daysDiff < 3 ? 'critical' : (daysDiff < 7 ? 'warning' : 'short')
+      };
+      
+      if (isAddedAfter5th) {
+        results.addedAfter5th.push(eventData);
+      }
+      
+      if (isShortNotice) {
+        results.lessThan10Days.push(eventData);
+        
+        if (daysDiff < 3) {
+          results.critical.push(eventData);
+        } else if (daysDiff < 7) {
+          results.warning.push(eventData);
+        }
+      }
+    }
+  });
+  
+  results.total = Math.max(results.addedAfter5th.length, results.lessThan10Days.length);
+  
+  return results;
+}
+
+function showShortNoticeModal(analysis, monthStr) {
+  const monthName = new Date(monthStr + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  const modal = document.createElement('div');
+  modal.className = 'modal active';
+  modal.innerHTML = `
+    <div class="modal-content max-w-5xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl font-bold text-yellow-600">
+          <i class="fas fa-clock mr-2"></i>
+          Short Notice Events - ${monthName}
+        </h2>
+        <button onclick="this.closest('.modal').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+      </div>
+      
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+          <div class="text-2xl font-bold text-red-700">${analysis.critical.length}</div>
+          <div class="text-sm text-red-600">Critical (&lt;3 days)</div>
+        </div>
+        <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
+          <div class="text-2xl font-bold text-orange-700">${analysis.warning.length}</div>
+          <div class="text-sm text-orange-600">Warning (3-7 days)</div>
+        </div>
+        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
+          <div class="text-2xl font-bold text-yellow-700">${analysis.lessThan10Days.length}</div>
+          <div class="text-sm text-yellow-600">&lt;10 days notice</div>
+        </div>
+        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+          <div class="text-2xl font-bold text-blue-700">${analysis.addedAfter5th.length}</div>
+          <div class="text-sm text-blue-600">Added after 5th</div>
+        </div>
+      </div>
+      
+      <!-- Tabs -->
+      <div class="border-b border-gray-300 mb-4">
+        <div class="flex space-x-4">
+          <button onclick="switchShortNoticeTab('lessThan10')" id="tab-lessThan10" class="px-4 py-2 font-semibold border-b-2 border-yellow-500 text-yellow-600">
+            &lt;10 Days Notice (${analysis.lessThan10Days.length})
+          </button>
+          <button onclick="switchShortNoticeTab('after5th')" id="tab-after5th" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800">
+            Added After 5th (${analysis.addedAfter5th.length})
+          </button>
+        </div>
+      </div>
+      
+      <!-- Content -->
+      <div id="shortNoticeContent" class="space-y-3 max-h-96 overflow-y-auto">
+        ${renderShortNoticeEvents(analysis.lessThan10Days)}
+      </div>
+      
+      <!-- Actions -->
+      <div class="flex justify-between mt-6 pt-4 border-t border-gray-200">
+        <button onclick="exportShortNotice(${JSON.stringify(analysis).replace(/"/g, '&quot;')}, '${monthStr}')" 
+                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+          <i class="fas fa-file-download mr-2"></i>Export Report
+        </button>
+        <button onclick="this.closest('.modal').remove()" class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
+          Close
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  // Store analysis for tab switching
+  window.shortNoticeAnalysis = analysis;
+}
+
+function renderShortNoticeEvents(events) {
+  if (events.length === 0) {
+    return '<div class="text-center py-8 text-gray-500">No events found</div>';
+  }
+  
+  return events
+    .sort((a, b) => a.daysDiff - b.daysDiff) // Sort by days notice (shortest first)
+    .map(event => {
+      const severityColor = event.severity === 'critical' ? 'red' : 
+                           event.severity === 'warning' ? 'orange' : 'yellow';
+      const severityIcon = event.severity === 'critical' ? '🔴' : 
+                          event.severity === 'warning' ? '🟠' : '🟡';
+      
+      return `
+        <div class="p-4 rounded-lg bg-${severityColor}-50 border-l-4 border-${severityColor}-500">
+          <div class="flex items-start justify-between">
+            <div class="flex-1">
+              <div class="flex items-center gap-3 mb-2">
+                <span class="text-2xl">${severityIcon}</span>
+                <div>
+                  <div class="font-semibold text-lg text-gray-800">${event.program}</div>
+                  <div class="text-sm text-gray-600">
+                    <i class="fas fa-map-marker-alt mr-1"></i>${event.venue}
+                    ${event.crew ? `<span class="ml-3"><i class="fas fa-users mr-1"></i>${event.crew}</span>` : ''}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-3 gap-4 text-sm mt-3">
+                <div class="bg-white p-2 rounded">
+                  <div class="text-gray-500">Event Date</div>
+                  <div class="font-semibold text-gray-800">${new Date(event.event_date).toLocaleDateString()}</div>
+                </div>
+                <div class="bg-white p-2 rounded">
+                  <div class="text-gray-500">Created Date</div>
+                  <div class="font-semibold text-gray-800">${new Date(event.created_at).toLocaleDateString()}</div>
+                </div>
+                <div class="bg-white p-2 rounded">
+                  <div class="text-gray-500">Notice Period</div>
+                  <div class="font-bold text-${severityColor}-700">${event.daysDiff} days</div>
+                </div>
+              </div>
+              
+              ${event.isAddedAfter5th ? `
+                <div class="mt-2 text-sm text-blue-700">
+                  <i class="fas fa-info-circle mr-1"></i>
+                  Added on day ${event.createdDay} of the month
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+}
+
+function switchShortNoticeTab(tab) {
+  // Update tab styles
+  document.getElementById('tab-lessThan10').className = 'px-4 py-2 font-semibold text-gray-600 hover:text-gray-800';
+  document.getElementById('tab-after5th').className = 'px-4 py-2 font-semibold text-gray-600 hover:text-gray-800';
+  
+  const activeTab = document.getElementById(`tab-${tab}`);
+  activeTab.className = 'px-4 py-2 font-semibold border-b-2 border-yellow-500 text-yellow-600';
+  
+  // Update content
+  const content = document.getElementById('shortNoticeContent');
+  const analysis = window.shortNoticeAnalysis;
+  
+  if (tab === 'lessThan10') {
+    content.innerHTML = renderShortNoticeEvents(analysis.lessThan10Days);
+  } else {
+    content.innerHTML = renderShortNoticeEvents(analysis.addedAfter5th);
+  }
+}
+
+function exportShortNotice(analysis, monthStr) {
+  const monthName = new Date(monthStr + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  // Combine all events (deduplicate)
+  const allEvents = new Map();
+  
+  [...analysis.lessThan10Days, ...analysis.addedAfter5th].forEach(event => {
+    allEvents.set(event.id, event);
+  });
+  
+  // Create CSV
+  const headers = ['Event Date', 'Program', 'Venue', 'Crew', 'Created Date', 'Days Notice', 'Status', 'Added After 5th'];
+  const rows = Array.from(allEvents.values())
+    .sort((a, b) => a.daysDiff - b.daysDiff)
+    .map(event => [
+      new Date(event.event_date).toLocaleDateString(),
+      event.program,
+      event.venue,
+      event.crew || 'Not assigned',
+      new Date(event.created_at).toLocaleDateString(),
+      event.daysDiff + ' days',
+      event.severity === 'critical' ? 'Critical' : event.severity === 'warning' ? 'Warning' : 'Short',
+      event.isAddedAfter5th ? 'Yes' : 'No'
+    ]);
+  
+  const csv = [headers, ...rows].map(row => 
+    row.map(cell => `"${cell}"`).join(',')
+  ).join('\n');
+  
+  // Download
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `short-notice-events-${monthStr}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  
+  if (typeof showNotification === 'function') {
+    showNotification('✅ Short notice report exported!', 'success');
+  }
+}
+
+// Expose globally
+window.checkShortNotice = checkShortNotice;
+window.switchShortNoticeTab = switchShortNoticeTab;
+window.exportShortNotice = exportShortNotice;
+
 function showConflictsModal(conflicts, totalEvents) {
   const modal = document.createElement('div');
   modal.className = 'modal active';

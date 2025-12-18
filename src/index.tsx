@@ -1943,6 +1943,12 @@ app.get('/', (c) => {
                                 <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
                             </button>
                             
+                            <!-- Short Notice Detection -->
+                            <button onclick="checkShortNotice()" 
+                                    class="px-3 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all">
+                                <i class="fas fa-clock mr-1.5"></i>Short Notice
+                            </button>
+                            
                             <!-- Export -->
                             <button onclick="openCSVExportModal()" 
                                     class="px-3 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">

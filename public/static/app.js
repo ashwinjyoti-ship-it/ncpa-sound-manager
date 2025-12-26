@@ -162,7 +162,20 @@ function renderCalendar() {
       eventsByDate[date] = [];
     }
     eventsByDate[date].push(event);
+    
+    // Debug: Log Jan 31 events specifically
+    if (date && date.includes('-31')) {
+      console.log('🔍 Found day 31 event:', {
+        date: date,
+        program: event.program,
+        venue: event.venue,
+        id: event.id
+      });
+    }
   });
+  
+  // Log events by date after grouping
+  console.log(`  - Events by date:`, Object.keys(eventsByDate).length > 0 ? Object.keys(eventsByDate) : 'No events');
   
   // Render calendar grid
   const grid = document.getElementById('calendarGrid');
@@ -188,6 +201,17 @@ function renderCalendar() {
     cell.className = isToday ? 'calendar-day p-2 bg-blue-50 border-2 border-blue-500' : 'calendar-day bg-white p-2';
     
     const dayEvents = eventsByDate[dateStr] || [];
+    
+    // Debug: Log day 31 specifically
+    if (day === 31) {
+      console.log(`🔍 Rendering day 31:`, {
+        dateStr: dateStr,
+        eventsFound: dayEvents.length,
+        eventsByDateKeys: Object.keys(eventsByDate),
+        hasKey: eventsByDate.hasOwnProperty(dateStr),
+        events: dayEvents
+      });
+    }
     
     // Day number
     const dayNumber = document.createElement('div');

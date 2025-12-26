@@ -148,6 +148,26 @@ function renderCalendar() {
     eventCountEl.textContent = `${uniqueMonthEvents.length} events`;
   }
   
+  // Check if next month has events when current month is empty
+  if (uniqueMonthEvents.length === 0) {
+    const nextMonth = month + 1;
+    const nextYear = nextMonth > 11 ? year + 1 : year;
+    const nextMonthIndex = nextMonth > 11 ? 0 : nextMonth;
+    const nextStartDate = new Date(nextYear, nextMonthIndex, 1).toISOString().split('T')[0];
+    const nextDaysInMonth = new Date(nextYear, nextMonthIndex + 1, 0).getDate();
+    const nextEndDate = new Date(nextYear, nextMonthIndex, nextDaysInMonth).toISOString().split('T')[0];
+    
+    const nextMonthEvents = allEvents.filter(event => {
+      if (!event.event_date) return false;
+      const eventDate = event.event_date.toString();
+      return eventDate >= nextStartDate && eventDate <= nextEndDate;
+    });
+    
+    if (nextMonthEvents.length > 0 && eventCountEl) {
+      eventCountEl.innerHTML = `0 events <span class="text-blue-600 cursor-pointer hover:underline" onclick="changeMonth(1)" title="Click to view ${monthNames[nextMonthIndex]} ${nextYear}">→ ${nextMonthEvents.length} events in ${monthNames[nextMonthIndex]}</span>`;
+    }
+  }
+  
   console.log(`📊 Event Count Debug - Month: ${monthNames[month]} ${year}`);
   console.log(`  - Total allEvents: ${allEvents.length}`);
   console.log(`  - Filtered monthEvents: ${monthEvents.length}`);

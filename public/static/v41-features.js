@@ -149,6 +149,10 @@ async function loadFilterOptions() {
       
       // Populate venue dropdown
       const venueSelect = document.getElementById('filterVenue');
+      // Clear existing options except "All Venues"
+      while (venueSelect.options.length > 1) {
+        venueSelect.remove(1);
+      }
       venues.forEach(venue => {
         const option = document.createElement('option');
         option.value = venue;
@@ -158,6 +162,10 @@ async function loadFilterOptions() {
       
       // Populate crew dropdown
       const crewSelect = document.getElementById('filterCrew');
+      // Clear existing options except "All Crew"
+      while (crewSelect.options.length > 1) {
+        crewSelect.remove(1);
+      }
       crews.forEach(crew => {
         const option = document.createElement('option');
         option.value = crew;
@@ -165,8 +173,12 @@ async function loadFilterOptions() {
         crewSelect.appendChild(option);
       });
       
-      // Populate team dropdown with STATIC standardized options
+      // Populate team dropdown with STATIC standardized options (ignoring API teams)
       const teamSelect = document.getElementById('filterTeam');
+      // Clear existing options except "All Teams"
+      while (teamSelect.options.length > 1) {
+        teamSelect.remove(1);
+      }
       const standardTeams = [
         'Bruce/Team',
         'Dr.Rao/Team',
@@ -186,6 +198,8 @@ async function loadFilterOptions() {
         option.textContent = team;
         teamSelect.appendChild(option);
       });
+      
+      console.log('✅ Filter options loaded: Venues:', venues.length, 'Crews:', crews.length, 'Teams: 10 (static)');
     }
   } catch (error) {
     console.error('Error loading filter options:', error);

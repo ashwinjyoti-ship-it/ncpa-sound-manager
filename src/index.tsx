@@ -2211,10 +2211,9 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
-                            <input type="text" name="team" list="teamList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
-                                   placeholder="Select or type team name">
-                            <datalist id="teamList">
+                            <select name="team" id="editTeam"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                <option value="">Select Team...</option>
                                 <option value="Bruce/Team">Bruce/Team</option>
                                 <option value="Dr.Rao/Team">Dr.Rao/Team</option>
                                 <option value="Dr.Swapno/Team">Dr.Swapno/Team</option>
@@ -2225,7 +2224,7 @@ app.get('/', (c) => {
                                 <option value="DPAG">DPAG</option>
                                 <option value="DP">DP</option>
                                 <option value="Others">Others</option>
-                            </datalist>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
@@ -2391,9 +2390,20 @@ app.get('/', (c) => {
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
-                            <input type="text" name="team" id="editTeam" list="teamList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
-                                   placeholder="Select or type team name">
+                            <select name="team" id="editTeam"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                <option value="">Select Team...</option>
+                                <option value="Bruce/Team">Bruce/Team</option>
+                                <option value="Dr.Rao/Team">Dr.Rao/Team</option>
+                                <option value="Dr.Swapno/Team">Dr.Swapno/Team</option>
+                                <option value="Farrahnaz/Team">Farrahnaz/Team</option>
+                                <option value="Bianca/Team">Bianca/Team</option>
+                                <option value="Dr.Sujata/Team">Dr.Sujata/Team</option>
+                                <option value="Nooshin/Team">Nooshin/Team</option>
+                                <option value="DPAG">DPAG</option>
+                                <option value="DP">DP</option>
+                                <option value="Others">Others</option>
+                            </select>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>

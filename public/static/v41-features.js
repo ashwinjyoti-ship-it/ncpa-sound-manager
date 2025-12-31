@@ -165,9 +165,22 @@ async function loadFilterOptions() {
         crewSelect.appendChild(option);
       });
       
-      // Populate team dropdown
+      // Populate team dropdown with STATIC standardized options
       const teamSelect = document.getElementById('filterTeam');
-      teams.forEach(team => {
+      const standardTeams = [
+        'Bruce/Team',
+        'Dr.Rao/Team',
+        'Dr.Swapno/Team',
+        'Farrahnaz/Team',
+        'Bianca/Team',
+        'Dr.Sujata/Team',
+        'Nooshin/Team',
+        'DPAG',
+        'DP',
+        'Others'
+      ];
+      
+      standardTeams.forEach(team => {
         const option = document.createElement('option');
         option.value = team;
         option.textContent = team;
@@ -246,6 +259,59 @@ function clearFilters() {
   loadEvents();
 }
 
+// Helper function to match team patterns
+function matchesTeamPattern(eventTeam, selectedTeam) {
+  if (!eventTeam) return false;
+  const team = eventTeam.toString().trim();
+  
+  // Pattern matching based on standardized team names
+  if (selectedTeam === 'Bruce/Team') {
+    return team.startsWith('Bruce/');
+  }
+  if (selectedTeam === 'Dr.Rao/Team') {
+    return team.startsWith('Dr.Rao/') || team.startsWith('Dr Rao/');
+  }
+  if (selectedTeam === 'Dr.Swapno/Team') {
+    return team.startsWith('Dr.Swapno/') || team.startsWith('Dr Swapno/');
+  }
+  if (selectedTeam === 'Farrahnaz/Team') {
+    return team.startsWith('Farrahnaz/');
+  }
+  if (selectedTeam === 'Bianca/Team') {
+    return team.startsWith('Bianca');
+  }
+  if (selectedTeam === 'Dr.Sujata/Team') {
+    // Matches Dr.Sujata/* AND Library
+    return team.startsWith('Dr.Sujata/') || team.startsWith('Dr Sujata/') || team.startsWith('Library');
+  }
+  if (selectedTeam === 'Nooshin/Team') {
+    // Matches Nooshin/* AND Corporate/*
+    return team.startsWith('Nooshin/') || team.startsWith('Corporate/');
+  }
+  if (selectedTeam === 'DPAG') {
+    return team === 'DPAG';
+  }
+  if (selectedTeam === 'DP') {
+    return team === 'DP';
+  }
+  if (selectedTeam === 'Others') {
+    // None of the above patterns - catch-all
+    return !(
+      team.startsWith('Bruce/') ||
+      team.startsWith('Dr.Rao/') || team.startsWith('Dr Rao/') ||
+      team.startsWith('Dr.Swapno/') || team.startsWith('Dr Swapno/') ||
+      team.startsWith('Farrahnaz/') ||
+      team.startsWith('Bianca') ||
+      team.startsWith('Dr.Sujata/') || team.startsWith('Dr Sujata/') || team.startsWith('Library') ||
+      team.startsWith('Nooshin/') || team.startsWith('Corporate/') ||
+      team === 'DPAG' ||
+      team === 'DP'
+    );
+  }
+  
+  return false;
+}
+
 async function applyFilters() {
   // Read filter values
   const venueSelect = document.getElementById('filterVenue');
@@ -255,7 +321,7 @@ async function applyFilters() {
   filterState.crews = Array.from(crewSelect.selectedOptions).map(o => o.value);
   
   const teamSelect = document.getElementById('filterTeam');
-  filterState.teams = Array.from(teamSelect.selectedOptions).map(o => o.value);
+  const selectedTeams = Array.from(teamSelect.selectedOptions).map(o => o.value);
   
   filterState.dateFrom = document.getElementById('filterDateFrom').value || null;
   filterState.dateTo = document.getElementById('filterDateTo').value || null;
@@ -264,14 +330,36 @@ async function applyFilters() {
   filterState.hasRequirements = reqValue === 'true' ? true : (reqValue === 'false' ? false : null);
   
   try {
-    const response = await axios.post(`${API_BASE}/events/filter`, filterState);
+    // First, get all events with venue/crew/date/requirements filters
+    // We'll handle team filtering client-side for pattern matching
+    const backendFilterState = {
+      venues: filterState.venues,
+      crews: filterState.crews,
+      teams: [], // Empty - we'll filter client-side
+      dateFrom: filterState.dateFrom,
+      dateTo: filterState.dateTo,
+      hasRequirements: filterState.hasRequirements,
+      sortBy: filterState.sortBy,
+      sortOrder: filterState.sortOrder
+    };
+    
+    const response = await axios.post(`${API_BASE}/events/filter`, backendFilterState);
     if (response.data.success) {
-      allEvents = response.data.data;
+      let filteredEvents = response.data.data;
+      
+      // Apply client-side team pattern matching
+      if (selectedTeams.length > 0) {
+        filteredEvents = filteredEvents.filter(event => {
+          return selectedTeams.some(selectedTeam => matchesTeamPattern(event.team, selectedTeam));
+        });
+      }
+      
+      allEvents = filteredEvents;
       renderCurrentView();
       
       // Show results message
       document.getElementById('filterResults').textContent = 
-        `Found ${response.data.count} event(s) matching filters`;
+        `Found ${filteredEvents.length} event(s) matching filters`;
     }
   } catch (error) {
     console.error('Error applying filters:', error);

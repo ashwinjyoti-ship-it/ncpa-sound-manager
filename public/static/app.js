@@ -22,6 +22,24 @@ let currentEditingCell = null;
 // API Base URL
 const API_BASE = '/api';
 
+// ============================================
+// DISPLAY NORMALIZATION HELPERS
+// ============================================
+
+// Normalize venue display (Tata Theatre → TT)
+function displayVenue(venue) {
+  if (!venue) return '';
+  
+  const venueStr = venue.toString().trim();
+  
+  // Normalize all Tata Theatre variations to TT
+  if (venueStr.includes('Tata Theatre') || venueStr === 'Tata Theatre') {
+    return 'TT';
+  }
+  
+  return venue;
+}
+
 // Initialize app on page load
 document.addEventListener('DOMContentLoaded', async () => {
   await loadEvents();
@@ -322,7 +340,7 @@ function renderCalendar() {
       
       card.innerHTML = `
         <div class="font-semibold truncate">${truncateText(event.program, 30)}</div>
-        <div class="text-gray-600 truncate"><i class="fas fa-map-marker-alt mr-1"></i>${event.venue}</div>
+        <div class="text-gray-600 truncate"><i class="fas fa-map-marker-alt mr-1"></i>${displayVenue(event.venue)}</div>
         ${event.crew ? `<div class="text-gray-600 truncate"><i class="fas fa-users mr-1"></i>${event.crew}</div>` : ''}
       `;
       
@@ -379,7 +397,7 @@ function renderTable() {
       </td>
       <td class="px-2 py-2 text-sm">${formatDate(event.event_date)}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="program" data-id="${event.id}">${event.program || ''}</td>
-      <td class="px-2 py-2 text-sm editable-cell" data-field="venue" data-id="${event.id}">${event.venue || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="venue" data-id="${event.id}">${displayVenue(event.venue) || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="team" data-id="${event.id}">${event.team || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="sound_requirements" data-id="${event.id}">${event.sound_requirements || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="call_time" data-id="${event.id}">${event.call_time || ''}</td>
@@ -529,7 +547,7 @@ function openEventModal(event) {
       </div>
       <div>
         <label class="font-semibold text-gray-700">Venue:</label>
-        <p class="text-gray-900">${event.venue}</p>
+        <p class="text-gray-900">${displayVenue(event.venue)}</p>
       </div>
       <div>
         <label class="font-semibold text-gray-700">Team (curator):</label>

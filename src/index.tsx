@@ -2215,14 +2215,16 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
                                    placeholder="Select or type team name">
                             <datalist id="teamList">
-                                <option value="Bruce/Rajeshr">Bruce/Rajeshr</option>
                                 <option value="Bruce/Team">Bruce/Team</option>
-                                <option value="Bruce/Binalfar">Bruce/Binalfar</option>
-                                <option value="Farahnaz & Team">Farahnaz & Team</option>
-                                <option value="Nooshir/Team">Nooshir/Team</option>
-                                <option value="Dr. Rao/Team">Dr. Rao/Team</option>
-                                <option value="Dr. Swapni/Team">Dr. Swapni/Team</option>
+                                <option value="Dr.Rao/Team">Dr.Rao/Team</option>
+                                <option value="Dr.Swapno/Team">Dr.Swapno/Team</option>
+                                <option value="Farrahnaz/Team">Farrahnaz/Team</option>
                                 <option value="Bianca/Team">Bianca/Team</option>
+                                <option value="Dr.Sujata/Team">Dr.Sujata/Team</option>
+                                <option value="Nooshin/Team">Nooshin/Team</option>
+                                <option value="DPAG">DPAG</option>
+                                <option value="DP">DP</option>
+                                <option value="Others">Others</option>
                             </datalist>
                         </div>
                         <div>
@@ -2819,8 +2821,8 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.1.1"></script>
-        <script src="/static/v41-features.js?v=4.1.0"></script>
+        <script src="/static/app.js?v=4.2.0"></script>
+        <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>
     </html>

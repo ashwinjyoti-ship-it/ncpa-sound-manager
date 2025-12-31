@@ -108,6 +108,13 @@ function renderCalendar() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   
+  console.log(`🔧 renderCalendar called:`, {
+    currentDateFull: currentDate.toISOString(),
+    year: year,
+    month: month,
+    monthName: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][month]
+  });
+  
   // Update header
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                       'July', 'August', 'September', 'October', 'November', 'December'];
@@ -117,10 +124,20 @@ function renderCalendar() {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   
+  console.log(`🔧 Date calculations:`, {
+    firstDay: firstDay,
+    daysInMonth: daysInMonth,
+    startDateCalc: `new Date(${year}, ${month}, 1)`,
+    endDateCalc: `new Date(${year}, ${month}, ${daysInMonth})`
+  });
+  
   // Get events for this month
-  const startDate = new Date(year, month, 1).toISOString().split('T')[0];
-  // Fix: Use daysInMonth to get last day of current month, not previous month
-  const endDate = new Date(year, month, daysInMonth).toISOString().split('T')[0];
+  // CRITICAL FIX: Format dates in YYYY-MM-DD WITHOUT timezone conversion
+  // Using toISOString() converts to UTC which breaks for non-UTC timezones!
+  const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const endDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+  
+  console.log(`🔧 Actual formatted dates:`, {startDate, endDate});
   
   // Filter events and count unique ones only (by ID)
   const monthEvents = allEvents.filter(event => {
@@ -136,6 +153,7 @@ function renderCalendar() {
   const uniqueEventIds = new Set();
   const uniqueMonthEvents = monthEvents.filter(event => {
     if (uniqueEventIds.has(event.id)) {
+      console.log(`⚠️ DUPLICATE REMOVED: ID ${event.id} - ${event.program}`);
       return false; // Skip duplicate
     }
     uniqueEventIds.add(event.id);
@@ -174,22 +192,50 @@ function renderCalendar() {
   console.log(`  - Unique monthEvents: ${uniqueMonthEvents.length}`);
   console.log(`  - Date range: ${startDate} to ${endDate}`);
   
+  // Debug: Check if Jan 31 events are in monthEvents
+  if (month === 0 && year === 2026) {
+    console.log(`  - Jan 31 in monthEvents:`, monthEvents.filter(e => e.event_date === '2026-01-31').length);
+    console.log(`  - Jan 31 in uniqueMonthEvents:`, uniqueMonthEvents.filter(e => e.event_date === '2026-01-31').length);
+  }
+  
   // SUPER DEBUG: If January 2026, log ALL event dates
   if (month === 0 && year === 2026) {
     console.log(`🚨 JANUARY 2026 SPECIAL DEBUG:`);
-    console.log(`  - All event dates in allEvents:`, 
-      allEvents.map(e => e.event_date).filter(d => d && d.startsWith('2026-01')).slice(0, 50)
-    );
-    console.log(`  - Events on 2026-01-31 in allEvents:`, 
+    const jan31Events = allEvents.filter(e => {
+      if (!e.event_date) return false;
+      const date = e.event_date.toString().trim();
+      return date.includes('31') && date.includes('01') && date.includes('2026');
+    });
+    console.log(`  - Events with '31' and '01' and '2026' in date:`, jan31Events.map(e => ({
+      id: e.id, 
+      date: e.event_date, 
+      dateType: typeof e.event_date,
+      dateLength: e.event_date ? e.event_date.length : 0,
+      program: e.program
+    })));
+    console.log(`  - Exact match for '2026-01-31':`, 
       allEvents.filter(e => e.event_date === '2026-01-31').map(e => ({id: e.id, program: e.program}))
     );
-    console.log(`  - Events on 2026-01-31 in monthEvents:`, 
-      monthEvents.filter(e => e.event_date === '2026-01-31').map(e => ({id: e.id, program: e.program}))
+    console.log(`  - Using includes():`, 
+      allEvents.filter(e => e.event_date && e.event_date.includes('2026-01-31')).map(e => ({id: e.id, program: e.program}))
     );
   }
   
   // Group events by date
   const eventsByDate = {};
+  
+  // CRITICAL DEBUG for January 2026
+  if (month === 0 && year === 2026) {
+    console.log(`🚨 GROUPING DEBUG - uniqueMonthEvents count: ${uniqueMonthEvents.length}`);
+    console.log(`🚨 Events with date containing '31':`, 
+      uniqueMonthEvents.filter(e => e.event_date && e.event_date.includes('31')).map(e => ({
+        id: e.id,
+        date: e.event_date,
+        program: e.program
+      }))
+    );
+  }
+  
   uniqueMonthEvents.forEach(event => {
     const date = event.event_date;
     if (!eventsByDate[date]) {
@@ -199,7 +245,7 @@ function renderCalendar() {
     
     // Debug: Log day 31 events specifically
     if (date && date.endsWith('-31')) {
-      console.log('🔍 Found day 31 event:', {
+      console.log('🔍 Found day 31 event in grouping:', {
         date: date,
         program: event.program,
         venue: event.venue,

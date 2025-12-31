@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test January 31 Rendering</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js"></script>
+</head>
+<body>
+  <h1>January 2026 Calendar Test</h1>
+  <div id="output"></div>
+  
+  <script>
+    const API_BASE = 'https://ac4c589e.ncpa-sound.pages.dev/api';
+    
+    async function test() {
+      const output = document.getElementById('output');
+      
+      // Load events
+      const response = await axios.get(`${API_BASE}/events`);
+      const allEvents = response.data.data;
+      
+      output.innerHTML += `<p>Total events loaded: ${allEvents.length}</p>`;
+      
+      // Check Jan 31 events
+      const jan31Events = allEvents.filter(e => e.event_date === '2026-01-31');
+      output.innerHTML += `<p>Events on 2026-01-31: ${jan31Events.length}</p>`;
+      jan31Events.forEach(e => {
+        output.innerHTML += `<p>  - ID: ${e.id}, Program: ${e.program}</p>`;
+      });
+      
+      // Simulate calendar rendering for January 2026
+      const year = 2026;
+      const month = 0; // January
+      const startDate = '2026-01-01';
+      const endDate = '2026-01-31';
+      
+      const monthEvents = allEvents.filter(event => {
+        if (!event.event_date) return false;
+        const eventDate = event.event_date.toString();
+        return eventDate >= startDate && eventDate <= endDate;
+      });
+      
+      output.innerHTML += `<p>Events in January 2026 (after filtering): ${monthEvents.length}</p>`;
+      
+      // Group by date
+      const eventsByDate = {};
+      monthEvents.forEach(event => {
+        const date = event.event_date;
+        if (!eventsByDate[date]) eventsByDate[date] = [];
+        eventsByDate[date].push(event);
+      });
+      
+      output.innerHTML += `<p>Dates with events: ${Object.keys(eventsByDate).length}</p>`;
+      output.innerHTML += `<p>Events on day 31 (2026-01-31): ${eventsByDate['2026-01-31'] ? eventsByDate['2026-01-31'].length : 0}</p>`;
+      
+      if (eventsByDate['2026-01-31']) {
+        eventsByDate['2026-01-31'].forEach(e => {
+          output.innerHTML += `<p>  ✅ Event ${e.id}: ${e.program}</p>`;
+        });
+      } else {
+        output.innerHTML += `<p>  ❌ NO EVENTS IN events by Date FOR 2026-01-31!</p>`;
+        output.innerHTML += `<p>Keys in eventsByDate: ${Object.keys(eventsByDate).join(', ')}</p>`;
+      }
+    }
+    
+    test();
+  </script>
+</body>
+</html>

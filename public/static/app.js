@@ -174,6 +174,20 @@ function renderCalendar() {
   console.log(`  - Unique monthEvents: ${uniqueMonthEvents.length}`);
   console.log(`  - Date range: ${startDate} to ${endDate}`);
   
+  // SUPER DEBUG: If January 2026, log ALL event dates
+  if (month === 0 && year === 2026) {
+    console.log(`🚨 JANUARY 2026 SPECIAL DEBUG:`);
+    console.log(`  - All event dates in allEvents:`, 
+      allEvents.map(e => e.event_date).filter(d => d && d.startsWith('2026-01')).slice(0, 50)
+    );
+    console.log(`  - Events on 2026-01-31 in allEvents:`, 
+      allEvents.filter(e => e.event_date === '2026-01-31').map(e => ({id: e.id, program: e.program}))
+    );
+    console.log(`  - Events on 2026-01-31 in monthEvents:`, 
+      monthEvents.filter(e => e.event_date === '2026-01-31').map(e => ({id: e.id, program: e.program}))
+    );
+  }
+  
   // Group events by date
   const eventsByDate = {};
   uniqueMonthEvents.forEach(event => {
@@ -183,19 +197,32 @@ function renderCalendar() {
     }
     eventsByDate[date].push(event);
     
-    // Debug: Log Jan 31 events specifically
-    if (date && date.includes('-31')) {
+    // Debug: Log day 31 events specifically
+    if (date && date.endsWith('-31')) {
       console.log('🔍 Found day 31 event:', {
         date: date,
         program: event.program,
         venue: event.venue,
-        id: event.id
+        id: event.id,
+        crew: event.crew
       });
     }
   });
   
   // Log events by date after grouping
   console.log(`  - Events by date:`, Object.keys(eventsByDate).length > 0 ? Object.keys(eventsByDate) : 'No events');
+  
+  // CRITICAL DEBUG: Check day 31 specifically for current month
+  const day31DateStr = `${year}-${String(month + 1).padStart(2, '0')}-31`;
+  if (daysInMonth === 31) {
+    console.log(`🎯 DEBUGGING DAY 31 for ${monthNames[month]} ${year}:`);
+    console.log(`  - Expected date string: ${day31DateStr}`);
+    console.log(`  - Events in eventsByDate[${day31DateStr}]:`, eventsByDate[day31DateStr] || 'NONE');
+    console.log(`  - Keys in eventsByDate:`, Object.keys(eventsByDate));
+    console.log(`  - allEvents with date ${day31DateStr}:`, 
+      allEvents.filter(e => e.event_date === day31DateStr).map(e => ({id: e.id, program: e.program}))
+    );
+  }
   
   // Render calendar grid
   const grid = document.getElementById('calendarGrid');

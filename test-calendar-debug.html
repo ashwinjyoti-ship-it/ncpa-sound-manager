@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head><title>Debug Calendar Filtering</title></head>
+<body>
+<script>
+// Simulate the exact calendar filtering logic
+const allEvents = [
+  {id: 1420, event_date: "2026-01-31", program: "Billy Kilson Live", venue: "Tata Theatre"},
+  {id: 1421, event_date: "2026-01-31", program: "Seminar", venue: "TET"},
+  {id: 1465, event_date: "2026-01-31", program: "Billy Kilson Live", venue: "TT"}
+];
+
+const year = 2026;
+const month = 0; // January = 0
+const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+// This is the EXACT logic from app.js
+const startDate = new Date(year, month, 1).toISOString().split('T')[0];
+const endDate = new Date(year, month, daysInMonth).toISOString().split('T')[0];
+
+console.log('=== CALENDAR FILTERING DEBUG ===');
+console.log('Year:', year, 'Month:', month, '(January)');
+console.log('Days in month:', daysInMonth);
+console.log('Start date:', startDate);
+console.log('End date:', endDate);
+
+// Filter logic from renderCalendar()
+const monthEvents = allEvents.filter(event => {
+  if (!event.event_date) {
+    console.log('  ❌ Event has no date:', event.id);
+    return false;
+  }
+  
+  const eventDate = event.event_date.toString();
+  const result = eventDate >= startDate && eventDate <= endDate;
+  
+  console.log('  Event', event.id, ':', eventDate, 
+    '>=', startDate, '?', eventDate >= startDate,
+    '<=', endDate, '?', eventDate <= endDate,
+    '→', result ? 'INCLUDED' : 'EXCLUDED');
+  
+  return result;
+});
+
+console.log('\n=== RESULTS ===');
+console.log('Filtered events:', monthEvents.length);
+
+// Group by date
+const eventsByDate = {};
+monthEvents.forEach(event => {
+  const date = event.event_date;
+  if (!eventsByDate[date]) eventsByDate[date] = [];
+  eventsByDate[date].push(event);
+});
+
+console.log('Events by date:', JSON.stringify(eventsByDate, null, 2));
+
+// Check day 31 specifically
+const day31Str = `${year}-${String(month + 1).padStart(2, '0')}-31`;
+console.log('\nDay 31 string:', day31Str);
+console.log('Events on day 31:', eventsByDate[day31Str] ? eventsByDate[day31Str].length : 0);
+console.log('Has key?', eventsByDate.hasOwnProperty(day31Str));
+console.log('All keys:', Object.keys(eventsByDate));
+</script>
+</body>
+</html>

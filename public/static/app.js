@@ -23,8 +23,8 @@ let currentEditingCell = null;
 const API_BASE = '/api';
 
 // Initialize app on page load
-document.addEventListener('DOMContentLoaded', () => {
-  loadEvents();
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadEvents();
   renderCalendar();
   
   // Search functionality with debounce

@@ -161,11 +161,11 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         VALUES (?, ?, ?)
       `).bind(user.id, token, expiresAt.toISOString()).run()
       
-      // Set cookie
+      // Set cookie with SameSite=None to allow iframe embedding
       setCookie(c, 'session_token', token, {
         httpOnly: true,
         secure: true,
-        sameSite: 'Lax',
+        sameSite: 'None',  // Required for iframe embedding
         maxAge: 7 * 24 * 60 * 60,
         path: '/'
       })

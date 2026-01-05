@@ -1608,15 +1608,19 @@ app.get('/safari-test', (c) => {
 
 app.get('/', (c) => {
   // Set Content Security Policy for Safari compatibility
-  c.header('Content-Security-Policy', 
+  c.header('Content-Security-Policy',
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://cdn.sheetjs.com https://api.anthropic.com; " +
     "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com; " +
     "font-src 'self' https://cdn.jsdelivr.net data:; " +
     "img-src 'self' data: https:; " +
     "connect-src 'self' https://api.anthropic.com; " +
-    "worker-src 'self' blob:;"
+    "worker-src 'self' blob:; " +
+    "frame-ancestors 'self' https://ncpa-sound-admin.pages.dev;"
   )
+
+  // Remove X-Frame-Options to avoid conflicts with CSP frame-ancestors
+  c.header('X-Frame-Options', 'ALLOW-FROM https://ncpa-sound-admin.pages.dev')
   
   return c.html(`
     <!DOCTYPE html>

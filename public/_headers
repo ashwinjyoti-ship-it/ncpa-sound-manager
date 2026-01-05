@@ -1,5 +1,6 @@
 /*
-  X-Frame-Options: DENY
+  X-Frame-Options: ALLOW-FROM https://ncpa-sound-admin.pages.dev
+  Content-Security-Policy: frame-ancestors 'self' https://ncpa-sound-admin.pages.dev
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: interest-cohort=()

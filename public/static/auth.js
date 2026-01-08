@@ -372,8 +372,8 @@ async function loadCrewStats() {
             Crew Workload - ${monthName}
           </h2>
           <div class="flex gap-6 text-sm text-gray-600">
-            <div><span class="font-semibold">${data.summary.totalAssignments}</span> total assignments</div>
-            <div><span class="font-semibold">${data.summary.avgAssignments}</span> average per crew</div>
+            <div><span class="font-semibold">${data.summary.totalAssignments}</span> total days</div>
+            <div><span class="font-semibold">${data.summary.avgAssignments}</span> average days per crew</div>
             <div><span class="text-red-600 font-semibold">${data.summary.overloaded}</span> overloaded</div>
             <div><span class="text-blue-600 font-semibold">${data.summary.underutilized}</span> underutilized</div>
           </div>
@@ -398,7 +398,7 @@ async function loadCrewStats() {
                       ${statusText}
                     </span>
                   </div>
-                  <span class="text-xl font-bold" style="color: #FF6B35;">${crew.count} shows</span>
+                  <span class="text-xl font-bold" style="color: #FF6B35;">${crew.count} days</span>
                 </div>
                 <div class="relative w-full bg-gray-200 rounded-full h-6">
                   <div class="${statusColor} h-6 rounded-full transition-all flex items-center justify-end pr-2" 

@@ -1,19 +1,33 @@
 // NCPA Sound Crew - Authentication & User Management
 // Version 1.0.0
 
+// Configure axios to always send cookies with requests
+if (typeof axios !== 'undefined') {
+  axios.defaults.withCredentials = true;
+  console.log('🍪 Axios configured to send credentials with all requests');
+}
+
 let currentUser = null;
 
 // Check authentication on page load
 document.addEventListener('DOMContentLoaded', async () => {
+  console.log('🚀 Page loaded, checking authentication...');
+  console.log('🍪 Initial cookies:', document.cookie || '(none)');
   await checkAuth();
 });
 
 // Check if user is authenticated
 async function checkAuth() {
   try {
-    const response = await axios.get(`${API_BASE}/auth/me`);
+    console.log('🔐 Checking authentication...');
+    const response = await axios.get(`${API_BASE}/auth/me`, {
+      withCredentials: true  // Ensure cookies are sent
+    });
+    console.log('✅ Auth response:', response.data);
+    
     if (response.data.success) {
       currentUser = response.data.user;
+      console.log('✅ User authenticated:', currentUser.email);
       showUserMenu();
       
       // Check for pending approvals if admin
@@ -21,9 +35,11 @@ async function checkAuth() {
         checkPendingApprovals();
       }
     } else {
+      console.log('⚠️ Auth failed:', response.data);
       showLoginButton();
     }
   } catch (error) {
+    console.error('❌ Auth check error:', error.response?.status, error.response?.data || error.message);
     showLoginButton();
   }
 }
@@ -91,23 +107,35 @@ async function handleLogin(event) {
   const errorDiv = document.getElementById('loginError');
   
   try {
+    console.log('🔐 Attempting login for:', email);
     const response = await axios.post(`${API_BASE}/auth/login`, {
       email,
       password
+    }, {
+      withCredentials: true  // Ensure cookies are received and stored
     });
+    
+    console.log('✅ Login response:', response.data);
     
     if (response.data.success) {
       currentUser = response.data.user;
+      console.log('✅ Login successful, user:', currentUser.email);
+      
+      // Check if cookies are set
+      console.log('🍪 Cookies after login:', document.cookie);
+      
       closeLoginModal();
       showUserMenu();
       
       // Reload page to fetch events
       location.reload();
     } else {
+      console.error('❌ Login failed:', response.data.error);
       errorDiv.textContent = response.data.error || 'Login failed';
       errorDiv.style.display = 'block';
     }
   } catch (error) {
+    console.error('❌ Login error:', error.response?.status, error.response?.data || error.message);
     errorDiv.textContent = error.response?.data?.error || 'Login failed. Please try again.';
     errorDiv.style.display = 'block';
   }

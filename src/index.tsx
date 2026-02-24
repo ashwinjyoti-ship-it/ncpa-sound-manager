@@ -1309,8 +1309,8 @@ Parse ALL events and extract the following fields for EACH event:
 - program: Full program/event name (from "Programme" or "Event" column)
 - venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib")
 - team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
-- sound_requirements: Technical sound requirements (look for microphones, speakers, playback, recording, etc.)
-- call_time: Call time for sound crew (prioritize times labeled "Sound" > "Tech" > "Technical setup" > "AC/Lights" > any utility times)
+- sound_requirements: Extract COMPLETE sound requirement text. Look for: lines starting with "Sound", equipment like "cordless mics", "laptop for recorded music", "NCPA basic sound", and ANY sound discussion including "Sound to be discussed with [person]". Extract FULL sentences, not just keywords.
+- call_time: Extract time sound crew must be ready from "ready by Xam/pm" patterns within sound requirements. Prioritize sound-specific readiness times.
 - crew: Crew member names assigned to the event
 
 CRITICAL INSTRUCTIONS:
@@ -1320,12 +1320,8 @@ CRITICAL INSTRUCTIONS:
    - USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
    - If context says "October 2025", then "Wed 1st" becomes "2025-10-01", "Thu 2nd" becomes "2025-10-02", etc.
    - ALWAYS use the context month/year, not September or any other month
-3. For call_time: Prioritize in this order:
-   - Times explicitly labeled "Sound" or "Sound Call" or "Sound Requirements:"
-   - Times labeled "Tech" or "Technical" or "Technical setup:"
-   - Times labeled as utility work like "AC", "Lights", "Setup"
-   - General call times
-4. For sound_requirements: Extract ANY technical information related to audio/sound (mics, speakers, recording, playback, etc.)
+3. For call_time: Look for "ready by [TIME]" within sound requirement sections. Extract times like "9am", "2:00pm". This is when sound must be ready, not event start time.
+4. For sound_requirements: CAPTURE FULL TEXT from lines starting with "Sound" or containing sound equipment. Include: mic counts, laptop/playback needs, "NCPA basic sound", names like "Ashwin", and ANY sound discussion. Combine multi-line sound info into one field.
 5. If a field is not found or unclear, use empty string ""
 6. Handle various document formats - don't rely on specific headers
 7. Parse tables, lists, or any structured format
@@ -1347,9 +1343,18 @@ Example format:
     "program": "Classical Music Concert",
     "venue": "Tata Theatre",
     "team": "Indian Music",
-    "sound_requirements": "4 mics, playback system",
-    "call_time": "16:00",
+    "sound_requirements": "NCPA basic sound - 2 cordless mics & Aux wire connections to be ready by 9am",
+    "call_time": "9:00am",
     "crew": "Ashwin, Rohan"
+  },
+  {
+    "event_date": "2025-10-05",
+    "program": "NCPA Nrityagurukul",
+    "venue": "TET",
+    "team": "Dr.Swapno/Team",
+    "sound_requirements": "2 cordless mic backstage, Laptop for recorded music",
+    "call_time": "9:00am",
+    "crew": "AGN"
   }
 ]
 

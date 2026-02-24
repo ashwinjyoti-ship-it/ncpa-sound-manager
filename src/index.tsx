@@ -1307,25 +1307,46 @@ ${chunk}
 Parse ALL events and extract the following fields for EACH event:
 - event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information. USE THE MONTH AND YEAR FROM THE CONTEXT ABOVE if provided in filename)
 - program: Full program/event name (from "Programme" or "Event" column)
-- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib")
-- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team])
-- sound_requirements: Extract COMPLETE sound requirement text. Look for: lines starting with "Sound", equipment like "cordless mics", "laptop for recorded music", "NCPA basic sound", and ANY sound discussion including "Sound to be discussed with [person]". Extract FULL sentences, not just keywords.
-- call_time: Extract time sound crew must be ready from "ready by Xam/pm" patterns within sound requirements. Prioritize sound-specific readiness times.
-- crew: Crew member names assigned to the event
+- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib", "TT")
+- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team], [Nooshin/Team], [Tejal/Team])
+- sound_requirements: Extract ONLY sound-related requirements. Look for text blocks containing "Sound" or sound equipment. Extract: mic specifications (e.g., "2 cordless mics"), playback equipment (e.g., "laptop for recorded music"), "NCPA basic sound", sound check times, mic stand counts, monitor speaker needs. EXCLUDE: catering info, parking, ushers, lights, AC, general stage setup, non-sound requirements.
+- call_time: Extract the time when sound must be ready from phrases like: "ready by [TIME]", "to be ready by [TIME]", "Sound Check at [TIME]", "sound to be ready by [TIME]", "connections to be ready by [TIME]", "calltime: Ready by [TIME]". Extract times like "9am", "9:00am", "2:00pm", "2pm". If multiple times found, use the sound-specific readiness time.
+- crew: Crew member initials assigned (e.g., "AGN", "FD", "SP", "VSD", "LDPG", "NP", "SA", "BBK", "TT")
 
-CRITICAL INSTRUCTIONS:
-1. Extract ALL events from this section - don't skip any
-2. For dates: 
-   - Look for day names (Monday, Tuesday, Wed, Thu, Fri, etc.) and dates (Thu 4th, Fri 5th, Wed 1st, etc.)
-   - USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
-   - If context says "October 2025", then "Wed 1st" becomes "2025-10-01", "Thu 2nd" becomes "2025-10-02", etc.
-   - ALWAYS use the context month/year, not September or any other month
-3. For call_time: Look for "ready by [TIME]" within sound requirement sections. Extract times like "9am", "2:00pm". This is when sound must be ready, not event start time.
-4. For sound_requirements: CAPTURE FULL TEXT from lines starting with "Sound" or containing sound equipment. Include: mic counts, laptop/playback needs, "NCPA basic sound", names like "Ashwin", and ANY sound discussion. Combine multi-line sound info into one field.
-5. If a field is not found or unclear, use empty string ""
-6. Handle various document formats - don't rely on specific headers
-7. Parse tables, lists, or any structured format
-8. If an event is partially cut off at the end of this section, still include it - we'll deduplicate later
+CRITICAL EXTRACTION RULES FOR SOUND REQUIREMENTS:
+1. Look for lines or phrases starting with "Sound" followed by a dash, colon, or bullet point
+2. Extract equipment details: mic types (cordless, lapel, foot mics), counts (e.g., "2 cordless mics"), playback devices (laptop, aux wire)
+3. Include "NCPA basic sound" if mentioned
+4. Capture sound-specific setup times embedded in the requirements
+5. DO NOT include: catering, parking, ushers, lights, AC, cleaning schedules, non-sound staff requirements
+6. If requirements say "Requirements will follow" or similar, leave sound_requirements empty
+
+CRITICAL EXTRACTION RULES FOR CALL TIME:
+1. Search for these patterns (case-insensitive):
+   - "ready by [TIME]"
+   - "to be ready by [TIME]"
+   - "Sound Check at [TIME]"
+   - "sound to be ready by [TIME]"
+   - "connections to be ready by [TIME]"
+   - "calltime: [TIME]"
+   - "calltime: Ready by [TIME]"
+2. TIME formats to extract: "9am", "9:00am", "9:00 am", "2pm", "2:00pm", "6:30pm", "12noon"
+3. The call_time is when sound CREW must be ready, not the event start time
+4. Normalize the time format to include AM/PM with proper spacing (e.g., "9:00 AM", "2:00 PM")
+
+CRITICAL DATE INSTRUCTIONS:
+1. Look for day names (Mon, Tue, Wed, Thu, Fri, Sat, Sun) followed by dates (Thu 4th, Fri 5th, Wed 1st, Sat 7th, etc.)
+2. USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
+3. If context says "March 2026", then "Sun 1st" becomes "2026-03-01", "Mon 2nd" becomes "2026-03-02", etc.
+4. ALWAYS use the context month/year from the filename
+
+VENUE CODE MAPPING (use full names):
+- TT or TET → "Tata Theatre"
+- JBT → "Jamshed Bhabha Theatre"
+- GDT → "Godrej Dance Theatre"
+- LT → "Little Theatre"
+- DPAG → "Dilip Piramal Art Gallery"
+- Experimental Theatre or Exp → "Experimental Theatre"
 
 Return ONLY a valid JSON array, nothing else. No explanations, no markdown, just the JSON array.
 
@@ -1339,22 +1360,40 @@ CRITICAL JSON REQUIREMENTS:
 Example format:
 [
   {
-    "event_date": "2025-10-04",
-    "program": "Classical Music Concert",
+    "event_date": "2026-03-01",
+    "program": "Grufalo - A Twisted Tale",
     "venue": "Tata Theatre",
-    "team": "Indian Music",
-    "sound_requirements": "NCPA basic sound - 2 cordless mics & Aux wire connections to be ready by 9am",
-    "call_time": "9:00am",
-    "crew": "Ashwin, Rohan"
+    "team": "Nooshin/Team",
+    "sound_requirements": "2 cordless mics, aux wire for recorded music",
+    "call_time": "9:00 AM",
+    "crew": "TET"
   },
   {
-    "event_date": "2025-10-05",
+    "event_date": "2026-03-05",
     "program": "NCPA Nrityagurukul",
-    "venue": "TET",
+    "venue": "Tata Theatre",
     "team": "Dr.Swapno/Team",
-    "sound_requirements": "2 cordless mic backstage, Laptop for recorded music",
-    "call_time": "9:00am",
+    "sound_requirements": "2 cordless mics, laptop for recorded music",
+    "call_time": "",
     "crew": "AGN"
+  },
+  {
+    "event_date": "2026-03-06",
+    "program": "Living Traditions",
+    "venue": "Tata Theatre",
+    "team": "Dr.Swapno/Team",
+    "sound_requirements": "sound to be ready by 9:00 am",
+    "call_time": "9:00 AM",
+    "crew": "AGN"
+  },
+  {
+    "event_date": "2026-03-07",
+    "program": "Animal",
+    "venue": "Tata Theatre",
+    "team": "Nooshin/Team",
+    "sound_requirements": "NCPA basic sound",
+    "call_time": "2:00 PM",
+    "crew": "TT"
   }
 ]
 

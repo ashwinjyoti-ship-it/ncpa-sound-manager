@@ -402,6 +402,8 @@ function renderTable() {
       <td class="px-2 py-2 text-sm editable-cell" data-field="sound_requirements" data-id="${event.id}">${event.sound_requirements || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="call_time" data-id="${event.id}">${event.call_time || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="crew" data-id="${event.id}">${event.crew || ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="rider" data-id="${event.id}">${event.rider ? `<a href="${event.rider}" target="_blank" rel="noopener" style="color:#98A2D7;">🔗</a>` : ''}</td>
+      <td class="px-2 py-2 text-sm editable-cell" data-field="notes" data-id="${event.id}">${event.notes || ''}</td>
       <td class="px-2 py-2 text-center">
         <button onclick="deleteEvent(${event.id})" class="text-red-600 hover:text-red-800">
           <i class="fas fa-trash"></i>
@@ -565,11 +567,19 @@ function openEventModal(event) {
         <label class="font-semibold text-gray-700">Crew (sound team):</label>
         <p class="text-gray-900">${event.crew || 'Not assigned'}</p>
       </div>
+      ${event.rider ? `<div>
+        <label class="font-semibold text-gray-700">Rider:</label>
+        <p class="text-gray-900"><a href="${event.rider}" target="_blank" rel="noopener" style="color:#98A2D7;text-decoration:underline;">${event.rider}</a></p>
+      </div>` : ''}
+      ${event.notes ? `<div>
+        <label class="font-semibold text-gray-700">Notes:</label>
+        <p class="text-gray-900 whitespace-pre-wrap">${event.notes}</p>
+      </div>` : ''}
       <div>
         <label class="font-semibold text-gray-700">Created:</label>
         <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
       </div>
-      
+
       ${actionButtons}
     </div>
   `;
@@ -815,6 +825,8 @@ async function editEventFromModal(eventId) {
       document.getElementById('editTeam').value = event.team || '';
       document.getElementById('editSoundReq').value = event.sound_requirements || '';
       document.getElementById('editCallTime').value = event.call_time || '';
+      document.getElementById('editRider').value = event.rider || '';
+      document.getElementById('editNotes').value = event.notes || '';
       
       // Handle multiple crew selection (checkboxes)
       const crewList = event.crew ? event.crew.split(',').map(c => c.trim()) : [];
@@ -881,9 +893,11 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString
+        crew: crewString,
+        rider: data.rider || null,
+        notes: data.notes || null
       });
-      
+
       if (response.data.success) {
         showNotification('Event updated successfully', 'success');
         closeEditEventModal();
@@ -908,7 +922,9 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString
+        crew: crewString,
+        rider: data.rider || null,
+        notes: data.notes || null
       });
       
       // Create copies for remaining dates

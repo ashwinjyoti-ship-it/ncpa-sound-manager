@@ -390,13 +390,13 @@ app.put('/api/events/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew } = body
-    
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, rider, notes } = body
+
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
-    
+
     await c.env.DB.prepare(`
-      UPDATE events 
+      UPDATE events
       SET event_date = ?,
           program = ?,
           venue = ?,
@@ -405,6 +405,8 @@ app.put('/api/events/:id', async (c) => {
           call_time = ?,
           crew = ?,
           requirements_updated = ?,
+          rider = ?,
+          notes = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
@@ -416,6 +418,8 @@ app.put('/api/events/:id', async (c) => {
       call_time || null,
       crew || null,
       requirements_updated,
+      rider || null,
+      notes || null,
       id
     ).run()
     
@@ -2247,6 +2251,8 @@ app.get('/', (c) => {
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Sound Req</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Call</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Crew</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Rider</th>
+                                    <th class="px-2 py-3 text-left text-white font-semibold text-sm">Notes</th>
                                     <th class="px-2 py-3 text-left text-white font-semibold text-sm">Actions</th>
                                 </tr>
                             </thead>
@@ -2558,6 +2564,16 @@ app.get('/', (c) => {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
                             <input type="text" name="call_time" id="editCallTime"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rider (document link)</label>
+                            <input type="url" name="rider" id="editRider" placeholder="https://..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" id="editNotes" rows="2"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"></textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>

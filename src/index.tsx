@@ -1684,25 +1684,75 @@ app.get('/', (c) => {
         <link href="https://cdn.jsdelivr.net/npm/@fontsource/manrope@5.0.8/index.css" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
+          :root {
+            --bg-body: #f8f9fc;
+            --glass-surface-bg: rgba(248,249,252,0.80);
+            --glass-card-bg: rgba(255,255,255,0.70);
+            --glass-header-bg: rgba(248,249,252,0.78);
+            --glass-border: rgba(173,179,184,0.18);
+            --glass-inner: rgba(255,255,255,0.55);
+            --modal-bg: rgba(248,249,252,0.88);
+            --cal-day-bg: rgba(255,255,255,0.68);
+            --event-card-bg: rgba(255,255,255,0.72);
+            --input-bg: rgba(255,255,255,0.7);
+            --hover-bg: #ebeef3;
+            --text-primary: #2d3338;
+            --text-secondary: #5a6065;
+            --shadow-overlay: rgba(45,51,56,0.38);
+            --shadow-soft: rgba(45,51,56,0.06);
+          }
+          html.dark {
+            --bg-body: #13151a;
+            --glass-surface-bg: rgba(20,23,30,0.88);
+            --glass-card-bg: rgba(26,30,40,0.80);
+            --glass-header-bg: rgba(15,17,23,0.88);
+            --glass-border: rgba(255,255,255,0.07);
+            --glass-inner: rgba(255,255,255,0.04);
+            --modal-bg: rgba(20,23,30,0.94);
+            --cal-day-bg: rgba(26,30,40,0.72);
+            --event-card-bg: rgba(26,30,40,0.80);
+            --input-bg: rgba(26,30,40,0.85);
+            --hover-bg: #1e2230;
+            --text-primary: #e2e6ef;
+            --text-secondary: #8a92a8;
+            --shadow-overlay: rgba(0,0,2,0.60);
+            --shadow-soft: rgba(0,0,0,0.30);
+          }
+
+          /* ── Dark mode Tailwind overrides ── */
+          html.dark .text-gray-800, html.dark .text-gray-700 { color: var(--text-primary) !important; }
+          html.dark .text-gray-600, html.dark .text-gray-500, html.dark .text-gray-400 { color: var(--text-secondary) !important; }
+          html.dark .bg-white { background-color: rgba(26,30,40,0.80) !important; }
+          html.dark .bg-gray-50 { background-color: rgba(22,25,34,0.80) !important; }
+          html.dark .bg-gray-100 { background-color: rgba(28,32,44,0.80) !important; }
+          html.dark .hover\:bg-gray-100:hover { background-color: var(--hover-bg) !important; }
+          html.dark .hover\:bg-red-50:hover { background-color: rgba(80,20,20,0.5) !important; }
+          html.dark .border-gray-200, html.dark .border-gray-300 { border-color: rgba(255,255,255,0.08) !important; }
+          html.dark hr { border-color: rgba(255,255,255,0.08); }
+          html.dark .text-red-600 { color: #f87171 !important; }
+          html.dark .bg-red-500 { background-color: #ef4444 !important; }
+          html.dark .text-green-600 { color: #86efac !important; }
+          html.dark .shadow-md, html.dark .shadow-lg { box-shadow: 0 4px 24px rgba(0,0,0,0.4) !important; }
+
           body {
             font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #f8f9fc;
+            background-color: var(--bg-body);
           }
 
           /* ── Glassmorphism utilities ── */
           .glass-surface {
-            background: rgba(248, 249, 252, 0.80);
+            background: var(--glass-surface-bg);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 8px 32px rgba(45,51,56,0.06);
+            box-shadow: inset 1px 1px 0 var(--glass-inner), 0 8px 32px var(--shadow-soft);
           }
 
           .glass-card {
-            background: rgba(255, 255, 255, 0.70);
+            background: var(--glass-card-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            outline: 1px solid rgba(173,179,184,0.15);
-            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.50);
+            outline: 1px solid var(--glass-border);
+            box-shadow: inset 1px 1px 0 var(--glass-inner);
           }
 
           /* ── Primary button ── */
@@ -1721,27 +1771,27 @@ app.get('/', (c) => {
           }
 
           .event-card-green {
-            background: rgba(255,255,255,0.72);
+            background: var(--event-card-bg);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border-left: 4px solid #A8C3A0;
-            box-shadow: 0 2px 12px rgba(45,51,56,0.06);
-            outline: 1px solid rgba(173,179,184,0.12);
+            box-shadow: 0 2px 12px var(--shadow-soft);
+            outline: 1px solid var(--glass-border);
           }
 
           .event-card-peach {
-            background: rgba(255,255,255,0.72);
+            background: var(--event-card-bg);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
             border-left: 4px solid #E07B7B;
-            box-shadow: 0 2px 12px rgba(45,51,56,0.06);
-            outline: 1px solid rgba(173,179,184,0.12);
+            box-shadow: 0 2px 12px var(--shadow-soft);
+            outline: 1px solid var(--glass-border);
           }
 
           .calendar-day {
             min-height: 120px;
-            outline: 1px solid rgba(173,179,184,0.15);
-            background: rgba(255,255,255,0.68);
+            outline: 1px solid var(--glass-border);
+            background: var(--cal-day-bg);
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
           }
@@ -1790,7 +1840,7 @@ app.get('/', (c) => {
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(45,51,56,0.38);
+            background-color: var(--shadow-overlay);
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
           }
@@ -1802,7 +1852,7 @@ app.get('/', (c) => {
           }
 
           .modal-content {
-            background: rgba(248, 249, 252, 0.88);
+            background: var(--modal-bg);
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
             padding: 30px;
@@ -1811,8 +1861,8 @@ app.get('/', (c) => {
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.60), 0 24px 64px rgba(45,51,56,0.08);
-            outline: 1px solid rgba(173,179,184,0.18);
+            box-shadow: inset 1px 1px 0 var(--glass-inner), 0 24px 64px var(--shadow-soft);
+            outline: 1px solid var(--glass-border);
           }
 
           table th {
@@ -1830,7 +1880,7 @@ app.get('/', (c) => {
           }
 
           .editable-cell:hover {
-            background-color: #ebeef3;
+            background-color: var(--hover-bg);
           }
 
           /* Make table cells wrap text instead of expanding */
@@ -1847,7 +1897,8 @@ app.get('/', (c) => {
             padding: 4px 8px;
             border-radius: 0.75rem;
             font-size: 14px;
-            background: rgba(255,255,255,0.7);
+            background: var(--input-bg);
+            color: var(--text-primary);
           }
 
           .loading {
@@ -1925,10 +1976,10 @@ app.get('/', (c) => {
           }
         </style>
     </head>
-    <body style="background-color: #f8f9fc;">
+    <body style="background-color: var(--bg-body);">
         <div class="min-h-screen">
             <!-- Header -->
-            <header class="glass-header sticky top-0 z-30" style="background:rgba(248,249,252,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.45);box-shadow:0 1px 24px rgba(45,51,56,0.07);">
+            <header class="glass-header sticky top-0 z-30" style="background:var(--glass-header-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-inner);box-shadow:0 1px 24px var(--shadow-soft);">
                 <div class="container mx-auto px-6 py-4">
                     <div class="flex justify-between items-center">
                         <div class="flex-1"></div>
@@ -1940,6 +1991,10 @@ app.get('/', (c) => {
                             <p class="text-gray-600 mt-1">Event Schedule & Technical Dashboard</p>
                         </div>
                         <div class="flex-1 flex justify-end items-center gap-3">
+                            <!-- Theme Toggle -->
+                            <button onclick="toggleTheme()" id="themeToggle" class="p-2 rounded-xl transition-all" style="color:#98A2D7;" title="Toggle light/dark mode">
+                                <i id="themeIcon" class="fas fa-moon text-lg"></i>
+                            </button>
                             <!-- User Menu (shown when logged in) -->
                             <div id="userMenu" style="display: none;">
                                 <div class="relative">
@@ -1953,7 +2008,7 @@ app.get('/', (c) => {
                                         </span>
                                     </button>
                                     <!-- Dropdown -->
-                                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-2xl z-50" style="background:rgba(248,249,252,0.90);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.18);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 16px 40px rgba(45,51,56,0.08);">
+                                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-2xl z-50" style="background:var(--modal-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid var(--glass-border);box-shadow:inset 1px 1px 0 var(--glass-inner),0 16px 40px var(--shadow-soft);">
                                         <button onclick="openChangePasswordModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">
                                             <i class="fas fa-key mr-2"></i>Change Password
                                         </button>
@@ -2785,6 +2840,26 @@ app.get('/', (c) => {
             console.log('✅ DOMContentLoaded fired successfully');
             console.log('✅ Body element:', document.body ? 'Found' : 'Not found');
           });
+
+          // ── Theme toggle ──
+          (function() {
+            const saved = localStorage.getItem('theme') ||
+              (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            if (saved === 'dark') document.documentElement.classList.add('dark');
+            document.addEventListener('DOMContentLoaded', function() {
+              const icon = document.getElementById('themeIcon');
+              if (icon && document.documentElement.classList.contains('dark')) {
+                icon.className = 'fas fa-sun text-lg';
+              }
+            });
+          })();
+
+          function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            const icon = document.getElementById('themeIcon');
+            if (icon) icon.className = isDark ? 'fas fa-sun text-lg' : 'fas fa-moon text-lg';
+          }
         </script>
         <script src="https://cdn.jsdelivr.net/npm/axios@1.6.0/dist/axios.min.js" crossorigin="anonymous"></script>
         <!-- Login Modal -->

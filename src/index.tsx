@@ -114,7 +114,7 @@ app.get('/api/events/search', async (c) => {
 app.get('/api/export/latest-csv', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         program as "Program",
         venue as "Venue",
@@ -122,13 +122,14 @@ app.get('/api/export/latest-csv', async (c) => {
         crew as "Crew",
         sound_requirements as "Sound Requirements",
         call_time as "Call Time",
-        status as "Status"
-      FROM events 
+        status as "Status",
+        rider as "Rider"
+      FROM events
       ORDER BY event_date ASC
     `).all()
     
     if (!results || results.length === 0) {
-      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status\n', {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider\n', {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
@@ -149,7 +150,7 @@ app.get('/api/export/latest-csv', async (c) => {
     }
     
     // Build CSV header
-    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status']
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider']
     const csvRows = [headers.join(',')]
     
     // Add data rows
@@ -162,7 +163,8 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row.Crew),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        escapeCSV(row.Status || 'confirmed')
+        escapeCSV(row.Status || 'confirmed'),
+        escapeCSV(row.Rider)
       ]
       csvRows.push(values.join(','))
     })
@@ -208,15 +210,16 @@ app.get('/api/export/csv', async (c) => {
     }
     
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         crew as "Crew",
         program as "Program",
         venue as "Venue",
         team as "Team",
         sound_requirements as "Sound Requirements",
-        call_time as "Call Time"
-      FROM events 
+        call_time as "Call Time",
+        rider as "Rider"
+      FROM events
       WHERE strftime('%Y-%m', event_date) = ?
       ORDER BY event_date ASC
     `).bind(month).all()
@@ -233,9 +236,9 @@ app.get('/api/export/csv', async (c) => {
     }
     
     // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time']
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
       // Format date as DD/MM/YYYY (zero-padded)
@@ -257,7 +260,8 @@ app.get('/api/export/csv', async (c) => {
         escapeCSV(row.Venue),
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
-        escapeCSV(row['Call Time'])
+        escapeCSV(row['Call Time']),
+        escapeCSV(row.Rider)
       ]
       csvRows.push(values.join(','))
     })

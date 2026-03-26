@@ -530,7 +530,7 @@ function openEventModal(event) {
     <div class="mt-6 pt-4 border-t border-gray-200">
       <p class="text-center text-gray-500 text-sm">
         <i class="fas fa-lock mr-2"></i>
-        Please <a href="#" onclick="closeEventModal(); openLoginModal(); return false;" class="text-orange-500 hover:text-orange-600 font-semibold">login</a> to edit events
+        Please <a href="#" onclick="closeEventModal(); openLoginModal(); return false;" class="font-semibold" style="color:#98A2D7;">login</a> to edit events
       </p>
     </div>
   `;
@@ -2160,7 +2160,7 @@ async function askAI(predefinedQuery) {
             <div class="bg-white border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
               <div class="flex justify-between items-start mb-2">
                 <div class="flex-1">
-                  <div class="text-sm text-orange-600 font-semibold">${formatDate(event.event_date)}</div>
+                  <div class="text-sm font-semibold" style="color:#98A2D7;">${formatDate(event.event_date)}</div>
                   <div class="text-lg font-bold text-gray-800 mt-1">${event.program}</div>
                 </div>
               </div>
@@ -2181,7 +2181,7 @@ async function askAI(predefinedQuery) {
       
       // Show insights
       if (insights && Object.keys(insights).length > 0) {
-        resultsHTML += '<div class="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-orange-800 mb-2">📊 Insights</h4><ul class="space-y-1 text-sm">';
+        resultsHTML += '<div class="rounded-xl p-4 mb-4" style="background:rgba(152,162,215,0.08);outline:1px solid rgba(173,179,184,0.18);"><h4 class="font-semibold mb-2" style="color:#465080;">📊 Insights</h4><ul class="space-y-1 text-sm">';
         for (const [key, value] of Object.entries(insights)) {
           resultsHTML += `<li><span class="text-gray-600">${key}:</span> <span class="font-medium text-gray-800">${value}</span></li>`;
         }
@@ -2201,7 +2201,7 @@ async function askAI(predefinedQuery) {
       if (follow_up_suggestions && follow_up_suggestions.length > 0) {
         resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
         follow_up_suggestions.forEach(suggestion => {
-          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs bg-white border border-gray-300 rounded-full px-3 py-1 hover:bg-orange-50 hover:border-orange-300 transition-colors">${suggestion}</button>`;
+          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${suggestion}</button>`;
         });
         resultsHTML += '</div></div>';
       }

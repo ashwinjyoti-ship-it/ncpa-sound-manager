@@ -1598,19 +1598,22 @@ app.get('/safari-test', (c) => {
         <meta charset="UTF-8">
         <title>Safari Test</title>
         <style>
-          body { 
-            font-family: Arial, sans-serif; 
-            padding: 40px; 
-            background: #f0f0f0;
+          body {
+            font-family: 'Manrope', Arial, sans-serif;
+            padding: 40px;
+            background: #f8f9fc;
           }
           .box {
-            background: white;
+            background: rgba(255,255,255,0.80);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 20px;
+            outline: 1px solid rgba(173,179,184,0.18);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 8px 32px rgba(45,51,56,0.07);
           }
-          .success { color: green; font-weight: bold; }
-          .error { color: red; font-weight: bold; }
+          .success { color: #A8C3A0; font-weight: bold; }
+          .error { color: #c0717a; font-weight: bold; }
         </style>
         <script>
           console.log('✅ TEST 1: JavaScript is executing');
@@ -1678,34 +1681,69 @@ app.get('/', (c) => {
           console.log('🦁 Safari: Testing JavaScript execution...');
         </script>
         <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://cdn.jsdelivr.net/npm/@fontsource/manrope@5.0.8/index.css" rel="stylesheet">
         <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
         <style>
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background-color: #FFF8DC;
+            font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8f9fc;
           }
-          
+
+          /* ── Glassmorphism utilities ── */
+          .glass-surface {
+            background: rgba(248, 249, 252, 0.80);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 8px 32px rgba(45,51,56,0.06);
+          }
+
+          .glass-card {
+            background: rgba(255, 255, 255, 0.70);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            outline: 1px solid rgba(173,179,184,0.15);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.50);
+          }
+
+          /* ── Primary button ── */
+          .btn-primary {
+            background: linear-gradient(135deg, #98A2D7 0%, #465080 100%);
+            color: #ffffff;
+            border-radius: 1.5rem;
+            transition: opacity 0.2s ease;
+          }
+          .btn-primary:hover { opacity: 0.88; }
+
+          /* ── Tabs ── */
           .tab-active {
-            border-bottom: 3px solid #FF6B35;
-            color: #FF6B35;
+            border-bottom: 3px solid #98A2D7;
+            color: #98A2D7;
           }
-          
+
           .event-card-green {
-            background: #FFFFFF;
-            border-left: 4px solid #28a745;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-left: 4px solid #A8C3A0;
+            box-shadow: 0 2px 12px rgba(45,51,56,0.06);
+            outline: 1px solid rgba(173,179,184,0.12);
           }
-          
+
           .event-card-peach {
-            background: #FFFFFF;
-            border-left: 4px solid #FF6B35;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            background: rgba(255,255,255,0.72);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-left: 4px solid #98A2D7;
+            box-shadow: 0 2px 12px rgba(45,51,56,0.06);
+            outline: 1px solid rgba(173,179,184,0.12);
           }
-          
+
           .calendar-day {
             min-height: 120px;
-            border: 1px solid #E8E8E8;
-            background-color: #FFFFFF;
+            outline: 1px solid rgba(173,179,184,0.15);
+            background: rgba(255,255,255,0.68);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
           }
           
           /* Mobile-optimized event cards */
@@ -1752,67 +1790,73 @@ app.get('/', (c) => {
             width: 100%;
             height: 100%;
             overflow: auto;
-            background-color: rgba(0,0,0,0.5);
+            background-color: rgba(45,51,56,0.38);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
           }
-          
+
           .modal.active {
             display: flex;
             align-items: center;
             justify-content: center;
           }
-          
+
           .modal-content {
-            background-color: #fefefe;
+            background: rgba(248, 249, 252, 0.88);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
             padding: 30px;
-            border-radius: 12px;
+            border-radius: 20px;
             max-width: 700px;
             width: 90%;
             max-height: 80vh;
             overflow-y: auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.60), 0 24px 64px rgba(45,51,56,0.08);
+            outline: 1px solid rgba(173,179,184,0.18);
           }
-          
+
           table th {
             position: sticky;
             top: 0;
-            background-color: #FF6B35;
+            background: linear-gradient(135deg, #98A2D7 0%, #465080 100%);
             color: white;
             z-index: 10;
           }
-          
+
           .editable-cell {
             cursor: text;
             word-wrap: break-word;
             overflow-wrap: break-word;
           }
-          
+
           .editable-cell:hover {
-            background-color: #f0f0f0;
+            background-color: #ebeef3;
           }
-          
+
           /* Make table cells wrap text instead of expanding */
           table.table-fixed td {
             word-wrap: break-word;
             overflow-wrap: break-word;
             white-space: normal;
           }
-          
+
           .editable-cell input,
           .editable-cell textarea {
             width: 100%;
-            border: 1px solid #ddd;
+            border: 1px solid rgba(173,179,184,0.25);
             padding: 4px 8px;
-            border-radius: 4px;
+            border-radius: 0.75rem;
             font-size: 14px;
+            background: rgba(255,255,255,0.7);
           }
-          
+
           .loading {
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 3px solid rgba(139, 69, 19, 0.3);
+            border: 3px solid rgba(152, 162, 215, 0.3);
             border-radius: 50%;
-            border-top-color: #FF6B35;
+            border-top-color: #98A2D7;
             animation: spin 1s ease-in-out infinite;
           }
           
@@ -1881,15 +1925,15 @@ app.get('/', (c) => {
           }
         </style>
     </head>
-    <body style="background-color: #FFF8DC;">
+    <body style="background-color: #f8f9fc;">
         <div class="min-h-screen">
             <!-- Header -->
-            <header class="shadow-md" style="background-color: #FFF8DC; border-bottom: 2px solid #FFE4B5;">
+            <header class="glass-header sticky top-0 z-30" style="background:rgba(248,249,252,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.45);box-shadow:0 1px 24px rgba(45,51,56,0.07);">
                 <div class="container mx-auto px-6 py-4">
                     <div class="flex justify-between items-center">
                         <div class="flex-1"></div>
                         <div class="flex-1 text-center">
-                            <h1 class="text-3xl font-bold" style="color: #FF6B35;">
+                            <h1 class="text-3xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;">
                                 <i class="fas fa-music mr-2"></i>
                                 NCPA Sound Crew
                             </h1>
@@ -1899,17 +1943,17 @@ app.get('/', (c) => {
                             <!-- User Menu (shown when logged in) -->
                             <div id="userMenu" style="display: none;">
                                 <div class="relative">
-                                    <button onclick="toggleUserDropdown()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-yellow-100 transition-all">
-                                        <i class="fas fa-user-circle text-2xl" style="color: #FF6B35;"></i>
+                                    <button onclick="toggleUserDropdown()" class="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#ebeef3] transition-all">
+                                        <i class="fas fa-user-circle text-2xl" style="color: #98A2D7;"></i>
                                         <span id="userEmailDisplay" class="text-sm font-medium text-gray-700"></span>
                                         <!-- Admin badge -->
                                         <span id="adminBadge" style="display: none;" class="relative">
-                                            <i class="fas fa-user-shield text-lg text-orange-600"></i>
+                                            <i class="fas fa-user-shield text-lg" style="color: #98A2D7;"></i>
                                             <span id="pendingCount" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center" style="display: none;"></span>
                                         </span>
                                     </button>
                                     <!-- Dropdown -->
-                                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                    <div id="userDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-2xl z-50" style="background:rgba(248,249,252,0.90);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.18);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 16px 40px rgba(45,51,56,0.08);">
                                         <button onclick="openChangePasswordModal()" class="w-full text-left px-4 py-2 hover:bg-gray-100 text-sm">
                                             <i class="fas fa-key mr-2"></i>Change Password
                                         </button>
@@ -1924,7 +1968,7 @@ app.get('/', (c) => {
                                 </div>
                             </div>
                             <!-- Login Button (shown when not logged in) -->
-                            <button id="loginBtn" onclick="openLoginModal()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                            <button id="loginBtn" onclick="openLoginModal()" class="btn-primary px-4 py-2">
                                 <i class="fas fa-sign-in-alt mr-2"></i>Login
                             </button>
                         </div>
@@ -1938,7 +1982,7 @@ app.get('/', (c) => {
                 <div class="md:hidden flex justify-between items-center mb-3">
                     <div></div>
                     <!-- Add Show Button (Mobile) -->
-                    <button onclick="openAddShowModal()" class="px-3 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-lg text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+                    <button onclick="openAddShowModal()" class="btn-primary px-3 py-2 text-sm font-semibold shadow-md hover:shadow-lg transition-all">
                         <i class="fas fa-plus mr-1"></i>Add Show
                     </button>
                 </div>
@@ -1947,7 +1991,7 @@ app.get('/', (c) => {
                 <div class="md:hidden mb-3">
                     <div class="relative">
                         <input type="text" id="searchInput" placeholder="Search by name, venue, crew..." 
-                               class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-sm">
+                               class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7] text-sm">
                         <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                     </div>
                 </div>
@@ -1972,7 +2016,7 @@ app.get('/', (c) => {
                             <!-- Search -->
                             <div class="relative">
                                 <input type="text" id="searchInput" placeholder="Search events..." 
-                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                                 <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                             </div>
                             
@@ -1981,8 +2025,8 @@ app.get('/', (c) => {
                             
                             <!-- Analysis Tools Group -->
                             <div class="flex gap-2">
-                                <button onclick="toggleFilterPanel()" 
-                                        class="px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                                <button onclick="toggleFilterPanel()"
+                                        class="btn-primary px-3 py-2 text-sm transition-all">
                                     <i class="fas fa-filter mr-1.5"></i>Filters
                                 </button>
                                 
@@ -2010,13 +2054,13 @@ app.get('/', (c) => {
                                 </button>
                                 
                                 <!-- Dropdown Menu -->
-                                <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                                <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl z-50" style="background:rgba(248,249,252,0.90);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.18);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 16px 40px rgba(45,51,56,0.08);">
                                     <div class="py-2">
                                         <!-- Export Section -->
                                         <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Export</div>
                                         <button onclick="openCSVExportModal(); toggleActionsDropdown();" 
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
-                                            <i class="fas fa-file-csv text-orange-500 w-5"></i>
+                                            <i class="fas fa-file-csv w-5" style="color: #98A2D7;"></i>
                                             <span class="text-sm text-gray-700">Export CSV</span>
                                         </button>
                                         <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();" 
@@ -2049,9 +2093,8 @@ app.get('/', (c) => {
                             <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
                             
                             <!-- Add Show Button -->
-                            <button onclick="openAddShowModal()" 
-                                class="px-3 py-2 text-sm text-white rounded-lg hover:opacity-90 transition-all" 
-                                style="background-color: #FF6B35;">
+                            <button onclick="openAddShowModal()"
+                                class="btn-primary px-3 py-2 text-sm transition-all">
                                 <i class="fas fa-plus mr-1.5"></i>Add Show
                             </button>
                         </div>
@@ -2059,36 +2102,36 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Calendar View -->
-                <div id="calendarView" class="rounded-lg p-3 md:p-6" style="background-color: #FFFFFF;">
+                <div id="calendarView" class="rounded-2xl p-3 md:p-6 glass-card">
                     <!-- Calendar controls with event count -->
                     <div class="flex justify-between items-center mb-4 md:mb-6">
-                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
+                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
                             <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
                         </button>
                         <div class="text-center">
-                            <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #FF6B35;"></h2>
+                            <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
                             <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
                         </div>
-                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-lg touch-manipulation" style="background-color: #FFE4B5; color: #8B4513;">
+                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
                             <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
                         </button>
                     </div>
                     
                     <!-- Calendar grid - Mobile optimized -->
                     <div class="grid grid-cols-7 gap-1 md:gap-2">
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">SUN</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">MON</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">TUE</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">WED</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">THU</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">FRI</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: #FFF8DC; color: #8B4513;">SAT</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
+                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
                     </div>
                     <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2 mt-2"></div>
                 </div>
 
                 <!-- Table View -->
-                <div id="tableView" class="bg-white rounded-lg shadow-lg p-3 md:p-6" style="display: none;">
+                <div id="tableView" class="glass-card rounded-2xl p-3 md:p-6" style="display: none;">
                     <!-- Bulk Actions Bar -->
                     <div class="mb-4 flex items-center justify-between">
                         <div class="flex items-center space-x-3">
@@ -2134,7 +2177,7 @@ app.get('/', (c) => {
                                 <col style="width: 6%;">   <!-- Actions -->
                             </colgroup>
                             <thead>
-                                <tr style="background-color: #FF6B35;">
+                                <tr>
                                     <th class="px-2 py-3 text-center text-white font-semibold text-sm">
                                         <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this.checked)" 
                                                class="cursor-pointer">
@@ -2160,7 +2203,7 @@ app.get('/', (c) => {
                 <!-- Dashboard removed - using simple event count in calendar header instead -->
                 
                 <!-- Crew Tab -->
-                <div id="crewView" class="bg-white rounded-lg shadow-lg p-6" style="display: none;">
+                <div id="crewView" class="glass-card rounded-2xl p-6" style="display: none;">
                     <div id="crewContent">
                         <div class="text-center py-12">
                             <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
@@ -2175,7 +2218,7 @@ app.get('/', (c) => {
         <div id="eventModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Event Details</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Event Details</h2>
                     <button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <div id="eventModalContent"></div>
@@ -2186,7 +2229,7 @@ app.get('/', (c) => {
         <div id="addShowModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Add New Show</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Add New Show</h2>
                     <button onclick="closeAddShowModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="addShowForm" onsubmit="handleAddShow(event)">
@@ -2212,7 +2255,7 @@ app.get('/', (c) => {
                         <div id="singleDateField">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                             <input type="date" name="event_date" id="singleDate"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         
                         <!-- Multiple Date Fields -->
@@ -2221,12 +2264,12 @@ app.get('/', (c) => {
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                                     <input type="date" name="start_date" id="startDate"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
                                     <input type="date" name="end_date" id="endDate"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 </div>
                             </div>
                             <p class="text-xs text-gray-500 mt-1">
@@ -2237,12 +2280,12 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Program/Event *</label>
                             <input type="text" name="program" required 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
                             <input type="text" name="venue" required list="venueList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"
                                    placeholder="Select or type venue">
                             <datalist id="venueList">
                                 <option value="JBT">Jamshed Bhabha Theatre</option>
@@ -2257,7 +2300,7 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
                             <select name="team" id="editTeam"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 <option value="">Select Team...</option>
                                 <option value="Bruce/Team">Bruce/Team</option>
                                 <option value="Dr.Rao/Team">Dr.Rao/Team</option>
@@ -2274,12 +2317,12 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
                             <textarea name="sound_requirements" rows="3" 
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"></textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
                             <input type="text" name="call_time" 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
@@ -2346,7 +2389,7 @@ app.get('/', (c) => {
                                 </label>
                             </div>
                             <input type="text" id="addCrewCustom" placeholder="Or type custom crew name (comma-separated for multiple)" 
-                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 text-sm">
+                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0] text-sm">
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle mr-1"></i>
                                 Select multiple crew members or add custom names below
@@ -2358,9 +2401,7 @@ app.get('/', (c) => {
                                 class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
                             Cancel
                         </button>
-                        <button type="submit" 
-                                class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
-                                style="background-color: #FF6B35;">
+                        <button type="submit" class="btn-primary px-6 py-2">
                             Add Show
                         </button>
                     </div>
@@ -2372,7 +2413,7 @@ app.get('/', (c) => {
         <div id="editEventModal" class="modal">
             <div class="modal-content">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Edit Event</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Edit Event</h2>
                     <button onclick="closeEditEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="editEventForm" onsubmit="handleEditEvent(event)">
@@ -2399,7 +2440,7 @@ app.get('/', (c) => {
                         <div id="editSingleDateField">
                             <label class="block text-sm font-medium text-gray-700 mb-1">Date *</label>
                             <input type="date" name="event_date" id="editSingleDate"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         
                         <!-- Multiple Date Fields -->
@@ -2408,12 +2449,12 @@ app.get('/', (c) => {
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                                     <input type="date" name="start_date" id="editStartDate"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
                                     <input type="date" name="end_date" id="editEndDate"
-                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 </div>
                             </div>
                             <p class="text-xs text-gray-500 mt-1">
@@ -2425,18 +2466,18 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Program/Event *</label>
                             <input type="text" name="program" id="editProgram" required 
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
                             <input type="text" name="venue" id="editVenue" required list="venueList"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"
                                    placeholder="Select or type venue">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Team (curator)</label>
                             <select name="team" id="editTeam"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                                 <option value="">Select Team...</option>
                                 <option value="Bruce/Team">Bruce/Team</option>
                                 <option value="Dr.Rao/Team">Dr.Rao/Team</option>
@@ -2453,12 +2494,12 @@ app.get('/', (c) => {
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
                             <textarea name="sound_requirements" id="editSoundReq" rows="3" 
-                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"></textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
                             <input type="text" name="call_time" id="editCallTime"
-                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
@@ -2525,7 +2566,7 @@ app.get('/', (c) => {
                                 </label>
                             </div>
                             <input type="text" id="editCrewCustom" placeholder="Or type custom crew name" 
-                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600 text-sm">
+                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0] text-sm">
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle mr-1"></i>
                                 Select multiple crew or enter custom names. Selected crew will be joined with commas.
@@ -2537,9 +2578,7 @@ app.get('/', (c) => {
                                 class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
                             Cancel
                         </button>
-                        <button type="submit" 
-                                class="px-6 py-2 text-white rounded-lg hover:opacity-90" 
-                                style="background-color: #FF6B35;">
+                        <button type="submit" class="btn-primary px-6 py-2">
                             Save Changes
                         </button>
                     </div>
@@ -2550,7 +2589,7 @@ app.get('/', (c) => {
         <!-- Delete Confirmation Modal -->
         <div id="deleteConfirmModal" class="modal">
             <div class="modal-content" style="max-width: 400px;">
-                <h2 class="text-xl font-bold mb-4" style="color: #FF6B35;">Delete Event</h2>
+                <h2 class="text-xl font-bold mb-4" style="color: #2d3338;">Delete Event</h2>
                 <p class="text-gray-700 mb-6" id="deleteConfirmMessage">Are you sure you want to delete this event?</p>
                 <div class="flex justify-end space-x-3">
                     <button onclick="closeDeleteConfirm()" 
@@ -2569,7 +2608,7 @@ app.get('/', (c) => {
         <div id="whatsappExportModal" class="modal">
             <div class="modal-content" style="max-width: 600px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">
                         <i class="fab fa-whatsapp mr-2"></i>Export for WhatsApp
                     </h2>
                     <button onclick="closeWhatsAppExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -2578,13 +2617,13 @@ app.get('/', (c) => {
                 <div class="space-y-4 mb-6">
                     <p class="text-gray-600">Select a time range to export events:</p>
                     <div class="grid grid-cols-2 gap-3">
-                        <button onclick="exportTomorrow()" class="px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                        <button onclick="exportTomorrow()" class="btn-primary px-4 py-3 transition-all">
                             <i class="fas fa-calendar-day mr-2"></i>Tomorrow
                         </button>
-                        <button onclick="exportThisWeek()" class="px-4 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                        <button onclick="exportThisWeek()" class="btn-primary px-4 py-3 transition-all">
                             <i class="fas fa-calendar-week mr-2"></i>This Week
                         </button>
-                        <button onclick="exportNextWeek()" class="px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all">
+                        <button onclick="exportNextWeek()" class="btn-primary px-4 py-3 transition-all">
                             <i class="fas fa-calendar-plus mr-2"></i>Next Week
                         </button>
                         <button onclick="exportCustomDate()" class="px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all">
@@ -2596,7 +2635,7 @@ app.get('/', (c) => {
                 <div id="customDatePicker" style="display: none;" class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Select Date:</label>
                     <input type="date" id="customDateInput" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
-                    <button onclick="exportSelectedDate()" class="mt-3 w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+                    <button onclick="exportSelectedDate()" class="btn-primary mt-3 w-full px-4 py-2">
                         Generate Export
                     </button>
                 </div>
@@ -2604,7 +2643,7 @@ app.get('/', (c) => {
                 <div id="exportPreview" style="display: none;">
                     <div class="flex justify-between items-center mb-3">
                         <h3 class="font-semibold text-gray-700">Preview:</h3>
-                        <button onclick="copyToClipboard()" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+                        <button onclick="copyToClipboard()" class="btn-primary px-4 py-2">
                             <i class="fas fa-copy mr-2"></i>Copy to Clipboard
                         </button>
                     </div>
@@ -2617,7 +2656,7 @@ app.get('/', (c) => {
         <div id="csvExportModal" class="modal">
             <div class="modal-content" style="max-width: 500px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">
                         <i class="fas fa-file-download mr-2"></i>Export Events
                     </h2>
                     <button onclick="closeCSVExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -2629,7 +2668,7 @@ app.get('/', (c) => {
                     <div class="grid grid-cols-1 gap-3">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Month:</label>
-                            <select id="csvExportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <select id="csvExportMonth" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                                 <option value="1">January</option>
                                 <option value="2">February</option>
                                 <option value="3">March</option>
@@ -2647,7 +2686,7 @@ app.get('/', (c) => {
                         
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Year:</label>
-                            <select id="csvExportYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <select id="csvExportYear" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                                 <option value="2024">2024</option>
                                 <option value="2025" selected>2025</option>
                                 <option value="2026">2026</option>
@@ -2681,8 +2720,8 @@ app.get('/', (c) => {
         </div>
 
         <!-- AI Assistant Floating Button -->
-        <button id="aiAssistantBtn" onclick="toggleAIAssistant()" 
-                class="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40">
+        <button id="aiAssistantBtn" onclick="toggleAIAssistant()"
+                class="btn-primary fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40">
             <i class="fas fa-robot text-xl"></i>
         </button>
 
@@ -2690,7 +2729,7 @@ app.get('/', (c) => {
         <div id="aiAssistantModal" class="modal">
             <div class="modal-content" style="max-width: 700px;">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">
                         <i class="fas fa-robot mr-2"></i>AI Assistant
                     </h2>
                     <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -2699,13 +2738,13 @@ app.get('/', (c) => {
                 <div class="mb-6">
                     <p class="text-gray-600 mb-4">Ask me anything about your events! Try these examples:</p>
                     <div class="grid grid-cols-2 gap-2 mb-4">
-                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-left">
+                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
                             📅 Events tomorrow
                         </button>
-                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 text-left">
+                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
                             🏛️ Events at Tata Theatre
                         </button>
-                        <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 text-left">
+                        <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(168,195,160,0.10);color:#3d5c3d;" onmouseover="this.style.background='rgba(168,195,160,0.20)'" onmouseout="this.style.background='rgba(168,195,160,0.10)'">
                             ⚠️ Missing requirements
                         </button>
                         <button onclick="askAI('Events assigned to Ashwin')" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
@@ -2715,9 +2754,9 @@ app.get('/', (c) => {
                     
                     <div class="flex space-x-2">
                         <input type="text" id="aiQueryInput" placeholder="Ask about events..." 
-                               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600"
+                               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
                                onkeypress="if(event.key==='Enter') askAI()">
-                        <button onclick="askAI()" class="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                        <button onclick="askAI()" class="btn-primary px-6 py-3">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
@@ -2752,23 +2791,23 @@ app.get('/', (c) => {
         <div id="loginModal" class="modal">
             <div class="modal-content max-w-md">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Login</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Login</h2>
                     <button onclick="closeLoginModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="loginForm" onsubmit="handleLogin(event)">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                         <input type="email" id="loginEmail" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
                         <input type="password" id="loginPassword" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div id="loginError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
                     <div class="flex gap-3">
-                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                        <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Login
                         </button>
                         <button type="button" onclick="openSignupModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
@@ -2783,7 +2822,7 @@ app.get('/', (c) => {
         <div id="signupModal" class="modal">
             <div class="modal-content max-w-md">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Sign Up</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Sign Up</h2>
                     <button onclick="closeSignupModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <p class="text-sm text-gray-600 mb-4">Your account will require admin approval before you can login.</p>
@@ -2791,23 +2830,23 @@ app.get('/', (c) => {
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Email</label>
                         <input type="email" id="signupEmail" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
                         <input type="password" id="signupPassword" required minlength="6"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                         <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Confirm Password</label>
                         <input type="password" id="signupPasswordConfirm" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div id="signupError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
                     <div id="signupSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
                     <div class="flex gap-3">
-                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                        <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Sign Up
                         </button>
                         <button type="button" onclick="openLoginModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
@@ -2822,29 +2861,29 @@ app.get('/', (c) => {
         <div id="changePasswordModal" class="modal">
             <div class="modal-content max-w-md">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">Change Password</h2>
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Change Password</h2>
                     <button onclick="closeChangePasswordModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                 </div>
                 <form id="changePasswordForm" onsubmit="handleChangePassword(event)">
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Current Password</label>
                         <input type="password" id="currentPassword" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">New Password</label>
                         <input type="password" id="newPassword" required minlength="6"
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Confirm New Password</label>
                         <input type="password" id="newPasswordConfirm" required 
-                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
                     <div id="changePasswordError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
                     <div id="changePasswordSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
                     <div class="flex gap-3">
-                        <button type="submit" class="flex-1 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-all">
+                        <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Change Password
                         </button>
                         <button type="button" onclick="closeChangePasswordModal()" class="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all">
@@ -2859,7 +2898,7 @@ app.get('/', (c) => {
         <div id="adminPanelModal" class="modal">
             <div class="modal-content max-w-2xl">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                    <h2 class="text-2xl font-bold" style="color: #2d3338;">
                         <i class="fas fa-users-cog mr-2"></i>Admin Panel
                     </h2>
                     <button onclick="closeAdminPanel()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>

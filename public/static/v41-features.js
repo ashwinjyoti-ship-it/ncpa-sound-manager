@@ -40,7 +40,8 @@ function initializeFilters() {
   // Create filter panel HTML
   const filterPanel = document.createElement('div');
   filterPanel.id = 'filterPanel';
-  filterPanel.className = 'bg-white rounded-lg shadow-md p-4 mb-4 hidden';
+  filterPanel.className = 'rounded-2xl p-4 mb-4 hidden';
+  filterPanel.style.cssText = 'background:rgba(255,255,255,0.80);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.15);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 8px 32px rgba(45,51,56,0.06);';
   filterPanel.innerHTML = `
     <div class="flex justify-between items-center mb-4">
       <h3 class="text-lg font-semibold text-gray-800">
@@ -55,7 +56,7 @@ function initializeFilters() {
       <!-- Venue Filter -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-        <select id="filterVenue" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+        <select id="filterVenue" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
           <option value="">All Venues</option>
         </select>
       </div>
@@ -63,7 +64,7 @@ function initializeFilters() {
       <!-- Crew Filter -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Crew</label>
-        <select id="filterCrew" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+        <select id="filterCrew" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
           <option value="">All Crew</option>
         </select>
       </div>
@@ -71,7 +72,7 @@ function initializeFilters() {
       <!-- Team Filter -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Team</label>
-        <select id="filterTeam" multiple class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" style="height: 80px;">
+        <select id="filterTeam" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
           <option value="">All Teams</option>
         </select>
       </div>
@@ -79,18 +80,18 @@ function initializeFilters() {
       <!-- Date Range -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-        <input type="date" id="filterDateFrom" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <input type="date" id="filterDateFrom" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
       </div>
       
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-        <input type="date" id="filterDateTo" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <input type="date" id="filterDateTo" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
       </div>
       
       <!-- Requirements Filter -->
       <div>
         <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
-        <select id="filterRequirements" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        <select id="filterRequirements" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
           <option value="">All</option>
           <option value="true">Has Requirements</option>
           <option value="false">Missing Requirements</option>
@@ -103,7 +104,7 @@ function initializeFilters() {
         <i class="fas fa-undo mr-1"></i>Clear Filters
       </button>
       <div class="space-x-2">
-        <button onclick="applyFilters()" class="px-4 py-2 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+        <button onclick="applyFilters()" class="px-4 py-2 text-sm text-white rounded-xl" style="background:linear-gradient(135deg,#98A2D7 0%,#465080 100%);"
           <i class="fas fa-check mr-1"></i>Apply Filters
         </button>
       </div>
@@ -544,8 +545,8 @@ function showShortNoticeModal(analysis, monthStr) {
   modal.innerHTML = `
     <div class="modal-content max-w-5xl">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-2xl font-bold text-yellow-600">
-          <i class="fas fa-clock mr-2"></i>
+        <h2 class="text-2xl font-bold" style="color:#2d3338;">
+          <i class="fas fa-clock mr-2" style="color:#98A2D7;"></i>
           Short Notice Events - ${monthName}
         </h2>
         <button onclick="this.closest('.modal').remove()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -557,24 +558,24 @@ function showShortNoticeModal(analysis, monthStr) {
           <div class="text-2xl font-bold text-red-700">${analysis.critical.length}</div>
           <div class="text-sm text-red-600">Critical (&lt;3 days)</div>
         </div>
-        <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded">
-          <div class="text-2xl font-bold text-orange-700">${analysis.warning.length}</div>
-          <div class="text-sm text-orange-600">Warning (3-7 days)</div>
+        <div class="p-4 rounded-xl" style="background:rgba(152,162,215,0.10);border-left:4px solid #98A2D7;">
+          <div class="text-2xl font-bold" style="color:#465080;">${analysis.warning.length}</div>
+          <div class="text-sm" style="color:#5a6065;">Warning (3-7 days)</div>
         </div>
-        <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded">
-          <div class="text-2xl font-bold text-yellow-700">${analysis.lessThan10Days.length}</div>
-          <div class="text-sm text-yellow-600">&lt;10 days notice</div>
+        <div class="p-4 rounded-xl" style="background:rgba(162,194,214,0.10);border-left:4px solid #A2C2D6;">
+          <div class="text-2xl font-bold" style="color:#2d6080;">${analysis.lessThan10Days.length}</div>
+          <div class="text-sm" style="color:#5a6065;">&lt;10 days notice</div>
         </div>
-        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
-          <div class="text-2xl font-bold text-blue-700">${analysis.addedAfter5th.length}</div>
-          <div class="text-sm text-blue-600">Added after 5th</div>
+        <div class="p-4 rounded-xl" style="background:rgba(168,195,160,0.10);border-left:4px solid #A8C3A0;">
+          <div class="text-2xl font-bold" style="color:#3d5c3d;">${analysis.addedAfter5th.length}</div>
+          <div class="text-sm" style="color:#5a6065;">Added after 5th</div>
         </div>
       </div>
       
       <!-- Tabs -->
       <div class="border-b border-gray-300 mb-4">
         <div class="flex space-x-4">
-          <button onclick="switchShortNoticeTab('lessThan10')" id="tab-lessThan10" class="px-4 py-2 font-semibold border-b-2 border-yellow-500 text-yellow-600">
+          <button onclick="switchShortNoticeTab('lessThan10')" id="tab-lessThan10" class="px-4 py-2 font-semibold border-b-2" style="border-color:#98A2D7;color:#98A2D7;">
             &lt;10 Days Notice (${analysis.lessThan10Days.length})
           </button>
           <button onclick="switchShortNoticeTab('after5th')" id="tab-after5th" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800">
@@ -669,7 +670,9 @@ function switchShortNoticeTab(tab) {
   document.getElementById('tab-after5th').className = 'px-4 py-2 font-semibold text-gray-600 hover:text-gray-800';
   
   const activeTab = document.getElementById(`tab-${tab}`);
-  activeTab.className = 'px-4 py-2 font-semibold border-b-2 border-yellow-500 text-yellow-600';
+  activeTab.className = 'px-4 py-2 font-semibold border-b-2';
+  activeTab.style.borderColor = '#98A2D7';
+  activeTab.style.color = '#98A2D7';
   
   // Update content
   const content = document.getElementById('shortNoticeContent');
@@ -749,7 +752,7 @@ function showConflictsModal(conflicts, totalEvents) {
       
       <div class="space-y-4 max-h-96 overflow-y-auto">
         ${conflicts.map((conflict, idx) => `
-          <div class="p-4 rounded-lg ${conflict.severity === 'error' ? 'bg-red-50 border-l-4 border-red-500' : 'bg-yellow-50 border-l-4 border-yellow-500'}">
+          <div class="p-4 rounded-xl ${conflict.severity === 'error' ? '' : ''}" style="${conflict.severity === 'error' ? 'background:rgba(192,113,122,0.08);border-left:4px solid #c0717a;' : 'background:rgba(152,162,215,0.08);border-left:4px solid #98A2D7;'}outline:1px solid rgba(173,179,184,0.12);"
             <div class="flex items-start justify-between">
               <div class="flex-1">
                 <div class="font-semibold text-lg mb-2">
@@ -911,8 +914,8 @@ async function bulkAssignCrew() {
           </h3>
           <div class="grid grid-cols-2 gap-2">
             ${suggestions.map(s => `
-              <button onclick="document.getElementById('bulkCrewInput').value='${s.name}'; this.style.background='#10b981'; this.style.color='white';" 
-                      class="px-3 py-2 text-left bg-white rounded border border-blue-200 hover:bg-blue-100 transition-all">
+              <button onclick="document.getElementById('bulkCrewInput').value='${s.name}'; this.style.background='#A8C3A0'; this.style.color='white';"
+                      class="px-3 py-2 text-left rounded-xl transition-all" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.18);"
                 <div class="font-semibold">${s.name}</div>
                 <div class="text-xs text-gray-600">
                   ${s.confidence}% confidence • ${s.assignmentCount} past assignments
@@ -1192,7 +1195,7 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
       </h2>
       <div>
         <label class="text-sm text-gray-600 mr-2">Crew Workload Period:</label>
-        <select id="periodSelector" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+        <select id="periodSelector" class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
           <option value="current_month" ${period === 'current_month' ? 'selected' : ''}>Current Month</option>
           <option value="last_3_months" ${period === 'last_3_months' ? 'selected' : ''}>Last 3 Months</option>
         </select>
@@ -1207,19 +1210,19 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
         <div class="text-xs mt-2 opacity-90">This month + 90 days</div>
       </div>
       
-      <div class="bg-gradient-to-br from-green-500 to-green-600 text-white p-6 rounded-lg shadow-md">
+      <div class="text-white p-6 rounded-xl shadow-md" style="background:linear-gradient(135deg,#A8C3A0 0%,#3d7a50 100%);">
         <div class="text-sm font-semibold mb-1">Upcoming (7 days)</div>
         <div class="text-3xl font-bold">${data.upcomingEvents.length}</div>
         <div class="text-xs mt-2 opacity-90">Events this week</div>
       </div>
       
-      <div class="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-lg shadow-md">
+      <div class="text-white p-6 rounded-xl shadow-md" style="background:linear-gradient(135deg,#98A2D7 0%,#465080 100%);">
         <div class="text-sm font-semibold mb-1">Needs Requirements</div>
         <div class="text-3xl font-bold">${data.needsRequirements}</div>
         <div class="text-xs mt-2 opacity-90">Missing sound setup</div>
       </div>
-      
-      <div class="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-lg shadow-md">
+
+      <div class="text-white p-6 rounded-xl shadow-md" style="background:linear-gradient(135deg,#A2C2D6 0%,#4a7a9b 100%);">
         <div class="text-sm font-semibold mb-1">Active Venues</div>
         <div class="text-3xl font-bold">${data.venueDistribution.length}</div>
         <div class="text-xs mt-2 opacity-90">With scheduled events</div>
@@ -1229,12 +1232,12 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
     <!-- Charts -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <!-- Shows Per Venue (with month/year selector) -->
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <div class="rounded-2xl p-6" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold text-gray-800">
             <i class="fas fa-map-marker-alt mr-2"></i>Shows Per Venue
           </h3>
-          <select id="venueMonthSelector" class="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-yellow-600">
+          <select id="venueMonthSelector" class="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
             ${monthOptions.map(opt => `
               <option value="${opt.value}" ${opt.selected ? 'selected' : ''}>${opt.label}</option>
             `).join('')}
@@ -1264,7 +1267,7 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
       </div>
       
       <!-- Individual Crew Workload -->
-      <div class="bg-white border border-gray-200 rounded-lg p-6">
+      <div class="rounded-2xl p-6" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
         <h3 class="text-lg font-semibold text-gray-800 mb-4">
           <i class="fas fa-users mr-2"></i>Individual Crew Workload
         </h3>
@@ -1326,7 +1329,7 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
       ` : `
         <div class="space-y-3">
           ${data.missingSoundNext4Days.map(e => `
-            <div class="bg-gradient-to-r from-orange-50 to-red-50 border-l-4 border-red-500 p-4 rounded cursor-pointer hover:shadow-md transition-all" 
+            <div class="p-4 rounded-xl cursor-pointer hover:shadow-md transition-all" style="background:rgba(255,255,255,0.72);border-left:4px solid #c0717a;outline:1px solid rgba(173,179,184,0.15);" 
                  onclick="openEditModal(${e.id})">
               <div class="flex justify-between items-start">
                 <div class="flex-1">
@@ -1351,17 +1354,17 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
     </div>
     
     <!-- AI Confidence Section -->
-    <div class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+    <div class="rounded-2xl p-6 mb-6" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
       <h3 class="text-lg font-semibold text-gray-800 mb-4">
-        <i class="fas fa-brain mr-2 text-purple-600"></i>
+        <i class="fas fa-brain mr-2" style="color:#98A2D7;"></i>
         AI Assignment Confidence
       </h3>
       
       <!-- Overall Confidence -->
-      <div class="mb-6 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+      <div class="mb-6 p-4 rounded-xl" style="background:linear-gradient(135deg,rgba(152,162,215,0.10) 0%,rgba(162,194,214,0.10) 100%);outline:1px solid rgba(173,179,184,0.15);"
         <div class="flex justify-between items-center mb-2">
           <span class="text-gray-700 font-semibold">Overall System:</span>
-          <span class="text-3xl font-bold ${data.aiConfidence.overall.confidence >= 85 ? 'text-green-600' : data.aiConfidence.overall.confidence >= 70 ? 'text-blue-600' : 'text-orange-600'}">
+          <span class="text-3xl font-bold ${data.aiConfidence.overall.confidence >= 85 ? 'text-[#A8C3A0]' : data.aiConfidence.overall.confidence >= 70 ? 'text-[#A2C2D6]' : 'text-[#98A2D7]'}">
             ${data.aiConfidence.overall.confidence}%
             ${data.aiConfidence.overall.status === 'ready' ? '✅' : data.aiConfidence.overall.status === 'good' ? '👍' : '📚'}
           </span>
@@ -1379,9 +1382,9 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
       <div class="space-y-2">
         <h4 class="text-sm font-semibold text-gray-700 mb-3">Confidence by Venue:</h4>
         ${data.aiConfidence.byVenue.map(v => {
-          const confidenceColor = v.confidence >= 85 ? 'text-green-600' : 
-                                  v.confidence >= 70 ? 'text-blue-600' : 
-                                  v.confidence >= 50 ? 'text-yellow-600' : 'text-red-600';
+          const confidenceColor = v.confidence >= 85 ? 'text-[#A8C3A0]' :
+                                  v.confidence >= 70 ? 'text-[#A2C2D6]' :
+                                  v.confidence >= 50 ? 'text-[#98A2D7]' : 'text-red-400';
           const icon = v.status === 'ready' ? '✅' : 
                        v.status === 'good' ? '✅' : 
                        v.status === 'learning' ? '⚠️' : '❌';
@@ -1424,7 +1427,7 @@ function renderDashboard(data, period = 'current_month', venueMonth = null) {
     
     <!-- Status Breakdown -->
     ${data.statusBreakdown.length > 0 ? `
-      <div class="bg-white border border-gray-200 rounded-lg p-6 mt-6">
+      <div class="rounded-2xl p-6 mt-6" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
         <h3 class="text-lg font-semibold text-gray-800 mb-4">Status Breakdown</h3>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
           ${data.statusBreakdown.map(s => `

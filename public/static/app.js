@@ -334,7 +334,7 @@ function renderCalendar() {
     dayEvents.forEach(event => {
       const card = document.createElement('div');
       card.className = `text-xs p-2 mb-1 rounded cursor-pointer ${
-        event.requirements_updated ? 'event-card-green' : 'event-card-peach'
+        (event.requirements_updated && event.call_time && event.call_time.toLowerCase() !== 'not specified') ? 'event-card-green' : 'event-card-peach'
       }`;
       card.onclick = () => openEventModal(event);
       

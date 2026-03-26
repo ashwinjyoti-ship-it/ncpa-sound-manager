@@ -1733,7 +1733,7 @@ app.get('/', (c) => {
             background: rgba(255,255,255,0.72);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-left: 4px solid #98A2D7;
+            border-left: 4px solid #E07B7B;
             box-shadow: 0 2px 12px rgba(45,51,56,0.06);
             outline: 1px solid rgba(173,179,184,0.12);
           }

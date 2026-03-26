@@ -402,7 +402,7 @@ function renderTable() {
       <td class="px-2 py-2 text-sm editable-cell" data-field="sound_requirements" data-id="${event.id}">${event.sound_requirements || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="call_time" data-id="${event.id}">${event.call_time || ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="crew" data-id="${event.id}">${event.crew || ''}</td>
-      <td class="px-2 py-2 text-sm editable-cell" data-field="rider" data-id="${event.id}">${event.rider ? `<a href="${event.rider}" target="_blank" rel="noopener" style="color:#98A2D7;">🔗</a>` : ''}</td>
+      <td class="px-2 py-2 text-sm" data-field="rider" data-id="${event.id}">${event.rider ? event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" style="color:#98A2D7;text-decoration:underline;margin-right:4px;">🔗${event.rider.split(',').length > 1 ? (i+1) : ''}</a>`).join('') : ''}</td>
       <td class="px-2 py-2 text-sm editable-cell" data-field="notes" data-id="${event.id}">${event.notes || ''}</td>
       <td class="px-2 py-2 text-center">
         <button onclick="deleteEvent(${event.id})" class="text-red-600 hover:text-red-800">
@@ -569,7 +569,7 @@ function openEventModal(event) {
       </div>
       ${event.rider ? `<div>
         <label class="font-semibold text-gray-700">Rider:</label>
-        <p class="text-gray-900"><a href="${event.rider}" target="_blank" rel="noopener" style="color:#98A2D7;text-decoration:underline;">${event.rider}</a></p>
+        <p class="text-gray-900">${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" style="color:#98A2D7;text-decoration:underline;">Rider${event.rider.split(',').length > 1 ? ' ' + (i+1) : ''}</a>`).join(' &nbsp; ')}</p>
       </div>` : ''}
       ${event.notes ? `<div>
         <label class="font-semibold text-gray-700">Notes:</label>

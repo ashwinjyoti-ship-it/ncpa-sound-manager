@@ -148,7 +148,15 @@ app.get('/api/export/latest-csv', async (c) => {
       }
       return str
     }
-    
+    // Split comma-separated rider URLs onto separate lines within the cell
+    const formatRider = (val: any): string => {
+      if (!val) return ''
+      const urls = String(val).split(',').map((u: string) => u.trim()).filter(Boolean)
+      if (urls.length === 0) return ''
+      if (urls.length === 1) return escapeCSV(urls[0])
+      return `"${urls.join('\n').replace(/"/g, '""')}"`
+    }
+
     // Build CSV header
     const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider']
     const csvRows = [headers.join(',')]
@@ -164,7 +172,7 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
         escapeCSV(row.Status || 'confirmed'),
-        escapeCSV(row.Rider)
+        formatRider(row.Rider)
       ]
       csvRows.push(values.join(','))
     })
@@ -234,7 +242,15 @@ app.get('/api/export/csv', async (c) => {
       }
       return str
     }
-    
+    // Split comma-separated rider URLs onto separate lines within the cell
+    const formatRider = (val: any): string => {
+      if (!val) return ''
+      const urls = String(val).split(',').map((u: string) => u.trim()).filter(Boolean)
+      if (urls.length === 0) return ''
+      if (urls.length === 1) return escapeCSV(urls[0])
+      return `"${urls.join('\n').replace(/"/g, '""')}"`
+    }
+
     // Build CSV with custom column order
     const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider']
     const csvRows = [headers.join(',')]
@@ -261,7 +277,7 @@ app.get('/api/export/csv', async (c) => {
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        escapeCSV(row.Rider)
+        formatRider(row.Rider)
       ]
       csvRows.push(values.join(','))
     })

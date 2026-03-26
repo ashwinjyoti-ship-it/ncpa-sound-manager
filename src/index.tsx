@@ -1729,6 +1729,7 @@ app.get('/', (c) => {
           html.dark .hover\:bg-red-50:hover { background-color: rgba(80,20,20,0.5) !important; }
           html.dark .border-gray-200, html.dark .border-gray-300 { border-color: rgba(255,255,255,0.08) !important; }
           html.dark hr { border-color: rgba(255,255,255,0.08); }
+          html.dark .text-gray-900 { color: var(--text-primary) !important; }
           html.dark .text-red-600 { color: #f87171 !important; }
           html.dark .bg-red-500 { background-color: #ef4444 !important; }
           html.dark .text-green-600 { color: #86efac !important; }
@@ -1777,6 +1778,7 @@ app.get('/', (c) => {
             border-left: 4px solid #A8C3A0;
             box-shadow: 0 2px 12px var(--shadow-soft);
             outline: 1px solid var(--glass-border);
+            color: var(--text-primary);
           }
 
           .event-card-peach {
@@ -1786,6 +1788,7 @@ app.get('/', (c) => {
             border-left: 4px solid #E07B7B;
             box-shadow: 0 2px 12px var(--shadow-soft);
             outline: 1px solid var(--glass-border);
+            color: var(--text-primary);
           }
 
           .calendar-day {
@@ -2160,14 +2163,14 @@ app.get('/', (c) => {
                 <div id="calendarView" class="rounded-2xl p-3 md:p-6 glass-card">
                     <!-- Calendar controls with event count -->
                     <div class="flex justify-between items-center mb-4 md:mb-6">
-                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: var(--text-primary);">
                             <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
                         </button>
                         <div class="text-center">
                             <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
                             <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
                         </div>
-                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: var(--text-primary);">
                             <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
                         </button>
                     </div>

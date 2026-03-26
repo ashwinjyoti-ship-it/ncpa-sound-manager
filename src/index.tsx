@@ -129,7 +129,7 @@ app.get('/api/export/latest-csv', async (c) => {
     `).all()
     
     if (!results || results.length === 0) {
-      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider\n', {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider 1,Rider 2,Rider 3\n', {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
@@ -148,21 +148,19 @@ app.get('/api/export/latest-csv', async (c) => {
       }
       return str
     }
-    // Split comma-separated rider URLs onto separate lines within the cell
-    const formatRider = (val: any): string => {
-      if (!val) return ''
-      const urls = String(val).split(',').map((u: string) => u.trim()).filter(Boolean)
-      if (urls.length === 0) return ''
-      if (urls.length === 1) return escapeCSV(urls[0])
-      return `"${urls.join('\n').replace(/"/g, '""')}"`
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
     }
 
     // Build CSV header
-    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider']
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
         escapeCSV(row.Date),
         escapeCSV(row.Program),
@@ -172,7 +170,7 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
         escapeCSV(row.Status || 'confirmed'),
-        formatRider(row.Rider)
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })
@@ -242,17 +240,14 @@ app.get('/api/export/csv', async (c) => {
       }
       return str
     }
-    // Split comma-separated rider URLs onto separate lines within the cell
-    const formatRider = (val: any): string => {
-      if (!val) return ''
-      const urls = String(val).split(',').map((u: string) => u.trim()).filter(Boolean)
-      if (urls.length === 0) return ''
-      if (urls.length === 1) return escapeCSV(urls[0])
-      return `"${urls.join('\n').replace(/"/g, '""')}"`
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
     }
 
     // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider']
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
 
     // Add data rows
@@ -268,16 +263,16 @@ app.get('/api/export/csv', async (c) => {
           formattedDate = `${day}/${month}/${year}`
         }
       }
-      
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
-        escapeCSV(formattedDate), // Escape for CSV safety
+        escapeCSV(formattedDate),
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        formatRider(row.Rider)
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })

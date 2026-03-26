@@ -2131,7 +2131,7 @@ app.get('/', (c) => {
                                 </button>
                                 
                                 <!-- Dropdown Menu -->
-                                <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl z-50" style="background:rgba(248,249,252,0.90);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.18);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 16px 40px rgba(45,51,56,0.08);">
+                                <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl z-50" style="background:var(--modal-bg);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid var(--glass-border);box-shadow:inset 1px 1px 0 var(--glass-inner),0 16px 40px var(--shadow-soft);">
                                     <div class="py-2">
                                         <!-- Export Section -->
                                         <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Export</div>

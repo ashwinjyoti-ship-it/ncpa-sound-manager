@@ -123,13 +123,14 @@ app.get('/api/export/latest-csv', async (c) => {
         sound_requirements as "Sound Requirements",
         call_time as "Call Time",
         status as "Status",
-        rider as "Rider"
+        rider as "Rider",
+        notes as "Notes"
       FROM events
       ORDER BY event_date ASC
     `).all()
     
     if (!results || results.length === 0) {
-      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider\n', {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider,Notes\n', {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
@@ -150,7 +151,7 @@ app.get('/api/export/latest-csv', async (c) => {
     }
     
     // Build CSV header
-    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider']
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider', 'Notes']
     const csvRows = [headers.join(',')]
     
     // Add data rows
@@ -164,13 +165,14 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
         escapeCSV(row.Status || 'confirmed'),
-        escapeCSV(row.Rider)
+        escapeCSV(row.Rider),
+        escapeCSV(row.Notes)
       ]
       csvRows.push(values.join(','))
     })
-    
+
     const csv = csvRows.join('\n')
-    
+
     return new Response(csv, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
@@ -218,7 +220,8 @@ app.get('/api/export/csv', async (c) => {
         team as "Team",
         sound_requirements as "Sound Requirements",
         call_time as "Call Time",
-        rider as "Rider"
+        rider as "Rider",
+        notes as "Notes"
       FROM events
       WHERE strftime('%Y-%m', event_date) = ?
       ORDER BY event_date ASC
@@ -236,7 +239,7 @@ app.get('/api/export/csv', async (c) => {
     }
     
     // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider']
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider', 'Notes']
     const csvRows = [headers.join(',')]
 
     // Add data rows
@@ -261,7 +264,8 @@ app.get('/api/export/csv', async (c) => {
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        escapeCSV(row.Rider)
+        escapeCSV(row.Rider),
+        escapeCSV(row.Notes)
       ]
       csvRows.push(values.join(','))
     })

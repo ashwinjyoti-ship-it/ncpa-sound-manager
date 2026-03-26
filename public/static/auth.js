@@ -321,14 +321,15 @@ async function loadPendingUsers() {
           </div>
           <div class="space-y-3">
             ${users.map(user => `
-              <div class="flex items-center justify-between p-4 rounded-2xl" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
+              <div class="flex items-center justify-between p-4 rounded-2xl" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
+
                 <div>
                   <p class="font-medium text-gray-800">${user.email}</p>
                   <p class="text-sm text-gray-500">Requested: ${new Date(user.created_at).toLocaleDateString()}</p>
                 </div>
                 <div class="flex gap-2">
                   <button onclick="approveUser(${user.id})" 
-                          class="px-4 py-2 text-white rounded-xl transition-all text-sm" style="background-color:#A8C3A0;"
+                          class="px-4 py-2 text-white rounded-xl transition-all text-sm" style="background-color:#A8C3A0;">
                     <i class="fas fa-check mr-1"></i>Approve
                   </button>
                   <button onclick="rejectUser(${user.id})" 
@@ -417,7 +418,7 @@ async function loadCrewStats() {
                               'Balanced';
             
             return `
-              <div class="p-4 rounded-2xl hover:shadow-md transition-all" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
+              <div class="p-4 rounded-2xl hover:shadow-md transition-all" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-3">
                     <span class="text-lg font-bold text-gray-400">${idx + 1}.</span>

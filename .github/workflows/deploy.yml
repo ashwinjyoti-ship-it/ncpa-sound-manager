@@ -9,6 +9,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     name: Build & Deploy
+    permissions:
+      contents: read
+      deployments: write
 
     steps:
       - name: Checkout
@@ -32,3 +35,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy dist --project-name ncpa-sound-crew
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

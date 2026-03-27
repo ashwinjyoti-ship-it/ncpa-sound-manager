@@ -334,7 +334,7 @@ function renderCalendar() {
     dayEvents.forEach(event => {
       const card = document.createElement('div');
       card.className = `text-xs p-2 mb-1 rounded cursor-pointer ${
-        event.requirements_updated ? 'event-card-green' : 'event-card-peach'
+        (event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified') ? 'event-card-green' : 'event-card-peach'
       }`;
       card.onclick = () => openEventModal(event);
       
@@ -1049,124 +1049,102 @@ function handleCSVUpload(e) {
 async function handleWordUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
-  
-  // Show persistent progress notification
-  const progressNotification = showPersistentNotification('📄 Extracting text from Word document...', 'info');
-  
+
+  const progressToast = createUploadProgressToast();
+  let animInterval = null;
+
   try {
+    updateUploadProgress(progressToast, 5, '📄 Extracting text from Word document...');
     const arrayBuffer = await file.arrayBuffer();
-    
-    // Extract raw text from Word document
     const result = await mammoth.extractRawText({ arrayBuffer });
     const text = result.value;
-    
-    console.log('Word document extracted:', text.length, 'characters');
-    
+
     // Extract month/year from filename for navigation
     const monthMatch = file.name.match(/(january|february|march|april|may|june|july|august|september|october|november|december)/i);
     const yearMatch = file.name.match(/20\d{2}/);
     let uploadedMonth = null;
     let uploadedYear = null;
-    
     if (monthMatch && yearMatch) {
       const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
       uploadedMonth = monthNames.indexOf(monthMatch[0].toLowerCase());
       uploadedYear = parseInt(yearMatch[0]);
     }
-    
-    // Estimate processing time based on document size
+
     const estimatedChunks = Math.ceil(text.length / 12000);
-    const estimatedTime = estimatedChunks * 15; // ~15 seconds per chunk
-    
-    if (estimatedChunks > 1) {
-      updatePersistentNotification(progressNotification, `🤖 AI is analyzing document in ${estimatedChunks} chunks... (this may take ~${estimatedTime}s)`, 'info');
-    } else {
-      updatePersistentNotification(progressNotification, '🤖 AI is analyzing the document...', 'info');
-    }
-    
-    // Use AI to parse the document intelligently with chunked processing
+    const estimatedMs = estimatedChunks * 15000;
+    const chunkLabel = estimatedChunks > 1 ? `${estimatedChunks} chunks` : '1 chunk';
+    updateUploadProgress(progressToast, 15, `🤖 AI parsing document (${chunkLabel})...`);
+
+    // Animate progress bar during AI call (15% → 80% over estimated time)
+    let elapsed = 0;
+    animInterval = setInterval(() => {
+      elapsed += 600;
+      const pct = 15 + (65 * Math.min(elapsed / estimatedMs, 0.95));
+      updateUploadProgress(progressToast, pct, `🤖 AI parsing document (${chunkLabel})...`);
+    }, 600);
+
     const response = await axios.post(`${API_BASE}/ai/parse-word`, {
       text: text,
       filename: file.name
-    }, {
-      timeout: 180000 // 3 minutes timeout for large documents
-    });
-    
+    }, { timeout: 180000 });
+
+    clearInterval(animInterval);
+    animInterval = null;
+
     if (!response.data.success) {
       throw new Error(response.data.error || 'AI parsing failed');
     }
-    
+
     const events = response.data.events;
-    const chunks = response.data.chunks || 1;
-    const totalEvents = response.data.totalEvents || events.length;
     const uniqueEvents = response.data.uniqueEvents || events.length;
-    
+
     if (events.length === 0) {
-      updatePersistentNotification(progressNotification, '❌ No events found in document. AI could not identify any event entries.', 'error');
-      setTimeout(() => removePersistentNotification(progressNotification), 8000);
+      updateUploadProgress(progressToast, 100, '❌ No events found in document', 'error');
+      setTimeout(() => removePersistentNotification(progressToast), 8000);
       return;
     }
-    
-    console.log(`✅ AI parsed ${uniqueEvents} unique events from ${chunks} chunks (${totalEvents} total found)`);
-    console.log('Sample events:', events.slice(0, 3));
-    
-    // Update progress
-    updatePersistentNotification(progressNotification, `⬆️ Uploading ${uniqueEvents} events to database...`, 'info');
-    
-    // Upload events
+
+    updateUploadProgress(progressToast, 85, `⬆️ Uploading ${uniqueEvents} events to database...`);
+
     const uploadResponse = await axios.post(`${API_BASE}/events/bulk`, { events });
-    
+
     if (uploadResponse.data.success) {
       const stats = uploadResponse.data.stats || {};
       const uploaded = stats.inserted || uploadResponse.data.data.length;
       const duplicates = stats.skipped || 0;
       const invalid = stats.invalid || 0;
-      
-      // Reload events first
+
       await loadEvents();
-      
-      // Navigate to the uploaded month if we could detect it
       if (uploadedMonth !== null && uploadedYear !== null) {
         currentDate = new Date(uploadedYear, uploadedMonth, 1);
         renderCalendar();
       }
-      
-      // Show detailed success message
-      let message = `✅ Upload complete! ${uploaded} new events added`;
-      if (duplicates > 0) {
-        message += `, ${duplicates} duplicates skipped (already exist)`;
-      }
-      if (invalid > 0) {
-        message += `, ${invalid} invalid entries ignored`;
-      }
-      
-      // Show success even if some were skipped (this is expected behavior)
-      const notificationType = uploaded > 0 ? 'success' : (duplicates > 0 ? 'info' : 'warning');
-      updatePersistentNotification(progressNotification, message, notificationType);
-      setTimeout(() => removePersistentNotification(progressNotification), 6000);
-      
+
+      let message = `✅ ${uploaded} events added`;
+      if (duplicates > 0) message += `, ${duplicates} duplicates skipped`;
+      if (invalid > 0) message += `, ${invalid} invalid`;
+
+      const notificationType = uploaded > 0 ? 'success' : 'info';
+      updateUploadProgress(progressToast, 100, message, notificationType);
+      setTimeout(() => removePersistentNotification(progressToast), 6000);
     } else {
-      updatePersistentNotification(progressNotification, `❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
-      setTimeout(() => removePersistentNotification(progressNotification), 8000);
+      updateUploadProgress(progressToast, 100, `❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
+      setTimeout(() => removePersistentNotification(progressToast), 8000);
     }
-    
+
   } catch (error) {
-    console.error('Error parsing Word document:', error);
-    
-    // Better error messages
+    if (animInterval) clearInterval(animInterval);
     let errorMessage = 'Failed to parse Word document';
     if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-      errorMessage = 'Document is very large and processing timed out. Please try CSV upload instead.';
+      errorMessage = 'Timed out — document may be too large. Try CSV upload instead.';
     } else if (error.response?.data?.error) {
       errorMessage = error.response.data.error;
     } else if (error.message) {
       errorMessage = error.message;
     }
-    
-    updatePersistentNotification(progressNotification, `❌ ${errorMessage}`, 'error');
-    setTimeout(() => removePersistentNotification(progressNotification), 8000);
+    updateUploadProgress(progressToast, 100, `❌ ${errorMessage}`, 'error');
+    setTimeout(() => removePersistentNotification(progressToast), 8000);
   } finally {
-    // Always reset file input so user can try again
     e.target.value = '';
   }
 }
@@ -1540,9 +1518,6 @@ function showNotification(message, type = 'info') {
 
 // Persistent notification for long-running operations
 function showPersistentNotification(message, type = 'info') {
-  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
-  console.log(`${icon} ${message}`);
-  
   const toast = document.createElement('div');
   toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
     type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
@@ -1550,28 +1525,49 @@ function showPersistentNotification(message, type = 'info') {
   toast.textContent = message;
   toast.setAttribute('data-persistent', 'true');
   document.body.appendChild(toast);
-  
-  return toast; // Return reference so it can be updated
+  return toast;
 }
 
-// Update an existing persistent notification
 function updatePersistentNotification(toast, message, type = 'info') {
   if (!toast) return;
-  
-  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
-  console.log(`${icon} ${message}`);
-  
   toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
     type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
   }`;
   toast.textContent = message;
 }
 
-// Remove a persistent notification
 function removePersistentNotification(toast) {
   if (toast && toast.parentNode) {
     toast.remove();
   }
+}
+
+// Progress bar toast for Word upload
+function createUploadProgressToast() {
+  const toast = document.createElement('div');
+  toast.setAttribute('data-persistent', 'true');
+  toast.style.cssText = 'position:fixed;top:16px;right:16px;min-width:320px;max-width:420px;background:#2563eb;color:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;';
+  toast.innerHTML = `
+    <div id="uploadStepLabel" style="font-size:14px;font-weight:600;margin-bottom:10px;">📄 Preparing...</div>
+    <div style="background:rgba(255,255,255,0.25);border-radius:6px;height:10px;overflow:hidden;">
+      <div id="uploadProgressBar" style="background:#fff;height:100%;width:0%;transition:width 0.5s ease;border-radius:6px;"></div>
+    </div>
+    <div id="uploadProgressPct" style="font-size:11px;margin-top:6px;opacity:0.85;">0%</div>
+  `;
+  document.body.appendChild(toast);
+  return toast;
+}
+
+function updateUploadProgress(toast, percent, message, type = 'info') {
+  if (!toast) return;
+  const bg = type === 'success' ? '#16a34a' : type === 'error' ? '#dc2626' : '#2563eb';
+  toast.style.background = bg;
+  const label = toast.querySelector('#uploadStepLabel');
+  const bar = toast.querySelector('#uploadProgressBar');
+  const pct = toast.querySelector('#uploadProgressPct');
+  if (label) label.textContent = message;
+  if (bar) bar.style.width = `${Math.min(Math.round(percent), 100)}%`;
+  if (pct) pct.textContent = type === 'success' ? '✓ Complete' : type === 'error' ? '✗ Failed' : `${Math.round(percent)}%`;
 }
 
 // Close modals when clicking outside

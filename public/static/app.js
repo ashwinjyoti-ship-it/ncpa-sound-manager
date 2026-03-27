@@ -565,6 +565,14 @@ function openEventModal(event) {
         <label class="font-semibold text-gray-700">Crew (sound team):</label>
         <p class="text-gray-900">${event.crew || 'Not assigned'}</p>
       </div>
+      ${event.rider ? `<div>
+        <label class="font-semibold text-gray-700">Rider:</label>
+        <p>${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" class="inline-flex items-center text-blue-600 hover:text-blue-800 mr-2"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join('')}</p>
+      </div>` : ''}
+      ${event.notes ? `<div>
+        <label class="font-semibold text-gray-700">Notes:</label>
+        <p class="text-gray-900 whitespace-pre-wrap">${event.notes}</p>
+      </div>` : ''}
       <div>
         <label class="font-semibold text-gray-700">Created:</label>
         <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
@@ -697,7 +705,9 @@ async function handleAddShow(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString
+        crew: crewString,
+        rider: data.rider || null,
+        notes: data.notes || null
       });
       
       if (response.data.success) {
@@ -815,6 +825,8 @@ async function editEventFromModal(eventId) {
       document.getElementById('editTeam').value = event.team || '';
       document.getElementById('editSoundReq').value = event.sound_requirements || '';
       document.getElementById('editCallTime').value = event.call_time || '';
+      document.getElementById('editRider').value = event.rider || '';
+      document.getElementById('editNotes').value = event.notes || '';
       
       // Handle multiple crew selection (checkboxes)
       const crewList = event.crew ? event.crew.split(',').map(c => c.trim()) : [];
@@ -881,7 +893,9 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString
+        crew: crewString,
+        rider: data.rider || null,
+        notes: data.notes || null
       });
       
       if (response.data.success) {

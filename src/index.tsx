@@ -114,7 +114,7 @@ app.get('/api/events/search', async (c) => {
 app.get('/api/export/latest-csv', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         program as "Program",
         venue as "Venue",
@@ -122,13 +122,14 @@ app.get('/api/export/latest-csv', async (c) => {
         crew as "Crew",
         sound_requirements as "Sound Requirements",
         call_time as "Call Time",
-        status as "Status"
-      FROM events 
+        status as "Status",
+        rider as "Rider"
+      FROM events
       ORDER BY event_date ASC
     `).all()
-    
+
     if (!results || results.length === 0) {
-      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status\n', {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider 1,Rider 2,Rider 3\n', {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
@@ -148,12 +149,19 @@ app.get('/api/export/latest-csv', async (c) => {
       return str
     }
     
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
+    }
+
     // Build CSV header
-    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status']
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
         escapeCSV(row.Date),
         escapeCSV(row.Program),
@@ -162,7 +170,8 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row.Crew),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        escapeCSV(row.Status || 'confirmed')
+        escapeCSV(row.Status || 'confirmed'),
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })
@@ -208,56 +217,59 @@ app.get('/api/export/csv', async (c) => {
     }
     
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         crew as "Crew",
         program as "Program",
         venue as "Venue",
         team as "Team",
         sound_requirements as "Sound Requirements",
-        call_time as "Call Time"
-      FROM events 
+        call_time as "Call Time",
+        rider as "Rider"
+      FROM events
       WHERE strftime('%Y-%m', event_date) = ?
       ORDER BY event_date ASC
     `).bind(month).all()
-    
+
     // Helper to escape CSV values
     const escapeCSV = (val: any): string => {
       if (val === null || val === undefined) return ''
       const str = String(val)
-      // Escape quotes and wrap in quotes if contains comma, quote, or newline
       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`
       }
       return str
     }
-    
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
+    }
+
     // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time']
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
-      // Format date as DD/MM/YYYY (zero-padded)
-      // Google Sheets will display this as plain text without converting to serial numbers
       let formattedDate = row.Date
       if (row.Date) {
         const dateMatch = row.Date.match(/^(\d{4})-(\d{2})-(\d{2})/)
         if (dateMatch) {
           const [, year, month, day] = dateMatch
-          // Simple DD/MM/YYYY format (e.g., 02/12/2025)
           formattedDate = `${day}/${month}/${year}`
         }
       }
-      
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
-        escapeCSV(formattedDate), // Escape for CSV safety
+        escapeCSV(formattedDate),
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
-        escapeCSV(row['Call Time'])
+        escapeCSV(row['Call Time']),
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })
@@ -390,13 +402,13 @@ app.put('/api/events/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew } = body
-    
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, rider, notes } = body
+
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
-    
+
     await c.env.DB.prepare(`
-      UPDATE events 
+      UPDATE events
       SET event_date = ?,
           program = ?,
           venue = ?,
@@ -404,6 +416,8 @@ app.put('/api/events/:id', async (c) => {
           sound_requirements = ?,
           call_time = ?,
           crew = ?,
+          rider = ?,
+          notes = ?,
           requirements_updated = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -415,6 +429,8 @@ app.put('/api/events/:id', async (c) => {
       sound_requirements || null,
       call_time || null,
       crew || null,
+      rider || null,
+      notes || null,
       requirements_updated,
       id
     ).run()
@@ -2441,6 +2457,16 @@ app.get('/', (c) => {
                             <label class="block text-sm font-medium text-gray-700 mb-1">Call Time</label>
                             <input type="text" name="call_time" id="editCallTime"
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rider (document URLs, comma-separated)</label>
+                            <input type="text" name="rider" id="editRider" placeholder="https://... , https://..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" id="editNotes" rows="2" placeholder="Internal notes (not shared to sheet)"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>

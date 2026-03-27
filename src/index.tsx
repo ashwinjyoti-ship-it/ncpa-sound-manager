@@ -1311,7 +1311,7 @@ Parse ALL events and extract the following fields for EACH event:
 - team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team], [Nooshin/Team], [Tejal/Team])
 - sound_requirements: Extract ONLY sound-related requirements. Look for text blocks containing "Sound" or sound equipment. Extract: mic specifications (e.g., "2 cordless mics"), playback equipment (e.g., "laptop for recorded music"), "NCPA basic sound", sound check times, mic stand counts, monitor speaker needs. EXCLUDE: catering info, parking, ushers, lights, AC, general stage setup, non-sound requirements.
 - call_time: Extract the time when sound must be ready from phrases like: "ready by [TIME]", "to be ready by [TIME]", "Sound Check at [TIME]", "sound to be ready by [TIME]", "connections to be ready by [TIME]", "calltime: Ready by [TIME]". Extract times like "9am", "9:00am", "2:00pm", "2pm". If multiple times found, use the sound-specific readiness time.
-- crew: Crew member initials assigned (e.g., "AGN", "FD", "SP", "VSD", "LDPG", "NP", "SA", "BBK", "TT")
+- crew: Always return empty string "" — crew is assigned manually in the app
 
 CRITICAL EXTRACTION RULES FOR SOUND REQUIREMENTS:
 1. Look for lines or phrases starting with "Sound" followed by a dash, colon, or bullet point
@@ -1339,9 +1339,12 @@ CRITICAL DATE INSTRUCTIONS:
 2. USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
 3. If context says "March 2026", then "Sun 1st" becomes "2026-03-01", "Mon 2nd" becomes "2026-03-02", etc.
 4. ALWAYS use the context month/year from the filename
+5. MULTI-DAY EVENTS: When an event spans multiple dates (e.g., "Thu 2nd & Fri 3rd & Sat 4th & Sun 5th" or "Sun 12th & Mon 13th"), create a SEPARATE event entry for EACH individual date. All fields (program, venue, team, sound_requirements, call_time) must be identical across each date — only event_date changes.
+6. Look for "&", "and", "to" between dates as indicators of multi-day spans.
 
 VENUE CODE MAPPING (use full names):
-- TT or TET → "Tata Theatre"
+- TT → "Tata Theatre"
+- TET → "Experimental Theatre"
 - JBT → "Jamshed Bhabha Theatre"
 - GDT → "Godrej Dance Theatre"
 - LT → "Little Theatre"
@@ -1360,40 +1363,40 @@ CRITICAL JSON REQUIREMENTS:
 Example format:
 [
   {
-    "event_date": "2026-03-01",
-    "program": "Grufalo - A Twisted Tale",
-    "venue": "Tata Theatre",
-    "team": "Nooshin/Team",
-    "sound_requirements": "2 cordless mics, aux wire for recorded music",
-    "call_time": "9:00 AM",
-    "crew": "TET"
+    "event_date": "2026-04-02",
+    "program": "The Monk & The Warrior",
+    "venue": "Experimental Theatre",
+    "team": "Bruce/Rajeshri",
+    "sound_requirements": "",
+    "call_time": "",
+    "crew": ""
   },
   {
-    "event_date": "2026-03-05",
+    "event_date": "2026-04-03",
+    "program": "The Monk & The Warrior",
+    "venue": "Experimental Theatre",
+    "team": "Bruce/Rajeshri",
+    "sound_requirements": "",
+    "call_time": "",
+    "crew": ""
+  },
+  {
+    "event_date": "2026-04-05",
     "program": "NCPA Nrityagurukul",
     "venue": "Tata Theatre",
     "team": "Dr.Swapno/Team",
     "sound_requirements": "2 cordless mics, laptop for recorded music",
     "call_time": "",
-    "crew": "AGN"
+    "crew": ""
   },
   {
-    "event_date": "2026-03-06",
+    "event_date": "2026-04-06",
     "program": "Living Traditions",
     "venue": "Tata Theatre",
     "team": "Dr.Swapno/Team",
-    "sound_requirements": "sound to be ready by 9:00 am",
+    "sound_requirements": "NCPA basic sound, sound to be ready by 9:00 am",
     "call_time": "9:00 AM",
-    "crew": "AGN"
-  },
-  {
-    "event_date": "2026-03-07",
-    "program": "Animal",
-    "venue": "Tata Theatre",
-    "team": "Nooshin/Team",
-    "sound_requirements": "NCPA basic sound",
-    "call_time": "2:00 PM",
-    "crew": "TT"
+    "crew": ""
   }
 ]
 

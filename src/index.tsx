@@ -334,7 +334,7 @@ app.get('/api/export/short-notice-report', async (c) => {
         team,
         CAST(JULIANDAY(event_date) - JULIANDAY(DATE(created_at)) AS INTEGER) AS notice_period
       FROM events
-      WHERE entry_type = 'manual'
+      WHERE source = 'manual'
         AND event_date >= ?
         AND event_date <= ?
       ORDER BY event_date ASC
@@ -414,7 +414,7 @@ app.post('/api/events', async (c) => {
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, entry_type)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
@@ -627,7 +627,7 @@ app.post('/api/events/bulk', async (c) => {
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
       
       const result = await c.env.DB.prepare(`
-        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, entry_type)
+        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
@@ -638,7 +638,7 @@ app.post('/api/events/bulk', async (c) => {
         call_time || null,
         crew || null,
         requirements_updated,
-        'bulk'
+        'import_word'
       ).run()
 
       inserted.push({ id: result.meta.last_row_id, ...event })

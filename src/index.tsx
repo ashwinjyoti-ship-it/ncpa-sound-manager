@@ -1805,7 +1805,7 @@ app.get('/', (c) => {
             background: rgba(255,255,255,0.72);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-left: 4px solid #A8C3A0;
+            border-left: 4px solid #16a34a;
             box-shadow: 0 2px 12px rgba(45,51,56,0.06);
             outline: 1px solid rgba(173,179,184,0.12);
           }
@@ -1814,7 +1814,7 @@ app.get('/', (c) => {
             background: rgba(255,255,255,0.72);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-left: 4px solid #98A2D7;
+            border-left: 4px solid #ef4444;
             box-shadow: 0 2px 12px rgba(45,51,56,0.06);
             outline: 1px solid rgba(173,179,184,0.12);
           }

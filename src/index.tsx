@@ -1786,35 +1786,62 @@ app.get('/', (c) => {
             box-shadow: inset 1px 1px 0 rgba(255,255,255,0.50);
           }
 
-          /* ── Primary button ── */
+          /* ── Primary button — liquid glass ── */
           .btn-primary {
-            background: linear-gradient(135deg, #98A2D7 0%, #465080 100%);
+            background: linear-gradient(135deg, rgba(152,162,215,0.88) 0%, rgba(70,80,128,0.92) 100%);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.35);
+            box-shadow: 0 2px 8px rgba(70,80,128,0.25), inset 0 1px 0 rgba(255,255,255,0.40);
             color: #ffffff;
             border-radius: 1.5rem;
-            transition: opacity 0.2s ease;
+            transition: all 0.18s ease;
           }
-          .btn-primary:hover { opacity: 0.88; }
+          .btn-primary:hover {
+            opacity: 0.90;
+            box-shadow: 0 4px 12px rgba(70,80,128,0.30), inset 0 1px 0 rgba(255,255,255,0.45);
+          }
 
-          /* ── Tabs ── */
+          /* ── Glass button — Apple liquid glass secondary ── */
+          .btn-glass {
+            background: rgba(255,255,255,0.52);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.65);
+            box-shadow: 0 1px 3px rgba(45,51,56,0.08), inset 0 1px 0 rgba(255,255,255,0.72);
+            border-radius: 10px;
+            color: #2d3338;
+            transition: all 0.18s ease;
+          }
+          .btn-glass:hover {
+            background: rgba(255,255,255,0.72);
+            box-shadow: 0 2px 6px rgba(45,51,56,0.10), inset 0 1px 0 rgba(255,255,255,0.80);
+          }
+
+          /* ── Tabs — iOS segmented control ── */
           .tab-active {
-            border-bottom: 3px solid #98A2D7;
-            color: #98A2D7;
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            color: #465080;
+            box-shadow: 0 1px 4px rgba(45,51,56,0.12), inset 0 1px 0 rgba(255,255,255,0.80);
+            outline: 1px solid rgba(173,179,184,0.18);
           }
 
           .event-card-green {
-            background: rgba(255,255,255,0.72);
+            background: rgba(240,253,244,0.70);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-left: 4px solid #16a34a;
+            border-left: 4px solid rgba(74,172,100,0.60);
             box-shadow: 0 2px 12px rgba(45,51,56,0.06);
             outline: 1px solid rgba(173,179,184,0.12);
           }
 
           .event-card-peach {
-            background: rgba(255,255,255,0.72);
+            background: rgba(254,242,242,0.70);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            border-left: 4px solid #ef4444;
+            border-left: 4px solid rgba(220,88,88,0.55);
             box-shadow: 0 2px 12px rgba(45,51,56,0.06);
             outline: 1px solid rgba(173,179,184,0.12);
           }
@@ -2080,14 +2107,14 @@ app.get('/', (c) => {
                 <!-- DESKTOP: Full toolbar with all features -->
                 <div class="hidden md:block">
                     <div class="flex justify-between items-center mb-6">
-                        <div class="flex space-x-6 border-b border-gray-300">
-                            <button id="calendarTab" class="px-4 py-2 font-semibold tab-active transition-all" onclick="showTab('calendar')">
+                        <div class="flex p-1 rounded-xl" style="background:rgba(120,120,128,0.10);gap:2px;">
+                            <button id="calendarTab" class="px-4 py-1.5 text-sm font-semibold tab-active rounded-lg transition-all" onclick="showTab('calendar')">
                                 <i class="fas fa-calendar-alt mr-2"></i>Calendar
                             </button>
-                            <button id="tableTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('table')">
+                            <button id="tableTab" class="px-4 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('table')">
                                 <i class="fas fa-table mr-2"></i>Table
                             </button>
-                            <button id="crewTab" class="px-4 py-2 font-semibold text-gray-600 hover:text-gray-800 transition-all" onclick="showTab('crew')">
+                            <button id="crewTab" class="px-4 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('crew')">
                                 <i class="fas fa-users mr-2"></i>Crew
                             </button>
                         </div>
@@ -2107,17 +2134,17 @@ app.get('/', (c) => {
                             <!-- Analysis Tools Group -->
                             <div class="flex gap-2">
                                 <button onclick="toggleFilterPanel()"
-                                        class="btn-primary px-3 py-2 text-sm transition-all">
+                                        class="btn-glass px-3 py-2 text-sm">
                                     <i class="fas fa-filter mr-1.5"></i>Filters
                                 </button>
-                                
-                                <button onclick="checkConflicts()" 
-                                        class="px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all">
+
+                                <button onclick="checkConflicts()"
+                                        class="btn-glass px-3 py-2 text-sm" style="color:#dc2626;">
                                     <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
                                 </button>
-                                
-                                <button onclick="checkShortNotice()" 
-                                        class="px-3 py-2 text-sm bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-all">
+
+                                <button onclick="checkShortNotice()"
+                                        class="btn-glass px-3 py-2 text-sm" style="color:#b45309;">
                                     <i class="fas fa-clock mr-1.5"></i>Short Notice
                                 </button>
                             </div>
@@ -2127,8 +2154,8 @@ app.get('/', (c) => {
                             
                             <!-- Import/Export Dropdown -->
                             <div class="relative">
-                                <button onclick="toggleActionsDropdown()" 
-                                        class="px-4 py-2 text-sm bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition-all flex items-center gap-2">
+                                <button onclick="toggleActionsDropdown()"
+                                        class="btn-glass px-4 py-2 text-sm flex items-center gap-2">
                                     <i class="fas fa-ellipsis-v"></i>
                                     <span>More Actions</span>
                                     <i class="fas fa-chevron-down text-xs"></i>

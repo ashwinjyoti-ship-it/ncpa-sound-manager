@@ -614,12 +614,19 @@ app.post('/api/events/bulk', async (c) => {
       `).bind(event_date, program, venue).first()
       
       if (existing) {
-        // Duplicate found - skip insertion to preserve existing data
-        skipped.push({ 
-          ...event, 
-          reason: 'Duplicate event already exists',
-          existing_id: existing.id 
-        })
+        // Duplicate found — if CSV has crew, update the existing record's crew field
+        if (crew && crew.trim()) {
+          await c.env.DB.prepare(`
+            UPDATE events SET crew = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+          `).bind(crew.trim(), existing.id).run()
+          inserted.push({ id: existing.id, ...event, _action: 'crew_updated' })
+        } else {
+          skipped.push({
+            ...event,
+            reason: 'Duplicate with no crew to update',
+            existing_id: existing.id
+          })
+        }
         continue
       }
       
@@ -645,9 +652,14 @@ app.post('/api/events/bulk', async (c) => {
     }
     
     // Build detailed response message
-    let message = `${inserted.length} events uploaded successfully`
+    const crewUpdated = inserted.filter((e: any) => e._action === 'crew_updated').length
+    const newInserts = inserted.length - crewUpdated
+    let message = newInserts > 0 ? `${newInserts} events uploaded successfully` : ''
+    if (crewUpdated > 0) {
+      message += (message ? ', ' : '') + `${crewUpdated} crew assignments updated`
+    }
     if (skipped.length > 0) {
-      message += `, ${skipped.length} duplicates skipped`
+      message += `, ${skipped.length} skipped`
     }
     if (invalid.length > 0) {
       message += `, ${invalid.length} invalid entries ignored`

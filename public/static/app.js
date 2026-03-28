@@ -2266,9 +2266,9 @@ function openShortNoticeModal() {
   const yyyy = now.getFullYear();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   document.getElementById('snrMonth').value = `${yyyy}-${mm}`;
-  const lastDay = new Date(yyyy, now.getMonth() + 1, 0).getDate();
-  document.getElementById('snrStart').value = `${yyyy}-${mm}-01`;
-  document.getElementById('snrEnd').value = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+  // Default range: current month to current month
+  document.getElementById('snrStart').value = `${yyyy}-${mm}`;
+  document.getElementById('snrEnd').value = `${yyyy}-${mm}`;
   snrSetMode('month');
 }
 
@@ -2305,10 +2305,15 @@ function downloadShortNoticeReport() {
     if (!month) { showNotification('Please select a month', 'error'); return; }
     url = `${API_BASE}/export/short-notice-report?month=${encodeURIComponent(month)}`;
   } else {
-    const start = document.getElementById('snrStart').value;
-    const end   = document.getElementById('snrEnd').value;
-    if (!start || !end) { showNotification('Please select both dates', 'error'); return; }
-    if (start > end) { showNotification('Start date must be before end date', 'error'); return; }
+    const startMonth = document.getElementById('snrStart').value; // YYYY-MM
+    const endMonth   = document.getElementById('snrEnd').value;   // YYYY-MM
+    if (!startMonth || !endMonth) { showNotification('Please select both months', 'error'); return; }
+    if (startMonth > endMonth) { showNotification('From month must be before To month', 'error'); return; }
+    // Convert to full date range: first day of start month → last day of end month
+    const [ey, em] = endMonth.split('-').map(Number);
+    const lastDay = new Date(ey, em, 0).getDate();
+    const start = `${startMonth}-01`;
+    const end   = `${endMonth}-${String(lastDay).padStart(2, '0')}`;
     url = `${API_BASE}/export/short-notice-report?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
   }
   const link = document.createElement('a');

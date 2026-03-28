@@ -2867,7 +2867,7 @@ app.get('/', (c) => {
                     </button>
                     <button id="snr-tab-range" onclick="snrSetMode('range')"
                             class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-all">
-                        Date Range
+                        Month Range
                     </button>
                 </div>
                 <div id="snr-panel-month" class="space-y-3">
@@ -2877,13 +2877,13 @@ app.get('/', (c) => {
                 </div>
                 <div id="snr-panel-range" class="space-y-3" style="display:none;">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
-                        <input type="date" id="snrStart"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">From Month:</label>
+                        <input type="month" id="snrStart"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
-                        <input type="date" id="snrEnd"
+                        <label class="block text-sm font-medium text-gray-700 mb-1">To Month:</label>
+                        <input type="month" id="snrEnd"
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
                     </div>
                 </div>

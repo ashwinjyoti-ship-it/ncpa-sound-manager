@@ -5,9 +5,8 @@ import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
 import { generateEventEmbedding } from './rag-utils'
 import { backfillEmbeddings } from './backfill-embeddings'
-import { 
+import {
   setupFilteringEndpoints,
-  setupConflictDetection,
   setupBulkAssignment,
   setupDashboardEndpoints,
   setupExportEndpoints
@@ -374,7 +373,6 @@ app.get('/api/export/short-notice-report', async (c) => {
 // V4.1 ENHANCED API ENDPOINTS (Must be before /:id catch-all route)
 // ============================================
 setupFilteringEndpoints(app)
-setupConflictDetection(app)
 setupBulkAssignment(app)
 setupDashboardEndpoints(app)
 setupExportEndpoints(app)
@@ -2150,12 +2148,7 @@ app.get('/', (c) => {
                                     <i class="fas fa-filter mr-1.5"></i>Filters
                                 </button>
 
-                                <button onclick="checkConflicts()"
-                                        class="btn-glass px-3 py-2 text-sm" style="color:#dc2626;">
-                                    <i class="fas fa-exclamation-triangle mr-1.5"></i>Conflicts
-                                </button>
-
-                                <button onclick="checkShortNotice()"
+<button onclick="checkShortNotice()"
                                         class="btn-glass px-3 py-2 text-sm" style="color:#b45309;">
                                     <i class="fas fa-clock mr-1.5"></i>Short Notice
                                 </button>

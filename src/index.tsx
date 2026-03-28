@@ -114,7 +114,7 @@ app.get('/api/events/search', async (c) => {
 app.get('/api/export/latest-csv', async (c) => {
   try {
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         program as "Program",
         venue as "Venue",
@@ -122,13 +122,14 @@ app.get('/api/export/latest-csv', async (c) => {
         crew as "Crew",
         sound_requirements as "Sound Requirements",
         call_time as "Call Time",
-        status as "Status"
-      FROM events 
+        status as "Status",
+        rider as "Rider"
+      FROM events
       ORDER BY event_date ASC
     `).all()
-    
+
     if (!results || results.length === 0) {
-      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status\n', {
+      return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider 1,Rider 2,Rider 3\n', {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
@@ -148,12 +149,19 @@ app.get('/api/export/latest-csv', async (c) => {
       return str
     }
     
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
+    }
+
     // Build CSV header
-    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status']
+    const headers = ['Date', 'Program', 'Venue', 'Team', 'Crew', 'Sound Requirements', 'Call Time', 'Status', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
         escapeCSV(row.Date),
         escapeCSV(row.Program),
@@ -162,7 +170,8 @@ app.get('/api/export/latest-csv', async (c) => {
         escapeCSV(row.Crew),
         escapeCSV(row['Sound Requirements']),
         escapeCSV(row['Call Time']),
-        escapeCSV(row.Status || 'confirmed')
+        escapeCSV(row.Status || 'confirmed'),
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })
@@ -208,56 +217,59 @@ app.get('/api/export/csv', async (c) => {
     }
     
     const { results } = await c.env.DB.prepare(`
-      SELECT 
+      SELECT
         event_date as "Date",
         crew as "Crew",
         program as "Program",
         venue as "Venue",
         team as "Team",
         sound_requirements as "Sound Requirements",
-        call_time as "Call Time"
-      FROM events 
+        call_time as "Call Time",
+        rider as "Rider"
+      FROM events
       WHERE strftime('%Y-%m', event_date) = ?
       ORDER BY event_date ASC
     `).bind(month).all()
-    
+
     // Helper to escape CSV values
     const escapeCSV = (val: any): string => {
       if (val === null || val === undefined) return ''
       const str = String(val)
-      // Escape quotes and wrap in quotes if contains comma, quote, or newline
       if (str.includes(',') || str.includes('"') || str.includes('\n')) {
         return `"${str.replace(/"/g, '""')}"`
       }
       return str
     }
-    
+    // Split rider into up to 3 individual URL columns for Sheets auto-linking
+    const splitRider = (val: any): [string, string, string] => {
+      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
+    }
+
     // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time']
+    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
-    
+
     // Add data rows
     results.forEach((row: any) => {
-      // Format date as DD/MM/YYYY (zero-padded)
-      // Google Sheets will display this as plain text without converting to serial numbers
       let formattedDate = row.Date
       if (row.Date) {
         const dateMatch = row.Date.match(/^(\d{4})-(\d{2})-(\d{2})/)
         if (dateMatch) {
           const [, year, month, day] = dateMatch
-          // Simple DD/MM/YYYY format (e.g., 02/12/2025)
           formattedDate = `${day}/${month}/${year}`
         }
       }
-      
+      const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
-        escapeCSV(formattedDate), // Escape for CSV safety
+        escapeCSV(formattedDate),
         escapeCSV(row.Crew),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),
         escapeCSV(row.Team),
         escapeCSV(row['Sound Requirements']),
-        escapeCSV(row['Call Time'])
+        escapeCSV(row['Call Time']),
+        rider1, rider2, rider3
       ]
       csvRows.push(values.join(','))
     })
@@ -268,6 +280,87 @@ app.get('/api/export/csv', async (c) => {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `inline; filename="ncpa-events-${month}.csv"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*'
+      }
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
+// SHORT NOTICE REPORT EXPORT
+// ============================================
+// Returns all manually-entered events in the requested date range with their
+// notice period (days between record creation and show date).
+// Notice period <= 12 days flags a protocol break per NCPA policy.
+// Query params: ?month=YYYY-MM  OR  ?start=YYYY-MM-DD&end=YYYY-MM-DD
+app.get('/api/export/short-notice-report', async (c) => {
+  try {
+    const month = c.req.query('month')
+    const start = c.req.query('start')
+    const end   = c.req.query('end')
+
+    let startDate: string, endDate: string, filenameSuffix: string
+
+    if (month) {
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        return c.json({ success: false, error: 'Invalid month format. Use YYYY-MM (e.g. 2026-03)' }, 400)
+      }
+      const [y, m] = month.split('-').map(Number)
+      const lastDay = new Date(y, m, 0).getDate()
+      startDate = `${month}-01`
+      endDate   = `${month}-${String(lastDay).padStart(2, '0')}`
+      filenameSuffix = month
+    } else if (start && end) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+        return c.json({ success: false, error: 'Invalid date format. Use YYYY-MM-DD (e.g. 2026-03-01)' }, 400)
+      }
+      if (start > end) {
+        return c.json({ success: false, error: 'start date must be on or before end date' }, 400)
+      }
+      startDate = start; endDate = end
+      filenameSuffix = `${start}_to_${end}`
+    } else {
+      return c.json({ success: false, error: 'Provide either ?month=YYYY-MM or ?start=YYYY-MM-DD&end=YYYY-MM-DD' }, 400)
+    }
+
+    const { results } = await c.env.DB.prepare(`
+      SELECT
+        program,
+        created_at,
+        event_date,
+        team,
+        CAST(JULIANDAY(event_date) - JULIANDAY(DATE(created_at)) AS INTEGER) AS notice_period
+      FROM events
+      WHERE source = 'manual'
+        AND event_date >= ?
+        AND event_date <= ?
+      ORDER BY event_date ASC
+    `).bind(startDate, endDate).all()
+
+    const fmtDMY = (raw: any): string => {
+      const m = String(raw || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : String(raw || '')
+    }
+    const escCSV = (val: any): string => {
+      const s = String(val ?? '')
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? `"${s.replace(/"/g, '""')}"` : s
+    }
+
+    const csvRows = [
+      ['Program Name', 'Record Creation Date', 'Show Date', 'Curation Team', 'Notice Period (days)'].join(','),
+      ...(results as any[]).map(r =>
+        [escCSV(r.program), escCSV(fmtDMY(r.created_at)), escCSV(fmtDMY(r.event_date)), escCSV(r.team), escCSV(r.notice_period)].join(',')
+      )
+    ]
+
+    return new Response(csvRows.join('\n'), {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="short-notice-report-${filenameSuffix}.csv"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Access-Control-Allow-Origin': '*'
       }
@@ -321,8 +414,8 @@ app.post('/api/events', async (c) => {
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
       program,
@@ -331,9 +424,10 @@ app.post('/api/events', async (c) => {
       sound_requirements || null,
       call_time || null,
       crew || null,
-      requirements_updated
+      requirements_updated,
+      'manual'
     ).run()
-    
+
     const eventId = result.meta.last_row_id
     
     // Generate embedding for semantic search (Version 4.0)
@@ -390,13 +484,13 @@ app.put('/api/events/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew } = body
-    
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, rider, notes } = body
+
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
-    
+
     await c.env.DB.prepare(`
-      UPDATE events 
+      UPDATE events
       SET event_date = ?,
           program = ?,
           venue = ?,
@@ -404,6 +498,8 @@ app.put('/api/events/:id', async (c) => {
           sound_requirements = ?,
           call_time = ?,
           crew = ?,
+          rider = ?,
+          notes = ?,
           requirements_updated = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -415,6 +511,8 @@ app.put('/api/events/:id', async (c) => {
       sound_requirements || null,
       call_time || null,
       crew || null,
+      rider || null,
+      notes || null,
       requirements_updated,
       id
     ).run()
@@ -529,8 +627,8 @@ app.post('/api/events/bulk', async (c) => {
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
       
       const result = await c.env.DB.prepare(`
-        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -539,9 +637,10 @@ app.post('/api/events/bulk', async (c) => {
         sound_requirements || null,
         call_time || null,
         crew || null,
-        requirements_updated
+        requirements_updated,
+        'import_word'
       ).run()
-      
+
       inserted.push({ id: result.meta.last_row_id, ...event })
     }
     
@@ -1305,47 +1404,30 @@ Document section:
 ${chunk}
 
 Parse ALL events and extract the following fields for EACH event:
-- event_date: Date in YYYY-MM-DD format (extract from "Day & Date" column or date information. USE THE MONTH AND YEAR FROM THE CONTEXT ABOVE if provided in filename)
-- program: Full program/event name (from "Programme" or "Event" column)
-- venue: Venue name (e.g., "Tata Theatre", "Experimental Theatre", "Jamshed Bhabha Theatre", "Little Theatre", "GDT", "TET", "LT", "JBT", "DPAG", "Stuart Liff Lib", "TT")
-- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team], [Nooshin/Team], [Tejal/Team])
-- sound_requirements: Extract ONLY sound-related requirements. Look for text blocks containing "Sound" or sound equipment. Extract: mic specifications (e.g., "2 cordless mics"), playback equipment (e.g., "laptop for recorded music"), "NCPA basic sound", sound check times, mic stand counts, monitor speaker needs. EXCLUDE: catering info, parking, ushers, lights, AC, general stage setup, non-sound requirements.
-- call_time: Extract the time when sound must be ready from phrases like: "ready by [TIME]", "to be ready by [TIME]", "Sound Check at [TIME]", "sound to be ready by [TIME]", "connections to be ready by [TIME]", "calltime: Ready by [TIME]". Extract times like "9am", "9:00am", "2:00pm", "2pm". If multiple times found, use the sound-specific readiness time.
-- crew: Crew member initials assigned (e.g., "AGN", "FD", "SP", "VSD", "LDPG", "NP", "SA", "BBK", "TT")
-
-CRITICAL EXTRACTION RULES FOR SOUND REQUIREMENTS:
-1. Look for lines or phrases starting with "Sound" followed by a dash, colon, or bullet point
-2. Extract equipment details: mic types (cordless, lapel, foot mics), counts (e.g., "2 cordless mics"), playback devices (laptop, aux wire)
-3. Include "NCPA basic sound" if mentioned
-4. Capture sound-specific setup times embedded in the requirements
-5. DO NOT include: catering, parking, ushers, lights, AC, cleaning schedules, non-sound staff requirements
-6. If requirements say "Requirements will follow" or similar, leave sound_requirements empty
-
-CRITICAL EXTRACTION RULES FOR CALL TIME:
-1. Search for these patterns (case-insensitive):
-   - "ready by [TIME]"
-   - "to be ready by [TIME]"
-   - "Sound Check at [TIME]"
-   - "sound to be ready by [TIME]"
-   - "connections to be ready by [TIME]"
-   - "calltime: [TIME]"
-   - "calltime: Ready by [TIME]"
-2. TIME formats to extract: "9am", "9:00am", "9:00 am", "2pm", "2:00pm", "6:30pm", "12noon"
-3. The call_time is when sound CREW must be ready, not the event start time
-4. Normalize the time format to include AM/PM with proper spacing (e.g., "9:00 AM", "2:00 PM")
+- event_date: Date in YYYY-MM-DD format (USE THE MONTH AND YEAR FROM THE CONTEXT ABOVE)
+- program: SHORT name only — max 5-7 words, the core event title. Remove: "An NCPA Presentation", duration like "(90 mins)", organizer in brackets like "[Nooshin/Team]", subtitles after colons, sponsor info. Example: "Saz-e-Bahar" not "Saz-e-Bahar: Festival of Indian Instrumental Music An NCPA Presentation Supported by Citi Day 1"
+- venue: Full venue name from the VENUE CODE MAPPING below
+- team: Curator/team name if mentioned (often in brackets like [Dr.Swapno/Team], [Nooshin/Team])
+- sound_requirements: Include ONLY these audio items: microphones (cordless/lapel/headset/foot/podium), mic stands, monitors, speakers, laptops for playback, aux/audio input, "NCPA basic sound", audio recording. Nothing else — no projectors, screens, video, lighting, AC, stage, chairs, catering, parking, green room, ushers. If in doubt, leave it out. If requirements say "to follow" or "will follow", leave empty.
+- call_time: Extract ONLY the time when the SOUND TEAM must be ready. Valid patterns only: "sound to be ready by [TIME]", "connections to be ready by [TIME]", "NCPA basic sound to be ready by [TIME]", "Sound Check at [TIME]". Do NOT use general setup times, technician arrival times, or event start times.
+- crew: Always return empty string ""
 
 CRITICAL DATE INSTRUCTIONS:
 1. Look for day names (Mon, Tue, Wed, Thu, Fri, Sat, Sun) followed by dates (Thu 4th, Fri 5th, Wed 1st, Sat 7th, etc.)
 2. USE THE MONTH AND YEAR FROM THE CONTEXT provided in the filename above
-3. If context says "March 2026", then "Sun 1st" becomes "2026-03-01", "Mon 2nd" becomes "2026-03-02", etc.
-4. ALWAYS use the context month/year from the filename
+3. ALWAYS use the context month/year — never guess the month
+4. MULTI-DAY EVENTS: When an event spans multiple dates (e.g. "Thu 2nd & Fri 3rd & Sat 4th & Sun 5th" or "Sun 12th & Mon 13th"), create a SEPARATE event entry for EACH individual date. All fields are identical — only event_date changes.
+5. Treat "&", "and", "to" between dates as indicators of multi-day spans.
 
-VENUE CODE MAPPING (use full names):
-- TT or TET → "Tata Theatre"
+VENUE CODE MAPPING (always use these exact full names):
+- TT → "Tata Theatre"
+- TET → "Experimental Theatre"
 - JBT → "Jamshed Bhabha Theatre"
 - GDT → "Godrej Dance Theatre"
-- LT → "Little Theatre"
+- LT or Little → "Little Theatre"
 - DPAG → "Dilip Piramal Art Gallery"
+- OAP → "Open Air Plaza"
+- Stuart Liff or Stuart Liff Lib → "Stuart Liff Library"
 - Experimental Theatre or Exp → "Experimental Theatre"
 
 Return ONLY a valid JSON array, nothing else. No explanations, no markdown, just the JSON array.
@@ -1355,45 +1437,44 @@ CRITICAL JSON REQUIREMENTS:
 - Escape any quotes inside strings with backslash
 - No trailing commas
 - No newlines inside string values (replace with spaces)
-- If a field contains special characters, escape them properly
 
-Example format:
+Example format (multi-day event creates separate entries, crew always empty):
 [
   {
-    "event_date": "2026-03-01",
-    "program": "Grufalo - A Twisted Tale",
-    "venue": "Tata Theatre",
-    "team": "Nooshin/Team",
-    "sound_requirements": "2 cordless mics, aux wire for recorded music",
-    "call_time": "9:00 AM",
-    "crew": "TET"
-  },
-  {
-    "event_date": "2026-03-05",
-    "program": "NCPA Nrityagurukul",
-    "venue": "Tata Theatre",
-    "team": "Dr.Swapno/Team",
-    "sound_requirements": "2 cordless mics, laptop for recorded music",
+    "event_date": "2026-04-02",
+    "program": "The Monk & The Warrior",
+    "venue": "Experimental Theatre",
+    "team": "Bruce/Rajeshri",
+    "sound_requirements": "",
     "call_time": "",
-    "crew": "AGN"
+    "crew": ""
   },
   {
-    "event_date": "2026-03-06",
-    "program": "Living Traditions",
-    "venue": "Tata Theatre",
-    "team": "Dr.Swapno/Team",
-    "sound_requirements": "sound to be ready by 9:00 am",
-    "call_time": "9:00 AM",
-    "crew": "AGN"
+    "event_date": "2026-04-03",
+    "program": "The Monk & The Warrior",
+    "venue": "Experimental Theatre",
+    "team": "Bruce/Rajeshri",
+    "sound_requirements": "",
+    "call_time": "",
+    "crew": ""
   },
   {
-    "event_date": "2026-03-07",
-    "program": "Animal",
+    "event_date": "2026-04-10",
+    "program": "Page to Stage: Some of My Ghazals",
+    "venue": "Little Theatre",
+    "team": "Dr.Sujata/Team",
+    "sound_requirements": "2 cordless headset mics, 2 cordless mics, 1 mic stand, 1 monitor, 1 podium mic",
+    "call_time": "",
+    "crew": ""
+  },
+  {
+    "event_date": "2026-04-11",
+    "program": "Merry Go Round",
     "venue": "Tata Theatre",
     "team": "Nooshin/Team",
     "sound_requirements": "NCPA basic sound",
     "call_time": "2:00 PM",
-    "crew": "TT"
+    "crew": ""
   }
 ]
 
@@ -1407,7 +1488,7 @@ If no events found, return: []`
       'anthropic-version': '2023-06-01'
     },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       messages: [{
         role: 'user',
@@ -2063,10 +2144,15 @@ app.get('/', (c) => {
                                             <i class="fas fa-file-csv w-5" style="color: #98A2D7;"></i>
                                             <span class="text-sm text-gray-700">Export CSV</span>
                                         </button>
-                                        <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();" 
+                                        <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();"
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
                                             <i class="fab fa-whatsapp text-green-600 w-5"></i>
                                             <span class="text-sm text-gray-700">WhatsApp Export</span>
+                                        </button>
+                                        <button onclick="openShortNoticeModal(); toggleActionsDropdown();"
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fas fa-clock text-red-500 w-5"></i>
+                                            <span class="text-sm text-gray-700">Short Notice Report</span>
                                         </button>
                                         
                                         <!-- Divider -->
@@ -2502,6 +2588,16 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Rider (document URLs, comma-separated)</label>
+                            <input type="text" name="rider" id="editRider" placeholder="https://... , https://..."
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                            <textarea name="notes" id="editNotes" rows="2" placeholder="Internal notes (not shared to sheet)"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
+                        </div>
+                        <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
                             <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
                                 <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
@@ -2715,6 +2811,60 @@ app.get('/', (c) => {
                             Use <strong>Calendar</strong> (.ics) for Google Calendar, Apple Calendar, Outlook
                         </p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Short Notice Report Modal -->
+        <div id="shortNoticeModal" class="modal">
+            <div class="modal-content" style="max-width: 520px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                        <i class="fas fa-clock mr-2"></i>Short Notice Report
+                    </h2>
+                    <button onclick="closeShortNoticeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">
+                    Exports manually-entered shows in the selected range.
+                    Shows entered with <strong class="text-red-600">12 days or fewer</strong> notice flag a protocol break.
+                </p>
+                <div class="flex gap-2 mb-5">
+                    <button id="snr-tab-month" onclick="snrSetMode('month')"
+                            class="flex-1 px-3 py-2 text-sm rounded-lg border border-orange-400 bg-orange-500 text-white transition-all">
+                        Single Month
+                    </button>
+                    <button id="snr-tab-range" onclick="snrSetMode('range')"
+                            class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+                        Date Range
+                    </button>
+                </div>
+                <div id="snr-panel-month" class="space-y-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Month:</label>
+                    <input type="month" id="snrMonth"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div id="snr-panel-range" class="space-y-3" style="display:none;">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
+                        <input type="date" id="snrStart"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
+                        <input type="date" id="snrEnd"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+                <div class="mt-5 flex gap-3">
+                    <button onclick="downloadShortNoticeReport()"
+                            class="flex-1 px-4 py-2.5 text-sm text-white rounded-lg"
+                            style="background-color: #FF6B35;">
+                        <i class="fas fa-download mr-2"></i>Download CSV
+                    </button>
+                    <button onclick="closeShortNoticeModal()"
+                            class="px-4 py-2.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>

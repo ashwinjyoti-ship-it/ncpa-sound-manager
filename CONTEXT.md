@@ -15,22 +15,17 @@
 
 ---
 
-## Stable Rollback Marker
+## Stable Rollback Markers
 
-**Branch:** `stable/v1.0` (commit `7d43d76`)
+| Branch | Commit | What's in it |
+|---|---|---|
+| `stable/v1.1` | `bf1d377` | **Current stable** — all features below, Apple glass UI, correct short notice |
+| `stable/v1.0` | `7d43d76` | Previous stable — pre-glass UI, pre-crew-CSV-update |
 
-This is the last known-good state before colour palette work. If something breaks, revert `origin/main` to this branch.
-
-**Note:** `stable/v1.0` includes the glassmorphism palette (it was already merged before this marker was created). Functionally stable — event card colours fixed.
-
-**What's in v1.0:**
-- Monthly calendar with event cards (green/red border logic)
-- Manual "Add Show" form + bulk Word doc/CSV upload
-- Word doc AI parsing (`claude-sonnet-4-6`)
-- Crew assignment, rider/notes, call time fields
-- CSV export (monthly + latest) for Google Sheets IMPORTDATA
-- Short Notice Report (More Actions → clock icon): exports manually-entered shows with notice period in days. Protocol break = ≤ 12 days notice.
-- Dark mode toggle
+**To roll back production to stable/v1.1:**
+```
+git push origin stable/v1.1:main --force
+```
 
 ---
 
@@ -40,8 +35,9 @@ This is the last known-good state before colour palette work. If something break
 |---|---|---|
 | `master` (local) | Stable, production | Maps to `origin/main` — this is what deploys |
 | `origin/main` | Production | Cloudflare Pages deploys from here via GitHub Actions |
-| `stable/v1.0` | Rollback marker | Last stable before colour palette work |
-| `claude/update-color-palette-0MUE8` | **Merged & live** | Glassmorphism/lavender palette — merged in PRs #1 & #2, currently in production |
+| `stable/v1.1` | Rollback marker | Current stable — post glass UI session |
+| `stable/v1.0` | Rollback marker | Previous stable |
+| `claude/update-color-palette-0MUE8` | **Merged & live** | Glassmorphism/lavender palette — merged in PRs #1 & #2 |
 
 **Important:** Local branch is named `master`, remote production is `main`.
 Push with: `git push origin master:main`
@@ -75,9 +71,9 @@ Push with: `git push origin master:main`
 | `src/index.tsx` | Main Hono server — ALL routes, ALL HTML/CSS/JS served as template strings |
 | `public/static/app.js` | Frontend calendar logic — event cards, modals, upload handling |
 | `public/static/auth.js` | Admin panel — user management, crew stats, pending approvals |
+| `public/static/v41-features.js` | V4.1 feature set — old short notice logic (dormant), analytics etc. |
 | `wrangler.jsonc` | Cloudflare config — D1, AI, Vectorize bindings |
 | `.github/workflows/deploy.yml` | CI/CD — deploys on push to `main` only |
-| `package.json` | Build scripts; note: `deploy:prod` script has legacy `--project-name ncpa-sound-crew` (wrong — ignore it, use wrangler.jsonc) |
 
 ---
 
@@ -92,7 +88,7 @@ CREATE TABLE events (
   team TEXT,               -- Department/team name
   sound_requirements TEXT, -- Audio equipment only (mics, monitors, laptops, aux)
   call_time TEXT,          -- Sound team call time only
-  crew TEXT,               -- Comma-separated crew initials (assigned manually in app)
+  crew TEXT,               -- Comma-separated crew names (assigned manually or via CSV)
   requirements_updated INTEGER, -- 1 if sound_requirements is filled, else 0
   status TEXT,             -- "confirmed" | "tentative" | "cancelled"
   tags TEXT,
@@ -103,8 +99,9 @@ CREATE TABLE events (
 ```
 
 **`source` column values:**
-- `'manual'` — event entered via the Add Show form (relevant for short notice report)
-- `'import_word'` — event uploaded via Word doc or CSV
+- `'manual'` — entered via the Add Show form. Used by short notice report.
+- `'import_word'` — uploaded via Word doc or CSV bulk import.
+- Note: historical records before March 2026 code fix may have `source = 'manual'` even if bulk-imported (old code defaulted to 'manual'). All NEW uploads are correctly tagged.
 
 ---
 
@@ -131,27 +128,42 @@ The app parses NCPA monthly schedule Word docs (`.docx`) into events using Claud
 - `program`: Short name only — max 5–7 words. Remove "An NCPA Presentation", duration, organizer brackets, subtitles after colons.
 - `sound_requirements`: Audio/AV equipment ONLY — mics, monitors, laptops, aux, NCPA basic sound. Exclude stage, lighting, AC, catering, parking, ushers.
 - `call_time`: Sound-team-specific readiness time ONLY — "sound to be ready by X", "Sound Check at X". Not general setup/technician times.
-- `crew`: Always return `""` — crew is assigned manually in the app.
+- `crew`: Always return `""` — crew is assigned manually or via CSV.
 - **Multi-day events**: "Thu 2nd & Fri 3rd & Sat 4th" → create a SEPARATE event per date with identical fields, only `event_date` changes.
+
+---
+
+## CSV Bulk Upload Logic (`POST /api/events/bulk`)
+
+**Duplicate check:** compares `event_date + program + venue` as triplet.
+
+| CSV row vs existing record | CSV has crew? | Result |
+|---|---|---|
+| Match found | Yes | **Updates `crew` field** on existing record |
+| Match found | No | Skip (nothing to update) |
+| No match | Either | Insert as new event with `source = 'import_word'` |
+
+**Use case:** Generate crew assignments externally → upload CSV → crew gets written into matching records without duplicating events.
+
+**Invalid rows:** Missing `event_date`, `program`, or `venue` → dropped.
+
+**Response message** distinguishes: "X events uploaded, Y crew assignments updated, Z skipped."
 
 ---
 
 ## Google Sheet Integration
 
-Crew access the live data via `=IMPORTDATA()` in Google Sheets:
-
 ```
 =IMPORTDATA("https://ncpa-sound.pages.dev/api/export/csv?month=YYYY-MM&v=N")
 ```
 
-**Important:** Bump `v=N` by 1 each time you want to force a cache refresh in Sheets (Google caches IMPORTDATA aggressively).
+Bump `v=N` by 1 to force cache refresh in Sheets.
 
 **Monthly CSV columns:** `Date, Crew, Program, Venue, Team, Sound Requirements, Call Time, Rider 1, Rider 2, Rider 3`
 
 **Latest CSV columns:** `Date, Program, Venue, Team, Crew, Sound Requirements, Call Time, Status, Rider 1, Rider 2, Rider 3`
 
-- Rider URLs are split into 3 separate columns (Rider 1, Rider 2, Rider 3) so each URL auto-links as a clickable hyperlink in Sheets (a single cell with multiple URLs loses clickability).
-- Notes are **internal only** — not exported to any CSV/Sheet.
+Notes are internal only — not exported.
 
 ---
 
@@ -159,38 +171,64 @@ Crew access the live data via `=IMPORTDATA()` in Google Sheets:
 
 **Route:** `GET /api/export/short-notice-report`
 
-**Access:** More Actions dropdown → clock icon → "Short Notice Report"
+**Access:** More Actions → clock icon → "Short Notice Report"
 
 **Logic:**
-- Only covers `source = 'manual'` events (hand-entered via Add Show form)
-- Notice period = `event_date` minus `created_at` date (whole days)
-- **Protocol break = notice period ≤ 12 days** (NCPA requires 12 days to organise a show)
-- Report includes ALL manual entries in range (not just short-notice ones) so you can see the full picture
+- Only `source = 'manual'` events (hand-entered via Add Show — not Word/CSV imports)
+- Notice period = `event_date` minus `DATE(created_at)` in whole days
+- **Protocol break = notice period ≤ 12 days**
+- Report shows ALL manual entries in range so you can see the full picture
 
-**CSV output columns:** `Program Name, Record Creation Date, Show Date, Curation Team, Notice Period (days)`
+**Modal options:**
+- **Single Month** — month picker → exports that full month
+- **Month Range** — from-month + to-month pickers → exports full months (1st to last day)
 
-**Date range options:** `?month=YYYY-MM` or `?start=YYYY-MM-DD&end=YYYY-MM-DD`
+**CSV columns:** `Program Name, Record Creation Date, Show Date, Curation Team, Notice Period (days)`
 
----
-
-## Event Card Color Logic
-
-Calendar cards show a colored left border:
-- **Green** border (`.event-card-green`): `requirements_updated && call_time` both truthy
-- **Red** border (`.event-card-peach`): either field missing
-
-Logic is in `public/static/app.js` (search for `event-card-green`).
-
-The `requirements_updated` DB flag is set server-side when `sound_requirements` is non-empty.
+**Note:** Old `checkShortNotice()` toolbar button (yellow card UI) has been removed — it used wrong logic with no source filter.
 
 ---
 
-## Dark Mode
+## Event Card Colour Logic
 
-The app supports light/dark mode via CSS variables and `html.dark` class:
-- Toggle button in header (moon/sun icon)
-- Persisted to `localStorage`
-- CSS variables defined on `:root` (light) and `html.dark` (dark) in `src/index.tsx`
+- **Green** left border + faint green background: `requirements_updated = 1` AND `call_time` is set
+- **Red** left border + faint red background: either field missing
+
+Green = `rgba(74,172,100,0.60)` border, `rgba(240,253,244,0.70)` background — watercolour, not harsh.
+Red = `rgba(220,88,88,0.55)` border, `rgba(254,242,242,0.70)` background — same treatment.
+
+Logic in `public/static/app.js` line ~337.
+
+---
+
+## UI / Visual Style (Current Production)
+
+**Palette:** Glassmorphism + lavender/periwinkle ("Ethereal Chronos" system, merged in PRs #1 & #2)
+- Primary: `#98A2D7` (muted periwinkle)
+- Deep accent: `#465080`
+- Background: `#f8f9fc`
+- Font: Manrope
+
+**Key CSS classes (in `src/index.tsx`):**
+- `.glass-surface` — frosted glass panel (20px blur)
+- `.glass-card` — frosted glass card (12px blur)
+- `.btn-primary` — liquid glass lavender pill (gradient + backdrop-filter)
+- `.btn-glass` — Apple-style frosted secondary button (white border, inset highlight)
+- `.tab-active` — iOS segmented control active pill (white glass, shadow)
+- `.event-card-green` / `.event-card-peach` — watercolour green/red indicator cards
+
+**Tab navigation:** iOS segmented control — grey pill container, active tab = floating white glass pill.
+
+**Toolbar buttons:** All glass-style. Conflicts button removed. Old Short Notice toolbar button removed.
+
+---
+
+## Removed Features
+
+| Feature | Reason |
+|---|---|
+| Conflicts button (toolbar) | Removed — not needed |
+| Short Notice toolbar button | Removed — replaced by More Actions → Short Notice Report with correct logic |
 
 ---
 
@@ -198,28 +236,19 @@ The app supports light/dark mode via CSS variables and `html.dark` class:
 
 | Commit | What |
 |---|---|
-| `7d43d76` | Merge short notice report + fix deploy workflow |
-| `1fd0eef` | Fix: use source column instead of new entry_type column |
-| `e9386d4` | Add Short Notice Report feature (entry_type approach — superseded) |
-| `9ca285d` | Revert app freeze fix during Word upload |
-| `81575d6` | Add Rider and Notes: view modal, edit form, API PUT, CSV Rider 1/2/3 split |
+| `bf1d377` | Remove old Short Notice toolbar button (wrong logic, no source filter) |
+| `71af5f8` | Short notice report: month range picker (not day range) |
+| `8a34017` | Remove Conflicts feature completely |
+| `4a3875b` | CSV bulk upload: update crew on duplicate match instead of skipping |
+| `a67f76f` | Apple liquid glass UI: subtle card colours, segmented tabs, glass buttons |
+| `e530f56` | Fix event card indicator colours (was lavender, now proper green/red) |
+| `bf1d377` | Short notice report with source=manual filter, 12-day rule, CSV export |
 
 ---
 
 ## Next Up
 
-- [ ] Colour palette change — the glassmorphism/lavender "Ethereal Chronos" palette from `claude/update-color-palette-0MUE8` IS already live in production (merged in PRs #1 & #2). Decision needed at start of session:
-  - Option A: Strip glassmorphism entirely → clean flat design → apply new palette
-  - Option B: Keep glassmorphism frosted-glass look → change lavender/purple tones to something better
-  - Note: event card green/red indicators are now fixed (#16a34a / #ef4444)
-  - Rollback available at `stable/v1.0` if anything breaks
-
-## Pending / To Verify
-
-- [ ] Test Short Notice Report on production — confirm 23 manual events appear, notice period calculates correctly
-- [ ] Upload April 2026.docx and confirm:
-  - "The Monk & The Warrior" appears as 4 separate events (2nd, 3rd, 4th, 5th April)
-  - "The Doctor By Farokh Udwadia" appears as 2 events (12th & 13th April)
-  - TET events (Saz-e-Bahar, Stalemate) show venue as "Experimental Theatre" not "Tata Theatre"
-  - Crew field is empty on all parsed events
-- [ ] Bump `v=` in IMPORTDATA formula to verify Rider 1/2/3 columns appear in Sheet
+- [ ] Colour palette refinement — the glassmorphism is in production. Session decision needed:
+  - Option A: Strip glassmorphism, go clean/flat, apply new palette
+  - Option B: Keep glassmorphism, change lavender/purple tones to something better
+  - Rollback to `stable/v1.1` if anything breaks

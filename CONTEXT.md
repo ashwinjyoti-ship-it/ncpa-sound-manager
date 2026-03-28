@@ -1,7 +1,7 @@
 # ncpa-sound-manager — Session Context
 
 > Reference file for Claude Code sessions. Updated after each significant work block.
-> Last updated: 2026-03-27
+> Last updated: 2026-03-28
 
 ---
 
@@ -15,18 +15,34 @@
 
 ---
 
+## Stable Rollback Marker
+
+**Branch:** `stable/v1.0` (commit `7d43d76`)
+
+This is the last known-good state before colour palette work. If something breaks, revert `origin/main` to this branch.
+
+**What's in v1.0:**
+- Monthly calendar with event cards (green/red border logic)
+- Manual "Add Show" form + bulk Word doc/CSV upload
+- Word doc AI parsing (`claude-sonnet-4-6`)
+- Crew assignment, rider/notes, call time fields
+- CSV export (monthly + latest) for Google Sheets IMPORTDATA
+- Short Notice Report (More Actions → clock icon): exports manually-entered shows with notice period in days. Protocol break = ≤ 12 days notice.
+- Dark mode toggle
+
+---
+
 ## Branch Strategy
 
 | Branch | State | Purpose |
 |---|---|---|
 | `master` (local) | Stable, production | Maps to `origin/main` — this is what deploys |
 | `origin/main` | Production | Cloudflare Pages deploys from here via GitHub Actions |
-| `claude/update-color-palette-0MUE8` | Archived / not deployed | Glassmorphism/lavender color palette work — not merged |
+| `stable/v1.0` | Rollback marker | Last stable before colour palette work |
+| `claude/update-color-palette-0MUE8` | Archived / not deployed | Previous glassmorphism/lavender attempt — not merged |
 
 **Important:** Local branch is named `master`, remote production is `main`.
 Push with: `git push origin master:main`
-
-**History note:** In March 2026, a GenSpark session broke `origin/main` by pushing incompatible changes (DeepSeek AI, rule-based parser). These were reverted by force-pushing the stable local `master` to `origin/main`. Always push from `master` to `origin/main`.
 
 ---
 
@@ -58,7 +74,7 @@ Push with: `git push origin master:main`
 | `public/static/app.js` | Frontend calendar logic — event cards, modals, upload handling |
 | `public/static/auth.js` | Admin panel — user management, crew stats, pending approvals |
 | `wrangler.jsonc` | Cloudflare config — D1, AI, Vectorize bindings |
-| `.github/workflows/deploy.yml` | CI/CD — deploys all branches (preview URLs for feature branches) |
+| `.github/workflows/deploy.yml` | CI/CD — deploys on push to `main` only |
 | `package.json` | Build scripts; note: `deploy:prod` script has legacy `--project-name ncpa-sound-crew` (wrong — ignore it, use wrangler.jsonc) |
 
 ---
@@ -78,11 +94,15 @@ CREATE TABLE events (
   requirements_updated INTEGER, -- 1 if sound_requirements is filled, else 0
   status TEXT,             -- "confirmed" | "tentative" | "cancelled"
   tags TEXT,
-  source TEXT,
+  source TEXT,             -- "manual" (Add Show form) | "import_word" (Word/CSV upload)
   rider TEXT,              -- Comma-separated document URLs (OneDrive etc.)
   notes TEXT               -- Internal notes — NOT exported to Google Sheet
 );
 ```
+
+**`source` column values:**
+- `'manual'` — event entered via the Add Show form (relevant for short notice report)
+- `'import_word'` — event uploaded via Word doc or CSV
 
 ---
 
@@ -133,6 +153,24 @@ Crew access the live data via `=IMPORTDATA()` in Google Sheets:
 
 ---
 
+## Short Notice Report
+
+**Route:** `GET /api/export/short-notice-report`
+
+**Access:** More Actions dropdown → clock icon → "Short Notice Report"
+
+**Logic:**
+- Only covers `source = 'manual'` events (hand-entered via Add Show form)
+- Notice period = `event_date` minus `created_at` date (whole days)
+- **Protocol break = notice period ≤ 12 days** (NCPA requires 12 days to organise a show)
+- Report includes ALL manual entries in range (not just short-notice ones) so you can see the full picture
+
+**CSV output columns:** `Program Name, Record Creation Date, Show Date, Curation Team, Notice Period (days)`
+
+**Date range options:** `?month=YYYY-MM` or `?start=YYYY-MM-DD&end=YYYY-MM-DD`
+
+---
+
 ## Event Card Color Logic
 
 Calendar cards show a colored left border:
@@ -154,24 +192,30 @@ The app supports light/dark mode via CSS variables and `html.dark` class:
 
 ---
 
-## Recent Work (as of 2026-03-27)
+## Recent Work (as of 2026-03-28)
 
 | Commit | What |
 |---|---|
+| `7d43d76` | Merge short notice report + fix deploy workflow |
+| `1fd0eef` | Fix: use source column instead of new entry_type column |
+| `e9386d4` | Add Short Notice Report feature (entry_type approach — superseded) |
+| `9ca285d` | Revert app freeze fix during Word upload |
 | `81575d6` | Add Rider and Notes: view modal, edit form, API PUT, CSV Rider 1/2/3 split |
-| `385e949` | Fix parsing: venue mapping, multi-day events, sound/calltime rules, progress bar |
-| `349b8fe` | Fix 3 parsing bugs: venue (TET), multi-day events, crew field |
-| `8517b5c` | Trigger redeploy to pick up new ANTHROPIC_API_KEY |
-| `bc6ce01` | Update AI model to `claude-sonnet-4-6` |
 
 ---
 
+## Next Up
+
+- [ ] Colour palette change (retry of `claude/update-color-palette-0MUE8` — previous attempt not merged)
+  - Previous attempt: glassmorphism/lavender — review what was done before starting fresh
+  - Rollback available at `stable/v1.0` if anything breaks
+
 ## Pending / To Verify
 
+- [ ] Test Short Notice Report on production — confirm 23 manual events appear, notice period calculates correctly
 - [ ] Upload April 2026.docx and confirm:
   - "The Monk & The Warrior" appears as 4 separate events (2nd, 3rd, 4th, 5th April)
   - "The Doctor By Farokh Udwadia" appears as 2 events (12th & 13th April)
   - TET events (Saz-e-Bahar, Stalemate) show venue as "Experimental Theatre" not "Tata Theatre"
   - Crew field is empty on all parsed events
 - [ ] Bump `v=` in IMPORTDATA formula to verify Rider 1/2/3 columns appear in Sheet
-- [ ] Check "More Actions" dropdown renders correctly in dark mode

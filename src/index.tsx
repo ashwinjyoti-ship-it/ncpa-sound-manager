@@ -290,6 +290,87 @@ app.get('/api/export/csv', async (c) => {
 })
 
 // ============================================
+// SHORT NOTICE REPORT EXPORT
+// ============================================
+// Returns all manually-entered events in the requested date range with their
+// notice period (days between record creation and show date).
+// Notice period <= 12 days flags a protocol break per NCPA policy.
+// Query params: ?month=YYYY-MM  OR  ?start=YYYY-MM-DD&end=YYYY-MM-DD
+app.get('/api/export/short-notice-report', async (c) => {
+  try {
+    const month = c.req.query('month')
+    const start = c.req.query('start')
+    const end   = c.req.query('end')
+
+    let startDate: string, endDate: string, filenameSuffix: string
+
+    if (month) {
+      if (!/^\d{4}-\d{2}$/.test(month)) {
+        return c.json({ success: false, error: 'Invalid month format. Use YYYY-MM (e.g. 2026-03)' }, 400)
+      }
+      const [y, m] = month.split('-').map(Number)
+      const lastDay = new Date(y, m, 0).getDate()
+      startDate = `${month}-01`
+      endDate   = `${month}-${String(lastDay).padStart(2, '0')}`
+      filenameSuffix = month
+    } else if (start && end) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || !/^\d{4}-\d{2}-\d{2}$/.test(end)) {
+        return c.json({ success: false, error: 'Invalid date format. Use YYYY-MM-DD (e.g. 2026-03-01)' }, 400)
+      }
+      if (start > end) {
+        return c.json({ success: false, error: 'start date must be on or before end date' }, 400)
+      }
+      startDate = start; endDate = end
+      filenameSuffix = `${start}_to_${end}`
+    } else {
+      return c.json({ success: false, error: 'Provide either ?month=YYYY-MM or ?start=YYYY-MM-DD&end=YYYY-MM-DD' }, 400)
+    }
+
+    const { results } = await c.env.DB.prepare(`
+      SELECT
+        program,
+        created_at,
+        event_date,
+        team,
+        CAST(JULIANDAY(event_date) - JULIANDAY(DATE(created_at)) AS INTEGER) AS notice_period
+      FROM events
+      WHERE entry_type = 'manual'
+        AND event_date >= ?
+        AND event_date <= ?
+      ORDER BY event_date ASC
+    `).bind(startDate, endDate).all()
+
+    const fmtDMY = (raw: any): string => {
+      const m = String(raw || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+      return m ? `${m[3]}/${m[2]}/${m[1]}` : String(raw || '')
+    }
+    const escCSV = (val: any): string => {
+      const s = String(val ?? '')
+      return (s.includes(',') || s.includes('"') || s.includes('\n'))
+        ? `"${s.replace(/"/g, '""')}"` : s
+    }
+
+    const csvRows = [
+      ['Program Name', 'Record Creation Date', 'Show Date', 'Curation Team', 'Notice Period (days)'].join(','),
+      ...(results as any[]).map(r =>
+        [escCSV(r.program), escCSV(fmtDMY(r.created_at)), escCSV(fmtDMY(r.event_date)), escCSV(r.team), escCSV(r.notice_period)].join(',')
+      )
+    ]
+
+    return new Response(csvRows.join('\n'), {
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="short-notice-report-${filenameSuffix}.csv"`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Access-Control-Allow-Origin': '*'
+      }
+    })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// ============================================
 // V4.1 ENHANCED API ENDPOINTS (Must be before /:id catch-all route)
 // ============================================
 setupFilteringEndpoints(app)
@@ -333,8 +414,8 @@ app.post('/api/events', async (c) => {
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, entry_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
       program,
@@ -343,9 +424,10 @@ app.post('/api/events', async (c) => {
       sound_requirements || null,
       call_time || null,
       crew || null,
-      requirements_updated
+      requirements_updated,
+      'manual'
     ).run()
-    
+
     const eventId = result.meta.last_row_id
     
     // Generate embedding for semantic search (Version 4.0)
@@ -545,8 +627,8 @@ app.post('/api/events/bulk', async (c) => {
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
       
       const result = await c.env.DB.prepare(`
-        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, entry_type)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -555,9 +637,10 @@ app.post('/api/events/bulk', async (c) => {
         sound_requirements || null,
         call_time || null,
         crew || null,
-        requirements_updated
+        requirements_updated,
+        'bulk'
       ).run()
-      
+
       inserted.push({ id: result.meta.last_row_id, ...event })
     }
     
@@ -2017,10 +2100,15 @@ app.get('/', (c) => {
                                             <i class="fas fa-file-csv text-orange-500 w-5"></i>
                                             <span class="text-sm text-gray-700">Export CSV</span>
                                         </button>
-                                        <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();" 
+                                        <button onclick="openWhatsAppExportModal(); toggleActionsDropdown();"
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
                                             <i class="fab fa-whatsapp text-green-600 w-5"></i>
                                             <span class="text-sm text-gray-700">WhatsApp Export</span>
+                                        </button>
+                                        <button onclick="openShortNoticeModal(); toggleActionsDropdown();"
+                                                class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
+                                            <i class="fas fa-clock text-red-500 w-5"></i>
+                                            <span class="text-sm text-gray-700">Short Notice Report</span>
                                         </button>
                                         
                                         <!-- Divider -->
@@ -2684,6 +2772,60 @@ app.get('/', (c) => {
                             Use <strong>Calendar</strong> (.ics) for Google Calendar, Apple Calendar, Outlook
                         </p>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Short Notice Report Modal -->
+        <div id="shortNoticeModal" class="modal">
+            <div class="modal-content" style="max-width: 520px;">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold" style="color: #FF6B35;">
+                        <i class="fas fa-clock mr-2"></i>Short Notice Report
+                    </h2>
+                    <button onclick="closeShortNoticeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <p class="text-sm text-gray-500 mb-4">
+                    Exports manually-entered shows in the selected range.
+                    Shows entered with <strong class="text-red-600">12 days or fewer</strong> notice flag a protocol break.
+                </p>
+                <div class="flex gap-2 mb-5">
+                    <button id="snr-tab-month" onclick="snrSetMode('month')"
+                            class="flex-1 px-3 py-2 text-sm rounded-lg border border-orange-400 bg-orange-500 text-white transition-all">
+                        Single Month
+                    </button>
+                    <button id="snr-tab-range" onclick="snrSetMode('range')"
+                            class="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-all">
+                        Date Range
+                    </button>
+                </div>
+                <div id="snr-panel-month" class="space-y-3">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Month:</label>
+                    <input type="month" id="snrMonth"
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                </div>
+                <div id="snr-panel-range" class="space-y-3" style="display:none;">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Start Date:</label>
+                        <input type="date" id="snrStart"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">End Date:</label>
+                        <input type="date" id="snrEnd"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                </div>
+                <div class="mt-5 flex gap-3">
+                    <button onclick="downloadShortNoticeReport()"
+                            class="flex-1 px-4 py-2.5 text-sm text-white rounded-lg"
+                            style="background-color: #FF6B35;">
+                        <i class="fas fa-download mr-2"></i>Download CSV
+                    </button>
+                    <button onclick="closeShortNoticeModal()"
+                            class="px-4 py-2.5 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+                        Cancel
+                    </button>
                 </div>
             </div>
         </div>

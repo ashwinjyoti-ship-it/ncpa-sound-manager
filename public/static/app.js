@@ -2255,3 +2255,68 @@ document.addEventListener('click', (e) => {
 
 // Expose globally
 window.toggleActionsDropdown = toggleActionsDropdown;
+
+// ============================================
+// SHORT NOTICE REPORT
+// ============================================
+
+function openShortNoticeModal() {
+  document.getElementById('shortNoticeModal').classList.add('active');
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('snrMonth').value = `${yyyy}-${mm}`;
+  const lastDay = new Date(yyyy, now.getMonth() + 1, 0).getDate();
+  document.getElementById('snrStart').value = `${yyyy}-${mm}-01`;
+  document.getElementById('snrEnd').value = `${yyyy}-${mm}-${String(lastDay).padStart(2, '0')}`;
+  snrSetMode('month');
+}
+
+function closeShortNoticeModal() {
+  document.getElementById('shortNoticeModal').classList.remove('active');
+}
+
+function snrSetMode(mode) {
+  const isMonth = mode === 'month';
+  document.getElementById('snr-panel-month').style.display = isMonth ? '' : 'none';
+  document.getElementById('snr-panel-range').style.display = isMonth ? 'none' : '';
+  const monthTab = document.getElementById('snr-tab-month');
+  const rangeTab = document.getElementById('snr-tab-range');
+  const on = ['bg-orange-500', 'text-white', 'border-orange-400'];
+  const off = ['bg-white', 'text-gray-700', 'border-gray-300'];
+  if (isMonth) {
+    on.forEach(c => monthTab.classList.add(c));
+    off.forEach(c => monthTab.classList.remove(c));
+    off.forEach(c => rangeTab.classList.add(c));
+    on.forEach(c => rangeTab.classList.remove(c));
+  } else {
+    on.forEach(c => rangeTab.classList.add(c));
+    off.forEach(c => rangeTab.classList.remove(c));
+    off.forEach(c => monthTab.classList.add(c));
+    on.forEach(c => monthTab.classList.remove(c));
+  }
+}
+
+function downloadShortNoticeReport() {
+  const isMonthMode = document.getElementById('snr-panel-month').style.display !== 'none';
+  let url;
+  if (isMonthMode) {
+    const month = document.getElementById('snrMonth').value;
+    if (!month) { showNotification('Please select a month', 'error'); return; }
+    url = `${API_BASE}/export/short-notice-report?month=${encodeURIComponent(month)}`;
+  } else {
+    const start = document.getElementById('snrStart').value;
+    const end   = document.getElementById('snrEnd').value;
+    if (!start || !end) { showNotification('Please select both dates', 'error'); return; }
+    if (start > end) { showNotification('Start date must be before end date', 'error'); return; }
+    url = `${API_BASE}/export/short-notice-report?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`;
+  }
+  const link = document.createElement('a');
+  link.href = url;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  showNotification('Downloading Short Notice Report...', 'success');
+  closeShortNoticeModal();
+}

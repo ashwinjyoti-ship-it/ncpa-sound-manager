@@ -1069,9 +1069,7 @@ async function handleWordUpload(e) {
 
   try {
     updateUploadProgress(progressToast, 5, '📄 Extracting text from Word document...');
-    await new Promise(resolve => setTimeout(resolve, 50)); // yield so toast paints before mammoth blocks
     const arrayBuffer = await file.arrayBuffer();
-    await new Promise(resolve => setTimeout(resolve, 0)); // yield again before heavy decompression
     const result = await mammoth.extractRawText({ arrayBuffer });
     const text = result.value;
 

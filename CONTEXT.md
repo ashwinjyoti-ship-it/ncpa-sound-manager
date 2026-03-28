@@ -21,6 +21,8 @@
 
 This is the last known-good state before colour palette work. If something breaks, revert `origin/main` to this branch.
 
+**Note:** `stable/v1.0` includes the glassmorphism palette (it was already merged before this marker was created). Functionally stable — event card colours fixed.
+
 **What's in v1.0:**
 - Monthly calendar with event cards (green/red border logic)
 - Manual "Add Show" form + bulk Word doc/CSV upload
@@ -39,7 +41,7 @@ This is the last known-good state before colour palette work. If something break
 | `master` (local) | Stable, production | Maps to `origin/main` — this is what deploys |
 | `origin/main` | Production | Cloudflare Pages deploys from here via GitHub Actions |
 | `stable/v1.0` | Rollback marker | Last stable before colour palette work |
-| `claude/update-color-palette-0MUE8` | Archived / not deployed | Previous glassmorphism/lavender attempt — not merged |
+| `claude/update-color-palette-0MUE8` | **Merged & live** | Glassmorphism/lavender palette — merged in PRs #1 & #2, currently in production |
 
 **Important:** Local branch is named `master`, remote production is `main`.
 Push with: `git push origin master:main`
@@ -206,8 +208,10 @@ The app supports light/dark mode via CSS variables and `html.dark` class:
 
 ## Next Up
 
-- [ ] Colour palette change (retry of `claude/update-color-palette-0MUE8` — previous attempt not merged)
-  - Previous attempt: glassmorphism/lavender — review what was done before starting fresh
+- [ ] Colour palette change — the glassmorphism/lavender "Ethereal Chronos" palette from `claude/update-color-palette-0MUE8` IS already live in production (merged in PRs #1 & #2). Decision needed at start of session:
+  - Option A: Strip glassmorphism entirely → clean flat design → apply new palette
+  - Option B: Keep glassmorphism frosted-glass look → change lavender/purple tones to something better
+  - Note: event card green/red indicators are now fixed (#16a34a / #ef4444)
   - Rollback available at `stable/v1.0` if anything breaks
 
 ## Pending / To Verify

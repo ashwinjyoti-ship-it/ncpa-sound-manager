@@ -2148,10 +2148,6 @@ app.get('/', (c) => {
                                     <i class="fas fa-filter mr-1.5"></i>Filters
                                 </button>
 
-<button onclick="checkShortNotice()"
-                                        class="btn-glass px-3 py-2 text-sm" style="color:#b45309;">
-                                    <i class="fas fa-clock mr-1.5"></i>Short Notice
-                                </button>
                             </div>
                             
                             <!-- Divider -->

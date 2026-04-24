@@ -2216,32 +2216,39 @@ app.get('/', (c) => {
                 </div>
 
                 <!-- Calendar View -->
-                <div id="calendarView" class="rounded-2xl p-3 md:p-6 glass-card">
-                    <!-- Calendar controls with event count -->
-                    <div class="flex justify-between items-center mb-4 md:mb-6">
-                        <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
-                            <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
-                        </button>
-                        <div class="text-center">
-                            <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
-                            <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
+                <div id="calendarView" class="rounded-2xl glass-card overflow-y-auto max-h-[calc(100vh-10rem)] md:max-h-[calc(100vh-12rem)]">
+                    <!-- Sticky header: month controls + days-of-week -->
+                    <div class="sticky top-0 z-10 px-3 md:px-6 pt-3 md:pt-6 pb-2 md:pb-4" style="background: rgba(255,255,255,0.95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
+                        <!-- Calendar controls with event count -->
+                        <div class="flex justify-between items-center mb-4 md:mb-6">
+                            <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                                <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
+                            </button>
+                            <div class="text-center">
+                                <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
+                                <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
+                            </div>
+                            <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                                <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
+                            </button>
                         </div>
-                        <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
-                            <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
-                        </button>
+                        
+                        <!-- Calendar grid - Mobile optimized -->
+                        <div class="grid grid-cols-7 gap-1 md:gap-2">
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
+                        </div>
                     </div>
                     
-                    <!-- Calendar grid - Mobile optimized -->
-                    <div class="grid grid-cols-7 gap-1 md:gap-2">
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
-                        <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
+                    <!-- Scrollable calendar grid -->
+                    <div class="px-3 md:px-6 pb-3 md:pb-6">
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2 mt-2"></div>
                     </div>
-                    <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2 mt-2"></div>
                 </div>
 
                 <!-- Table View -->

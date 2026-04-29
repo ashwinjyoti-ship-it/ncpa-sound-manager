@@ -381,18 +381,54 @@ async function rejectUser(userId) {
 // Crew Statistics Tab
 async function loadCrewStats() {
   const content = document.getElementById('crewContent');
-  
-  try {
-    // Get current month
+  const select = document.getElementById('crewMonthSelect');
+
+  // Populate the month dropdown on first load
+  if (select && select.options.length === 0) {
     const today = new Date();
-    const month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    
+    for (let offset = -6; offset <= 3; offset++) {
+      const d = new Date(today.getFullYear(), today.getMonth() + offset, 1);
+      const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.text = label;
+      if (offset === 0) opt.selected = true;
+      select.appendChild(opt);
+    }
+  }
+
+  const today = new Date();
+  const month = select
+    ? select.value
+    : `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+
+  // Show spinner while loading
+  content.innerHTML = `
+    <div class="text-center py-12">
+      <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+      <p class="mt-4 text-gray-600">Loading crew statistics...</p>
+    </div>
+  `;
+
+  try {
     const response = await axios.get(`${API_BASE}/crew/stats?month=${month}`);
-    
+
     if (response.data.success) {
       const data = response.data.data;
       const monthName = new Date(data.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      
+
+      if (data.crewStats.length === 0) {
+        content.innerHTML = `
+          <div class="text-center py-12">
+            <i class="fas fa-calendar-times text-4xl text-gray-300"></i>
+            <p class="mt-4 text-gray-600 font-medium">No crew assignments found for ${monthName}.</p>
+            <p class="mt-2 text-gray-400 text-sm">Assignments may not have been made yet for this month. Try selecting a different month above.</p>
+          </div>
+        `;
+        return;
+      }
+
       content.innerHTML = `
         <div class="mb-6">
           <h2 class="text-2xl font-bold text-gray-800 mb-2">
@@ -406,18 +442,18 @@ async function loadCrewStats() {
             <div><span class="text-blue-600 font-semibold">${data.summary.underutilized}</span> underutilized</div>
           </div>
         </div>
-        
+
         <div class="space-y-4">
           ${data.crewStats.map((crew, idx) => {
             const statusColor = crew.status === 'overloaded' ? 'bg-red-400' :
                                crew.status === 'underutilized' ? 'bg-[#A2C2D6]' :
                                'bg-[#A8C3A0]';
-            const statusText = crew.status === 'overloaded' ? 'Overloaded' : 
-                              crew.status === 'underutilized' ? 'Underutilized' : 
+            const statusText = crew.status === 'overloaded' ? 'Overloaded' :
+                              crew.status === 'underutilized' ? 'Underutilized' :
                               'Balanced';
-            
+
             return `
-              <div class="p-4 rounded-2xl hover:shadow-md transition-all" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);"
+              <div class="p-4 rounded-2xl hover:shadow-md transition-all" style="background:rgba(255,255,255,0.72);outline:1px solid rgba(173,179,184,0.15);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);">
                 <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-3">
                     <span class="text-lg font-bold text-gray-400">${idx + 1}.</span>
@@ -429,7 +465,7 @@ async function loadCrewStats() {
                   <span class="text-xl font-bold" style="color: #98A2D7;">${crew.count} days</span>
                 </div>
                 <div class="relative w-full bg-gray-200 rounded-full h-6">
-                  <div class="${statusColor} h-6 rounded-full transition-all flex items-center justify-end pr-2" 
+                  <div class="${statusColor} h-6 rounded-full transition-all flex items-center justify-end pr-2"
                        style="width: ${crew.percentage}%">
                     <span class="text-white text-xs font-semibold">${crew.percentage}%</span>
                   </div>

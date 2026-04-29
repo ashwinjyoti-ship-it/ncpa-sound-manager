@@ -2324,6 +2324,13 @@ app.get('/', (c) => {
                 
                 <!-- Crew Tab -->
                 <div id="crewView" class="glass-card rounded-2xl p-6" style="display: none;">
+                    <div class="flex items-center gap-3 mb-5">
+                        <label for="crewMonthSelect" class="text-sm font-semibold text-gray-600">Showing load for:</label>
+                        <select id="crewMonthSelect"
+                                class="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                                onchange="loadCrewStats()">
+                        </select>
+                    </div>
                     <div id="crewContent">
                         <div class="text-center py-12">
                             <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>

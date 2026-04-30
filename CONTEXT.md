@@ -1,7 +1,7 @@
 # ncpa-sound-manager — Session Context
 
 > Reference file for Claude Code sessions. Updated after each significant work block.
-> Last updated: 2026-03-28
+> Last updated: 2026-04-30
 
 ---
 
@@ -88,7 +88,9 @@ CREATE TABLE events (
   team TEXT,               -- Department/team name
   sound_requirements TEXT, -- Audio equipment only (mics, monitors, laptops, aux)
   call_time TEXT,          -- Sound team call time only
-  crew TEXT,               -- Comma-separated crew names (assigned manually or via CSV)
+  crew TEXT,               -- Comma-separated crew names (backward-compat, kept as combined FOH+Stage)
+  foh_crew TEXT,           -- Single FOH engineer name (May 2026 onwards)
+  stage_crew TEXT,         -- Comma-separated stage crew (May 2026 onwards)
   requirements_updated INTEGER, -- 1 if sound_requirements is filled, else 0
   status TEXT,             -- "confirmed" | "tentative" | "cancelled"
   tags TEXT,
@@ -97,6 +99,13 @@ CREATE TABLE events (
   notes TEXT               -- Internal notes — NOT exported to Google Sheet
 );
 ```
+
+**FOH / Stage crew split (migration 0007, applied 2026-04-30):**
+- `foh_crew` — single person; FOH position. Single-select dropdown in Edit modal.
+- `stage_crew` — one or more; stage crew. Multi-select checkboxes in Edit modal.
+- `crew` — kept as denormalized combined string (FOH + Stage joined) for backward compat.
+- May 2026 existing data migrated: first name in `crew` → `foh_crew`, rest → `stage_crew`.
+- Pre-May 2026 data: `foh_crew` and `stage_crew` are NULL; `crew` unchanged.
 
 **`source` column values:**
 - `'manual'` — entered via the Add Show form. Used by short notice report.
@@ -159,9 +168,12 @@ The app parses NCPA monthly schedule Word docs (`.docx`) into events using Claud
 
 Bump `v=N` by 1 to force cache refresh in Sheets.
 
-**Monthly CSV columns:** `Date, Crew, Program, Venue, Team, Sound Requirements, Call Time, Rider 1, Rider 2, Rider 3`
+**Current CSV columns (as of 2026-04-30):**
+`Date, FOH, Stage, Program, Venue, Team, Sound Requirements, Call Time, Rider 1, Rider 2, Rider 3`
 
-**Latest CSV columns:** `Date, Program, Venue, Team, Crew, Sound Requirements, Call Time, Status, Rider 1, Rider 2, Rider 3`
+- **FOH** — single engineer name, or empty for pre-May events.
+- **Stage** — comma-separated stage crew. For pre-May events, falls back to legacy `crew` value.
+- Old "Crew" column removed and replaced by FOH + Stage.
 
 Notes are internal only — not exported.
 
@@ -232,22 +244,24 @@ Logic in `public/static/app.js` line ~337.
 
 ---
 
-## Recent Work (as of 2026-03-28)
+## Recent Work (as of 2026-04-30)
 
 | Commit | What |
 |---|---|
+| `bcc7b65` | FOH/Stage crew split: Edit modal UI, DB migration, CSV export update |
 | `bf1d377` | Remove old Short Notice toolbar button (wrong logic, no source filter) |
 | `71af5f8` | Short notice report: month range picker (not day range) |
 | `8a34017` | Remove Conflicts feature completely |
 | `4a3875b` | CSV bulk upload: update crew on duplicate match instead of skipping |
 | `a67f76f` | Apple liquid glass UI: subtle card colours, segmented tabs, glass buttons |
 | `e530f56` | Fix event card indicator colours (was lavender, now proper green/red) |
-| `bf1d377` | Short notice report with source=manual filter, 12-day rule, CSV export |
 
 ---
 
 ## Next Up
 
+- [ ] Run DB migration 0007 on production D1: `wrangler d1 execute ncpa-sound-crew-db --file=migrations/0007_foh_stage_crew.sql`
+- [ ] Bump Google Sheet IMPORTDATA formula `v=N` after migration so Sheets picks up new FOH/Stage columns
 - [ ] Colour palette refinement — the glassmorphism is in production. Session decision needed:
   - Option A: Strip glassmorphism, go clean/flat, apply new palette
   - Option B: Keep glassmorphism, change lavender/purple tones to something better

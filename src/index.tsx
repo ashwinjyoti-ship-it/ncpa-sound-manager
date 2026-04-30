@@ -613,28 +613,28 @@ app.post('/api/events/bulk', async (c) => {
     const invalid = []
     
     for (const event of events) {
-      const { event_date, program, venue, team, sound_requirements, call_time, crew } = event
-      
+      const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = event
+
       // Validate required fields
       if (!event_date || !program || !venue) {
         invalid.push({ ...event, reason: 'Missing required fields (date, program, or venue)' })
         continue
       }
-      
+
       // Check for duplicate: same date + program + venue
       // This prevents re-importing events that already exist (from manual entry or previous imports)
       const existing = await c.env.DB.prepare(`
-        SELECT id FROM events 
+        SELECT id FROM events
         WHERE event_date = ? AND program = ? AND venue = ?
         LIMIT 1
       `).bind(event_date, program, venue).first()
-      
+
       if (existing) {
-        // Duplicate found — if CSV has crew, update the existing record's crew field
+        // Duplicate found — if CSV has crew, update the existing record's crew fields
         if (crew && crew.trim()) {
           await c.env.DB.prepare(`
-            UPDATE events SET crew = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-          `).bind(crew.trim(), existing.id).run()
+            UPDATE events SET crew = ?, foh_crew = ?, stage_crew = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
+          `).bind(crew.trim(), foh_crew || null, stage_crew || null, existing.id).run()
           inserted.push({ id: existing.id, ...event, _action: 'crew_updated' })
         } else {
           skipped.push({
@@ -645,13 +645,13 @@ app.post('/api/events/bulk', async (c) => {
         }
         continue
       }
-      
+
       // Not a duplicate - insert new event
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
-      
+
       const result = await c.env.DB.prepare(`
-        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -660,6 +660,8 @@ app.post('/api/events/bulk', async (c) => {
         sound_requirements || null,
         call_time || null,
         crew || null,
+        foh_crew || null,
+        stage_crew || null,
         requirements_updated,
         'import_word'
       ).run()

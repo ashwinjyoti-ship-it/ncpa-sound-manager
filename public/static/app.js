@@ -940,7 +940,9 @@ async function handleEditEvent(e) {
           team: data.team || null,
           sound_requirements: data.sound_requirements || null,
           call_time: data.call_time || null,
-          crew: crewString
+          crew: crewString,
+          foh_crew: fohCrew || null,
+          stage_crew: stageCrewString
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }

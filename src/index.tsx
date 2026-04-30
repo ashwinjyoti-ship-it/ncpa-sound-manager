@@ -218,6 +218,8 @@ app.get('/api/export/csv', async (c) => {
     const { results } = await c.env.DB.prepare(`
       SELECT
         event_date as "Date",
+        foh_crew as "FOH",
+        stage_crew as "Stage",
         crew as "Crew",
         program as "Program",
         venue as "Venue",
@@ -245,8 +247,9 @@ app.get('/api/export/csv', async (c) => {
       return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
     }
 
-    // Build CSV with custom column order
-    const headers = ['Date', 'Crew', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
+    // Column order: Date, FOH, Stage, Program, Venue, Team, Sound Requirements, Call Time, Rider 1-3
+    // For events without foh_crew/stage_crew (pre-May data), fall back to crew in Stage column.
+    const headers = ['Date', 'FOH', 'Stage', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
     const csvRows = [headers.join(',')]
 
     // Add data rows
@@ -259,10 +262,14 @@ app.get('/api/export/csv', async (c) => {
           formattedDate = `${day}/${month}/${year}`
         }
       }
+      // For old events without foh/stage split, show legacy crew in Stage column
+      const foh = row.FOH || ''
+      const stage = row.Stage || (!row.FOH && !row.Stage ? row.Crew : '') || ''
       const [rider1, rider2, rider3] = splitRider(row.Rider)
       const values = [
         escapeCSV(formattedDate),
-        escapeCSV(row.Crew),
+        escapeCSV(foh),
+        escapeCSV(stage),
         escapeCSV(row.Program),
         escapeCSV(row.Venue),
         escapeCSV(row.Team),
@@ -482,10 +489,17 @@ app.put('/api/events/:id', async (c) => {
   try {
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew, rider, notes } = body
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes } = body
 
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
+
+    // Build combined crew string from FOH + Stage for backward-compat columns
+    let combinedCrew = crew || null
+    if (foh_crew !== undefined || stage_crew !== undefined) {
+      const parts = [foh_crew, stage_crew].filter(Boolean).join(', ')
+      combinedCrew = parts || null
+    }
 
     await c.env.DB.prepare(`
       UPDATE events
@@ -496,6 +510,8 @@ app.put('/api/events/:id', async (c) => {
           sound_requirements = ?,
           call_time = ?,
           crew = ?,
+          foh_crew = ?,
+          stage_crew = ?,
           rider = ?,
           notes = ?,
           requirements_updated = ?,
@@ -508,13 +524,15 @@ app.put('/api/events/:id', async (c) => {
       team || null,
       sound_requirements || null,
       call_time || null,
-      crew || null,
+      combinedCrew,
+      foh_crew || null,
+      stage_crew || null,
       rider || null,
       notes || null,
       requirements_updated,
       id
     ).run()
-    
+
     return c.json({ success: true, message: 'Event updated successfully' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -2452,7 +2470,7 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team)</label>
                             <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
                                 <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
                                     <input type="checkbox" name="crew[]" value="Ashwin" class="add-crew-checkbox">
@@ -2515,11 +2533,9 @@ app.get('/', (c) => {
                                     <span class="text-sm">OC3</span>
                                 </label>
                             </div>
-                            <input type="text" id="addCrewCustom" placeholder="Or type custom crew name (comma-separated for multiple)" 
-                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0] text-sm">
                             <p class="text-xs text-gray-500 mt-1">
                                 <i class="fas fa-info-circle mr-1"></i>
-                                Select multiple crew members or add custom names below
+                                Initial crew selection — use Edit to assign FOH / Stage roles
                             </p>
                         </div>
                     </div>
@@ -2639,75 +2655,106 @@ app.get('/', (c) => {
                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-600"></textarea>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team) - Select Multiple</label>
-                            <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Ashwin" class="crew-checkbox">
-                                    <span class="text-sm">Ashwin</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Naren" class="crew-checkbox">
-                                    <span class="text-sm">Naren</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Sandeep" class="crew-checkbox">
-                                    <span class="text-sm">Sandeep</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Coni" class="crew-checkbox">
-                                    <span class="text-sm">Coni</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Nikhil" class="crew-checkbox">
-                                    <span class="text-sm">Nikhil</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="NS" class="crew-checkbox">
-                                    <span class="text-sm">NS</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Aditya" class="crew-checkbox">
-                                    <span class="text-sm">Aditya</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Viraj" class="crew-checkbox">
-                                    <span class="text-sm">Viraj</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Shridhar" class="crew-checkbox">
-                                    <span class="text-sm">Shridhar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Nazar" class="crew-checkbox">
-                                    <span class="text-sm">Nazar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Omkar" class="crew-checkbox">
-                                    <span class="text-sm">Omkar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Akshay" class="crew-checkbox">
-                                    <span class="text-sm">Akshay</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC1" class="crew-checkbox">
-                                    <span class="text-sm">OC1</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC2" class="crew-checkbox">
-                                    <span class="text-sm">OC2</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC3" class="crew-checkbox">
-                                    <span class="text-sm">OC3</span>
-                                </label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew Assignment</label>
+
+                            <!-- FOH — single assign -->
+                            <div class="mb-3 p-3 border border-blue-200 rounded-lg" style="background:rgba(239,246,255,0.7)">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-headphones text-blue-600 mr-2 text-xs"></i>
+                                    <span class="text-sm font-semibold text-blue-800">FOH</span>
+                                    <span class="text-xs text-blue-400 ml-2">single assign</span>
+                                </div>
+                                <select id="editFohCrew" name="foh_crew"
+                                        class="w-full px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm bg-white">
+                                    <option value="">— none —</option>
+                                    <option value="Ashwin">Ashwin</option>
+                                    <option value="Naren">Naren</option>
+                                    <option value="Sandeep">Sandeep</option>
+                                    <option value="Coni">Coni</option>
+                                    <option value="Nikhil">Nikhil</option>
+                                    <option value="NS">NS</option>
+                                    <option value="Aditya">Aditya</option>
+                                    <option value="Viraj">Viraj</option>
+                                    <option value="Shridhar">Shridhar</option>
+                                    <option value="Nazar">Nazar</option>
+                                    <option value="Omkar">Omkar</option>
+                                    <option value="Akshay">Akshay</option>
+                                    <option value="OC1">OC1</option>
+                                    <option value="OC2">OC2</option>
+                                    <option value="OC3">OC3</option>
+                                </select>
                             </div>
-                            <input type="text" id="editCrewCustom" placeholder="Or type custom crew name" 
-                                   class="w-full mt-2 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0] text-sm">
-                            <p class="text-xs text-gray-500 mt-1">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Select multiple crew or enter custom names. Selected crew will be joined with commas.
-                            </p>
+
+                            <!-- Stage — multi assign -->
+                            <div class="p-3 border border-green-200 rounded-lg" style="background:rgba(240,253,244,0.7)">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-volume-up text-green-600 mr-2 text-xs"></i>
+                                    <span class="text-sm font-semibold text-green-800">Stage</span>
+                                    <span class="text-xs text-green-400 ml-2">multi assign</span>
+                                </div>
+                                <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Ashwin" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Ashwin</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Naren" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Naren</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Sandeep" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Sandeep</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Coni" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Coni</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Nikhil" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Nikhil</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="NS" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">NS</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Aditya" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Aditya</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Viraj" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Viraj</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Shridhar" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Shridhar</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Nazar" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Nazar</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Omkar" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Omkar</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="Akshay" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">Akshay</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="OC1" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">OC1</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="OC2" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">OC2</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
+                                        <input type="checkbox" value="OC3" class="crew-checkbox stage-checkbox">
+                                        <span class="text-sm">OC3</span>
+                                    </label>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">

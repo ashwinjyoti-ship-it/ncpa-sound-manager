@@ -338,10 +338,18 @@ function renderCalendar() {
       }`;
       card.onclick = () => openEventModal(event);
       
+      // Build crew display: prefer foh_crew/stage_crew, fall back to crew
+      let crewHtml = '';
+      if (event.foh_crew || event.stage_crew) {
+        if (event.foh_crew) crewHtml += `<div class="truncate" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>${event.foh_crew}</div>`;
+        if (event.stage_crew) crewHtml += `<div class="text-gray-600 truncate"><i class="fas fa-volume-up mr-1 text-xs"></i>${event.stage_crew}</div>`;
+      } else if (event.crew) {
+        crewHtml = `<div class="text-gray-600 truncate"><i class="fas fa-users mr-1"></i>${event.crew}</div>`;
+      }
       card.innerHTML = `
         <div class="font-semibold truncate">${truncateText(event.program, 30)}</div>
         <div class="text-gray-600 truncate"><i class="fas fa-map-marker-alt mr-1"></i>${displayVenue(event.venue)}</div>
-        ${event.crew ? `<div class="text-gray-600 truncate"><i class="fas fa-users mr-1"></i>${event.crew}</div>` : ''}
+        ${crewHtml}
       `;
       
       cell.appendChild(card);
@@ -563,7 +571,10 @@ function openEventModal(event) {
       </div>
       <div>
         <label class="font-semibold text-gray-700">Crew (sound team):</label>
-        <p class="text-gray-900">${event.crew || 'Not assigned'}</p>
+        ${(event.foh_crew || event.stage_crew) ? `
+          ${event.foh_crew ? `<p class="text-gray-900"><span class="font-medium" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
+          ${event.stage_crew ? `<p class="text-gray-900"><span class="font-medium text-green-700"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
+        ` : `<p class="text-gray-900">${event.crew || 'Not assigned'}</p>`}
       </div>
       ${event.rider ? `<div>
         <label class="font-semibold text-gray-700">Rider:</label>
@@ -634,20 +645,10 @@ function openAddShowModal() {
 
 function closeAddShowModal() {
   document.getElementById('addShowModal').classList.remove('active');
-  
-  // Reset the form
   document.getElementById('addShowForm').reset();
-  
-  // Uncheck all crew checkboxes
   document.querySelectorAll('.add-crew-checkbox').forEach(checkbox => {
     checkbox.checked = false;
   });
-  
-  // Clear custom crew input
-  const customCrewInput = document.getElementById('addCrewCustom');
-  if (customCrewInput) {
-    customCrewInput.value = '';
-  }
 }
 
 function toggleDateFields() {
@@ -685,14 +686,7 @@ async function handleAddShow(e) {
   document.querySelectorAll('.add-crew-checkbox:checked').forEach(checkbox => {
     selectedCrew.push(checkbox.value);
   });
-  
-  // Add custom crew if provided
-  const customCrewInput = document.getElementById('addCrewCustom');
-  if (customCrewInput && customCrewInput.value.trim()) {
-    const customCrew = customCrewInput.value.split(',').map(c => c.trim()).filter(c => c);
-    selectedCrew.push(...customCrew);
-  }
-  
+
   const crewString = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
   
   try {
@@ -810,13 +804,13 @@ function toggleEditDateFields() {
 async function editEventFromModal(eventId) {
   // Close event detail modal
   closeEventModal();
-  
+
   // Fetch event details
   try {
     const response = await axios.get(`${API_BASE}/events/${eventId}`);
     if (response.data.success) {
       const event = response.data.data;
-      
+
       // Populate form
       document.getElementById('editEventId').value = event.id;
       document.getElementById('editSingleDate').value = event.event_date;
@@ -827,26 +821,28 @@ async function editEventFromModal(eventId) {
       document.getElementById('editCallTime').value = event.call_time || '';
       document.getElementById('editRider').value = event.rider || '';
       document.getElementById('editNotes').value = event.notes || '';
-      
-      // Handle multiple crew selection (checkboxes)
-      const crewList = event.crew ? event.crew.split(',').map(c => c.trim()) : [];
-      const crewCheckboxes = document.querySelectorAll('.crew-checkbox');
-      crewCheckboxes.forEach(checkbox => {
-        checkbox.checked = crewList.includes(checkbox.value);
-      });
-      
-      // Handle custom crew input
-      const customCrewInput = document.getElementById('editCustomCrew');
-      if (customCrewInput) {
-        const predefinedCrew = ['Ashwin', 'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya', 'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'];
-        const customCrew = crewList.filter(c => !predefinedCrew.includes(c));
-        customCrewInput.value = customCrew.join(', ');
+
+      // FOH — single select dropdown
+      const fohSelect = document.getElementById('editFohCrew');
+      if (fohSelect) {
+        fohSelect.value = event.foh_crew || '';
       }
-      
+
+      // Stage — multi-select checkboxes
+      // Prefer stage_crew; fall back to full crew list for pre-FOH/Stage events
+      const stageList = event.stage_crew
+        ? event.stage_crew.split(',').map(c => c.trim())
+        : (!event.foh_crew && event.crew)
+          ? event.crew.split(',').map(c => c.trim())
+          : [];
+      document.querySelectorAll('.stage-checkbox').forEach(cb => {
+        cb.checked = stageList.includes(cb.value);
+      });
+
       // Reset to single date mode
       document.querySelector('input[name="editDateType"][value="single"]').checked = true;
       toggleEditDateFields();
-      
+
       // Open edit modal
       document.getElementById('editEventModal').classList.add('active');
     }
@@ -858,30 +854,32 @@ async function editEventFromModal(eventId) {
 
 function closeEditEventModal() {
   document.getElementById('editEventModal').classList.remove('active');
+  const fohSelect = document.getElementById('editFohCrew');
+  if (fohSelect) fohSelect.value = '';
+  document.querySelectorAll('.stage-checkbox').forEach(cb => { cb.checked = false; });
 }
 
 async function handleEditEvent(e) {
   e.preventDefault();
-  
+
   const formData = new FormData(e.target);
   const data = Object.fromEntries(formData.entries());
   const dateType = data.editDateType;
   const eventId = data.event_id;
-  
-  // Collect selected crew from checkboxes
-  const selectedCrew = [];
-  document.querySelectorAll('.crew-checkbox:checked').forEach(checkbox => {
-    selectedCrew.push(checkbox.value);
+
+  // FOH — single value from dropdown
+  const fohCrew = document.getElementById('editFohCrew')?.value || null;
+
+  // Stage — multi-select checkboxes
+  const stageCrew = [];
+  document.querySelectorAll('.stage-checkbox:checked').forEach(cb => {
+    stageCrew.push(cb.value);
   });
-  
-  // Add custom crew if provided
-  const customCrewInput = document.getElementById('editCustomCrew');
-  if (customCrewInput && customCrewInput.value.trim()) {
-    const customCrew = customCrewInput.value.split(',').map(c => c.trim()).filter(c => c);
-    selectedCrew.push(...customCrew);
-  }
-  
-  const crewString = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
+  const stageCrewString = stageCrew.length > 0 ? stageCrew.join(', ') : null;
+
+  // Combined crew for backward-compat (FOH first, then Stage)
+  const crewParts = [fohCrew, stageCrewString].filter(Boolean);
+  const crewString = crewParts.length > 0 ? crewParts.join(', ') : null;
   
   try {
     if (dateType === 'single') {
@@ -894,10 +892,12 @@ async function handleEditEvent(e) {
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
         crew: crewString,
+        foh_crew: fohCrew || null,
+        stage_crew: stageCrewString,
         rider: data.rider || null,
         notes: data.notes || null
       });
-      
+
       if (response.data.success) {
         showNotification('Event updated successfully', 'success');
         closeEditEventModal();
@@ -908,12 +908,12 @@ async function handleEditEvent(e) {
       // Multiple dates - update original and create copies for additional dates
       const startDate = new Date(data.start_date);
       const endDate = new Date(data.end_date);
-      
+
       if (startDate > endDate) {
         showNotification('Start date must be before or equal to end date', 'error');
         return;
       }
-      
+
       // Update original event to start date
       await axios.put(`${API_BASE}/events/${eventId}`, {
         event_date: data.start_date,
@@ -922,14 +922,16 @@ async function handleEditEvent(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString
+        crew: crewString,
+        foh_crew: fohCrew || null,
+        stage_crew: stageCrewString
       });
-      
+
       // Create copies for remaining dates
       const events = [];
       const currentDateIter = new Date(startDate);
       currentDateIter.setDate(currentDateIter.getDate() + 1); // Start from day after start date
-      
+
       while (currentDateIter <= endDate) {
         events.push({
           event_date: currentDateIter.toISOString().split('T')[0],

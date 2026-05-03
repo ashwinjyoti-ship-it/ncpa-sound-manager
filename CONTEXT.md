@@ -19,12 +19,13 @@
 
 | Branch | Commit | What's in it |
 |---|---|---|
-| `stable/v1.1` | `bf1d377` | **Current stable** — all features below, Apple glass UI, correct short notice |
-| `stable/v1.0` | `7d43d76` | Previous stable — pre-glass UI, pre-crew-CSV-update |
+| `stable/v1.2` | `869bb96` | **Current stable** — FOH/Stage crew split, Edit modal UI, CSV export update |
+| `stable/v1.1` | `bf1d377` | Previous stable — Apple glass UI, correct short notice |
+| `stable/v1.0` | `7d43d76` | Pre-glass UI, pre-crew-CSV-update |
 
-**To roll back production to stable/v1.1:**
+**To roll back production to stable/v1.2:**
 ```
-git push origin stable/v1.1:main --force
+git push origin stable/v1.2:main --force
 ```
 
 ---

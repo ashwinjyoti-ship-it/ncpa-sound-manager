@@ -298,9 +298,10 @@ app.get('/api/export/csv', async (c) => {
 // ============================================
 // SHORT NOTICE REPORT EXPORT
 // ============================================
-// Returns all manually-entered events in the requested date range with their
-// notice period (days between record creation and show date).
-// Notice period <= 12 days flags a protocol break per NCPA policy.
+// Returns manually-entered events in the requested date range where the
+// notice period (show date minus creation date) is strictly less than 14 days.
+// Minimum acceptable gap is 14 days; anything below is a short-notice protocol break.
+// Bulk-imported events (source != 'manual') are excluded.
 // Query params: ?month=YYYY-MM  OR  ?start=YYYY-MM-DD&end=YYYY-MM-DD
 app.get('/api/export/short-notice-report', async (c) => {
   try {
@@ -343,6 +344,7 @@ app.get('/api/export/short-notice-report', async (c) => {
       WHERE source = 'manual'
         AND event_date >= ?
         AND event_date <= ?
+        AND CAST(JULIANDAY(event_date) - JULIANDAY(DATE(created_at)) AS INTEGER) < 14
       ORDER BY event_date ASC
     `).bind(startDate, endDate).all()
 
@@ -2916,7 +2918,7 @@ app.get('/', (c) => {
                 </div>
                 <p class="text-sm text-gray-500 mb-4">
                     Exports manually-entered shows in the selected range.
-                    Shows entered with <strong class="text-red-600">12 days or fewer</strong> notice flag a protocol break.
+                    Only shows entered via <em>Add Show</em> with <strong class="text-red-600">fewer than 14 days</strong> notice are included. Bulk imports are excluded.
                 </p>
                 <div class="flex gap-2 mb-5">
                     <button id="snr-tab-month" onclick="snrSetMode('month')"

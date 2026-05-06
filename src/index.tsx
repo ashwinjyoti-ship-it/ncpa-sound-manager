@@ -17,6 +17,7 @@ import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 
 type Bindings = {
   DB: D1Database;
+  DB_CREW: D1Database;
   AI: any;
   VECTORIZE: any; // Vectorize enabled for semantic search
   ANTHROPIC_API_KEY: string;
@@ -36,6 +37,62 @@ app.use('*', cors({
 
 // Serve static files
 app.use('/static/*', serveStatic({ root: './public' }))
+
+// ─── GET /api/crew-availability ───────────────────────────────────────────────
+app.get('/api/crew-availability', async (c) => {
+  const datesParam = c.req.query('dates')
+  if (!datesParam) return c.json({ success: false, error: 'dates param required' }, 400)
+
+  const dates = datesParam.split(',').map(d => d.trim()).filter(Boolean)
+  if (!dates.length) return c.json({ success: false, error: 'no valid dates' }, 400)
+
+  const ph = dates.map(() => '?').join(',')
+
+  try {
+    const soundRows = await c.env.DB.prepare(
+      `SELECT crew, foh_crew, stage_crew, program, venue, event_date
+       FROM events WHERE event_date IN (${ph})`
+    ).bind(...dates).all()
+
+    const assignedSet = new Set<string>()
+    const parseCSV = (s: string | null) => {
+      if (!s) return
+      s.split(',').map(m => m.trim()).filter(Boolean).forEach(m => assignedSet.add(m))
+    }
+    for (const row of soundRows.results as any[]) {
+      parseCSV(row.crew)
+      parseCSV(row.foh_crew)
+      parseCSV(row.stage_crew)
+    }
+
+    const crewRows = await c.env.DB_CREW.prepare(
+      `SELECT DISTINCT c.name
+       FROM crew_unavailability cu
+       JOIN crew c ON c.id = cu.crew_id
+       WHERE cu.unavailable_date IN (${ph})`
+    ).bind(...dates).all()
+
+    const unavailSet = new Set<string>(crewRows.results.map((r: any) => r.name as string))
+
+    const VALID_CREW = [
+      'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya',
+      'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
+      'OC1', 'OC2', 'OC3'
+    ]
+
+    const available   = VALID_CREW.filter(m => !assignedSet.has(m) && !unavailSet.has(m))
+    const assigned    = VALID_CREW.filter(m => assignedSet.has(m))
+    const unavailable = VALID_CREW.filter(m => unavailSet.has(m) && !assignedSet.has(m))
+
+    return c.json({
+      success: true, available, assigned, unavailable,
+      conflicts: soundRows.results, dates
+    })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
 
 // ============================================
 // API ROUTES
@@ -411,7 +468,7 @@ app.get('/api/events/:id', async (c) => {
 app.post('/api/events', async (c) => {
   try {
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew } = body
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = body
     
     if (!event_date || !program || !venue) {
       return c.json({ success: false, error: 'Date, program, and venue are required' }, 400)
@@ -419,10 +476,17 @@ app.post('/api/events', async (c) => {
     
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
+
+    // Compute FOH + Stage crew, falling back to legacy crew field
+    const stageCrew = Array.isArray(stage_crew)
+      ? (stage_crew as string[]).filter(Boolean).join(', ')
+      : (stage_crew as string || '')
+    const fohCrew = (foh_crew as string || '')
+    const allCrew = [fohCrew, stageCrew].filter(Boolean).join(', ') || crew || null
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, requirements_updated, source)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
       program,
@@ -430,7 +494,9 @@ app.post('/api/events', async (c) => {
       team || null,
       sound_requirements || null,
       call_time || null,
-      crew || null,
+      allCrew,
+      fohCrew || null,
+      stageCrew || null,
       requirements_updated,
       'manual'
     ).run()
@@ -477,7 +543,9 @@ app.post('/api/events', async (c) => {
         team,
         sound_requirements,
         call_time,
-        crew,
+        crew: allCrew,
+        foh_crew: fohCrew || null,
+        stage_crew: stageCrew || null,
         requirements_updated
       }
     }, 201)
@@ -2063,6 +2131,35 @@ app.get('/', (c) => {
               display: none !important;
             }
           }
+
+          /* ── Crew Availability Pill Styles ── */
+          .avail-loading{display:flex;align-items:center;gap:10px;padding:8px 0;color:#7280a8;font-size:14px}
+          @keyframes avail-spin{to{transform:rotate(360deg)}}
+          .avail-spinner{width:18px;height:18px;border:2px solid rgba(107,119,192,.2);border-top-color:#6B77C0;border-radius:50%;animation:avail-spin .65s linear infinite;flex-shrink:0}
+          .avail-cbox{background:rgba(192,100,60,.07);border:1px solid rgba(192,100,60,.20);border-radius:8px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;color:#8b3b1a;line-height:1.5}
+          .avail-cbox strong{font-weight:700;display:block;margin-bottom:4px}
+          .avail-citem{padding-left:12px;margin-top:3px}
+          .avail-role-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;margin-top:4px}
+          .avail-role-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#3D4675}
+          .avail-role-badge{font-size:10.5px;padding:2px 8px;border-radius:20px;font-weight:600}
+          .avail-badge-foh{background:rgba(107,119,192,.13);color:#3D4675}
+          .avail-badge-stage{background:rgba(168,195,160,.25);color:#6E9966}
+          .avail-role-hint{font-size:11.5px;color:#7280a8;margin-bottom:9px}
+          .avail-pill-grid{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:4px}
+          .avail-cpill{position:relative}
+          .avail-cpill input{position:absolute;opacity:0;width:0;height:0;pointer-events:none}
+          .avail-cpill label{display:inline-flex;align-items:center;padding:7px 13px;border-radius:24px;border:1.5px solid rgba(107,119,192,.18);background:rgba(255,255,255,.75);cursor:pointer;font-size:13px;font-weight:500;color:#1e2545;transition:all .14s;user-select:none;line-height:1}
+          .avail-foh-pill input:checked+label{background:#6B77C0;border-color:#3D4675;color:#fff;box-shadow:0 3px 10px rgba(107,119,192,.35)}
+          .avail-stage-pill input:checked+label{background:#A8C3A0;border-color:#6E9966;color:#253a1f;box-shadow:0 3px 10px rgba(110,153,102,.30)}
+          .avail-none-pill label{color:#7280a8;font-style:italic}
+          .avail-none-pill input:checked+label{background:rgba(160,160,170,.12);border-color:rgba(160,160,170,.35);color:#7280a8;box-shadow:none}
+          .avail-divider{height:1px;background:rgba(107,119,192,.18);margin:14px 0}
+          .avail-excl-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#7280a8;margin-bottom:8px}
+          .avail-excl-grid{display:flex;flex-wrap:wrap;gap:6px}
+          .avail-etag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500}
+          .avail-etag-a{background:rgba(192,80,60,.08);color:#8b3020;border:1px solid rgba(192,80,60,.15)}
+          .avail-etag-b{background:rgba(140,140,155,.10);color:#777;border:1px solid rgba(140,140,155,.20)}
+          .avail-no-crew{text-align:center;padding:20px 0 8px;color:#7280a8;font-size:14px}
         </style>
     </head>
     <body style="background-color: #f8f9fc;">
@@ -2473,74 +2570,12 @@ app.get('/', (c) => {
                             <input type="text" name="call_time" 
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
                         </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Crew (sound team)</label>
-                            <div class="grid grid-cols-3 gap-2 p-3 border border-gray-300 rounded-lg bg-gray-50 max-h-48 overflow-y-auto">
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Ashwin" class="add-crew-checkbox">
-                                    <span class="text-sm">Ashwin</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Naren" class="add-crew-checkbox">
-                                    <span class="text-sm">Naren</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Sandeep" class="add-crew-checkbox">
-                                    <span class="text-sm">Sandeep</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Coni" class="add-crew-checkbox">
-                                    <span class="text-sm">Coni</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Nikhil" class="add-crew-checkbox">
-                                    <span class="text-sm">Nikhil</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="NS" class="add-crew-checkbox">
-                                    <span class="text-sm">NS</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Aditya" class="add-crew-checkbox">
-                                    <span class="text-sm">Aditya</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Viraj" class="add-crew-checkbox">
-                                    <span class="text-sm">Viraj</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Shridhar" class="add-crew-checkbox">
-                                    <span class="text-sm">Shridhar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Nazar" class="add-crew-checkbox">
-                                    <span class="text-sm">Nazar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Omkar" class="add-crew-checkbox">
-                                    <span class="text-sm">Omkar</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="Akshay" class="add-crew-checkbox">
-                                    <span class="text-sm">Akshay</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC1" class="add-crew-checkbox">
-                                    <span class="text-sm">OC1</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC2" class="add-crew-checkbox">
-                                    <span class="text-sm">OC2</span>
-                                </label>
-                                <label class="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
-                                    <input type="checkbox" name="crew[]" value="OC3" class="add-crew-checkbox">
-                                    <span class="text-sm">OC3</span>
-                                </label>
-                            </div>
-                            <p class="text-xs text-gray-500 mt-1">
-                                <i class="fas fa-info-circle mr-1"></i>
-                                Initial crew selection — use Edit to assign FOH / Stage roles
-                            </p>
+                        <!-- Crew Availability Card (shown after date is selected) -->
+                        <div id="addShowCrewCard" style="display:none; margin-top:12px;">
+                          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#7280a8;margin-bottom:8px;">Crew Assignment</div>
+                          <div id="addShowCrewBody">
+                            <div class="avail-loading"><div class="avail-spinner"></div>Checking availability…</div>
+                          </div>
                         </div>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">

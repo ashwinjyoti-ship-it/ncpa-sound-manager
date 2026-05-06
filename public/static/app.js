@@ -641,14 +641,20 @@ function openAddShowModal() {
   
   document.getElementById('addShowModal').classList.add('active');
   document.getElementById('addShowForm').reset();
+  // Hide crew card on open (will show when date is picked)
+  var crewCard = document.getElementById('addShowCrewCard');
+  if (crewCard) crewCard.style.display = 'none';
 }
 
 function closeAddShowModal() {
   document.getElementById('addShowModal').classList.remove('active');
   document.getElementById('addShowForm').reset();
-  document.querySelectorAll('.add-crew-checkbox').forEach(checkbox => {
-    checkbox.checked = false;
-  });
+  // Reset crew availability card
+  var crewCard = document.getElementById('addShowCrewCard');
+  if (crewCard) crewCard.style.display = 'none';
+  var crewBody = document.getElementById('addShowCrewBody');
+  if (crewBody) crewBody.innerHTML = '<div class="avail-loading"><div class="avail-spinner"></div>Checking availability…</div>';
+  _addShowAvail = null;
 }
 
 function toggleDateFields() {
@@ -681,17 +687,17 @@ async function handleAddShow(e) {
   const data = Object.fromEntries(formData.entries());
   const dateType = data.dateType;
   
-  // Collect selected crew from checkboxes
-  const selectedCrew = [];
-  document.querySelectorAll('.add-crew-checkbox:checked').forEach(checkbox => {
-    selectedCrew.push(checkbox.value);
-  });
-
-  const crewString = selectedCrew.length > 0 ? selectedCrew.join(', ') : null;
+  // FOH and Stage crew will be read at submit time from pill selectors
+  const fohCrewSelected = (document.querySelector('input[name="addshow_foh_crew"]:checked') || {}).value || '';
+  const stageCrewSelected = Array.from(document.querySelectorAll('input[name="addshow_stage_crew"]:checked')).map(function(i){return i.value;});
+  const crewString = [fohCrewSelected, ...stageCrewSelected].filter(Boolean).join(', ') || null;
   
   try {
     if (dateType === 'single') {
       // Single date event
+      // Read FOH and Stage crew from the availability pill UI
+      const fohCrew = (document.querySelector('input[name="addshow_foh_crew"]:checked') || {}).value || '';
+      const stageCrew = Array.from(document.querySelectorAll('input[name="addshow_stage_crew"]:checked')).map(function(i){return i.value;});
       const response = await axios.post(`${API_BASE}/events`, {
         event_date: data.event_date,
         program: data.program,
@@ -699,7 +705,8 @@ async function handleAddShow(e) {
         team: data.team || null,
         sound_requirements: data.sound_requirements || null,
         call_time: data.call_time || null,
-        crew: crewString,
+        foh_crew: fohCrew,
+        stage_crew: stageCrew,
         rider: data.rider || null,
         notes: data.notes || null
       });
@@ -736,6 +743,8 @@ async function handleAddShow(e) {
           team: data.team || null,
           sound_requirements: data.sound_requirements || null,
           call_time: data.call_time || null,
+          foh_crew: fohCrewSelected,
+          stage_crew: stageCrewSelected,
           crew: crewString
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
@@ -769,6 +778,137 @@ async function handleAddShow(e) {
     showNotification('Failed to add show: ' + (error.response?.data?.error || error.message), 'error');
   }
 }
+
+
+// ============================================
+// CREW AVAILABILITY FOR ADD SHOW MODAL
+// ============================================
+
+var _addShowAvailTimer = null;
+var _addShowAvail = null;
+
+function schedAddShowAvailCheck() {
+  clearTimeout(_addShowAvailTimer);
+  _addShowAvailTimer = setTimeout(doAddShowAvailCheck, 280);
+}
+
+function getAddShowDates() {
+  var dateType = (document.querySelector('input[name="dateType"]:checked') || {}).value || 'single';
+  if (dateType === 'single') {
+    var singleDate = document.getElementById('singleDate');
+    if (singleDate && singleDate.value) return [singleDate.value];
+  } else {
+    var startDate = document.getElementById('startDate');
+    var endDate = document.getElementById('endDate');
+    if (startDate && endDate && startDate.value && endDate.value) {
+      var out = [], cur = new Date(startDate.value + 'T00:00:00Z'), end = new Date(endDate.value + 'T00:00:00Z');
+      while (cur <= end) { out.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate()+1); }
+      return out;
+    }
+  }
+  return [];
+}
+
+async function doAddShowAvailCheck() {
+  var dates = getAddShowDates();
+  var card = document.getElementById('addShowCrewCard');
+  if (!dates.length) { if (card) card.style.display = 'none'; return; }
+  if (card) card.style.display = 'block';
+  var body = document.getElementById('addShowCrewBody');
+  if (body) body.innerHTML = '<div class="avail-loading"><div class="avail-spinner"></div>Checking ' + dates.length + ' date' + (dates.length > 1 ? 's' : '') + '\u2026</div>';
+  try {
+    var r = await fetch('/api/crew-availability?dates=' + dates.join(','));
+    var d = await r.json();
+    if (!d.success) throw new Error(d.error);
+    _addShowAvail = d;
+    renderAddShowAvail(d);
+  } catch(e) {
+    if (body) body.innerHTML = '<div style="color:#c04040;font-size:13px;padding:4px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
+  }
+}
+
+function renderAddShowAvail(d) {
+  var h = '';
+  if (d.conflicts && d.conflicts.length) {
+    h += '<div class="avail-cbox"><strong>&#9888; Existing shows on ' + (d.dates.length > 1 ? 'these dates' : 'this date') + ':</strong>';
+    d.conflicts.forEach(function(c) {
+      var crew = [c.foh_crew, c.stage_crew, c.crew].filter(Boolean).join(', ') || 'no crew yet';
+      h += '<div class="avail-citem">&bull; ' + addShowEscHtml(c.event_date) + ': <strong>' + addShowEscHtml(c.program) + '</strong> @ ' + addShowEscHtml(c.venue) + ' (' + addShowEscHtml(crew) + ')</div>';
+    });
+    h += '</div>';
+  }
+  if (!d.available.length) {
+    h += '<div class="avail-no-crew">No crew available for the selected date(s).</div>';
+  } else {
+    h += '<div class="avail-role-hdr"><span class="avail-role-label">FOH Engineer</span><span class="avail-role-badge avail-badge-foh">Single select</span></div>';
+    h += '<p class="avail-role-hint">Select one crew member as Front-of-House engineer.</p>';
+    h += '<div class="avail-pill-grid">';
+    d.available.forEach(function(name) {
+      var id = 'addshow_foh_' + addShowSid(name);
+      h += '<div class="avail-cpill avail-foh-pill"><input type="radio" name="addshow_foh_crew" id="' + id + '" value="' + addShowEscHtml(name) + '" onchange="onAddShowFoh(this)"><label for="' + id + '">' + addShowEscHtml(name) + '</label></div>';
+    });
+    h += '<div class="avail-cpill avail-foh-pill avail-none-pill"><input type="radio" name="addshow_foh_crew" id="addshow_foh_none" value="" checked><label for="addshow_foh_none">None / TBD</label></div>';
+    h += '</div>';
+    h += '<div class="avail-divider"></div>';
+    h += '<div class="avail-role-hdr"><span class="avail-role-label">Stage Crew</span><span class="avail-role-badge avail-badge-stage">Multi select</span></div>';
+    h += '<p class="avail-role-hint">Select one or more stage crew members.</p>';
+    h += '<div class="avail-pill-grid">';
+    d.available.forEach(function(name) {
+      var id = 'addshow_stage_' + addShowSid(name);
+      h += '<div class="avail-cpill avail-stage-pill"><input type="checkbox" name="addshow_stage_crew" id="' + id + '" value="' + addShowEscHtml(name) + '" onchange="onAddShowStage(this)"><label for="' + id + '">' + addShowEscHtml(name) + '</label></div>';
+    });
+    h += '</div>';
+  }
+  if (d.assigned.length || d.unavailable.length) {
+    h += '<div class="avail-divider"></div>';
+    h += '<div class="avail-excl-hdr">Excluded from selection</div>';
+    h += '<div class="avail-excl-grid">';
+    d.assigned.forEach(function(n) { h += '<span class="avail-etag avail-etag-a">&#128274; ' + addShowEscHtml(n) + ' (assigned)</span>'; });
+    d.unavailable.forEach(function(n) { h += '<span class="avail-etag avail-etag-b">&#9940; ' + addShowEscHtml(n) + ' (blocked)</span>'; });
+    h += '</div>';
+  }
+  var body = document.getElementById('addShowCrewBody');
+  if (body) body.innerHTML = h;
+}
+
+function onAddShowFoh(radio) {
+  if (!radio.value) return;
+  var cb = document.getElementById('addshow_stage_' + addShowSid(radio.value));
+  if (cb) cb.checked = false;
+}
+
+function onAddShowStage(cb) {
+  if (!cb.checked) return;
+  var radio = document.querySelector('input[name="addshow_foh_crew"]:checked');
+  if (radio && radio.value === cb.value) {
+    var none = document.getElementById('addshow_foh_none');
+    if (none) none.checked = true;
+  }
+}
+
+function addShowSid(s) { return String(s).replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function addShowEscHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Wire date change listeners for crew availability check
+// Called after DOMContentLoaded to ensure elements exist
+(function() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var singleDate = document.getElementById('singleDate');
+    var startDate = document.getElementById('startDate');
+    var endDate = document.getElementById('endDate');
+    if (singleDate) singleDate.addEventListener('change', schedAddShowAvailCheck);
+    if (startDate) startDate.addEventListener('change', schedAddShowAvailCheck);
+    if (endDate) endDate.addEventListener('change', schedAddShowAvailCheck);
+    // Also wire the dateType radio buttons so switching modes re-checks
+    document.querySelectorAll('input[name="dateType"]').forEach(function(r) {
+      r.addEventListener('change', schedAddShowAvailCheck);
+    });
+  });
+})();
 
 // ============================================
 // EDIT EVENT

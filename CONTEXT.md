@@ -1,7 +1,7 @@
 # ncpa-sound-manager — Session Context
 
 > Reference file for Claude Code sessions. Updated after each significant work block.
-> Last updated: 2026-04-30
+> Last updated: 2026-05-06
 
 ---
 
@@ -19,8 +19,8 @@
 
 | Branch | Commit | What's in it |
 |---|---|---|
-| `stable/v1.2` | `869bb96` | **Current stable** — FOH/Stage crew split, Edit modal UI, CSV export update |
-| `stable/v1.1` | `bf1d377` | Previous stable — Apple glass UI, correct short notice |
+| `stable/v1.2` | `869bb96` | **Previous stable** — FOH/Stage crew split, Edit modal UI, CSV export update |
+| `stable/v1.1` | `bf1d377` | Older stable — Apple glass UI, correct short notice |
 | `stable/v1.0` | `7d43d76` | Pre-glass UI, pre-crew-CSV-update |
 
 **To roll back production to stable/v1.2:**
@@ -36,9 +36,9 @@ git push origin stable/v1.2:main --force
 |---|---|---|
 | `master` (local) | Stable, production | Maps to `origin/main` — this is what deploys |
 | `origin/main` | Production | Cloudflare Pages deploys from here via GitHub Actions |
-| `stable/v1.1` | Rollback marker | Current stable — post glass UI session |
-| `stable/v1.0` | Rollback marker | Previous stable |
-| `claude/update-color-palette-0MUE8` | **Merged & live** | Glassmorphism/lavender palette — merged in PRs #1 & #2 |
+| `stable/v1.2` | Rollback marker | Post FOH/Stage crew split |
+| `stable/v1.1` | Rollback marker | Post glass UI |
+| `stable/v1.0` | Rollback marker | Pre-glass UI |
 
 **Important:** Local branch is named `master`, remote production is `main`.
 Push with: `git push origin master:main`
@@ -51,17 +51,22 @@ Push with: `git push origin master:main`
 |---|---|
 | Server framework | [Hono.js](https://hono.dev) on Cloudflare Pages Functions |
 | Frontend | Vanilla JS + Tailwind CSS (served as inline template string in `src/index.tsx`) |
-| Database | Cloudflare D1 (SQLite) — `ncpa-sound-crew-db` |
+| Database (events) | Cloudflare D1 (SQLite) — `ncpa-sound-crew-db` (binding: `DB`) |
+| Database (crew) | Cloudflare D1 (SQLite) — `ncpa-crew-db` (binding: `DB_CREW`) — read-only from this app |
 | AI parsing | Anthropic Claude API (`claude-sonnet-4-6`) via `ANTHROPIC_API_KEY` env var |
 | Vector search | Cloudflare Vectorize — `ncpa-events-index` (binding: `VECTORIZE`) |
 | Deployment | GitHub Actions → `cloudflare/wrangler-action@v3` |
 | Build | `npm run build` (Vite/TypeScript) → output in `./dist` |
 
-**D1 database ID:** `8dd5bac9-26b7-45d7-94b3-7a013ec3e880`
+**D1 database IDs:**
+- `ncpa-sound-crew-db` (events): `8dd5bac9-26b7-45d7-94b3-7a013ec3e880`
+- `ncpa-crew-db` (crew unavailability): `3bc26aff-d41b-4d7b-bb68-7b768d02dabf`
 
 **Cloudflare Pages env vars needed:**
 - `ANTHROPIC_API_KEY` — Claude API key for Word doc parsing
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` — in GitHub Actions secrets
+
+**Important — `DB_CREW` in production:** After deploying PR #21, ensure the `DB_CREW` binding is added in the Cloudflare Pages dashboard (Settings → Functions → D1 database bindings) pointing to `ncpa-crew-db`. Without it the `/api/crew-availability` endpoint will error.
 
 ---
 
@@ -70,10 +75,10 @@ Push with: `git push origin master:main`
 | File | Purpose |
 |---|---|
 | `src/index.tsx` | Main Hono server — ALL routes, ALL HTML/CSS/JS served as template strings |
-| `public/static/app.js` | Frontend calendar logic — event cards, modals, upload handling |
+| `public/static/app.js` | Frontend calendar logic — event cards, modals, upload handling, Add Show UI |
 | `public/static/auth.js` | Admin panel — user management, crew stats, pending approvals |
 | `public/static/v41-features.js` | V4.1 feature set — old short notice logic (dormant), analytics etc. |
-| `wrangler.jsonc` | Cloudflare config — D1, AI, Vectorize bindings |
+| `wrangler.jsonc` | Cloudflare config — D1 (`DB` + `DB_CREW`), AI, Vectorize bindings |
 | `.github/workflows/deploy.yml` | CI/CD — deploys on push to `main` only |
 
 ---
@@ -102,8 +107,8 @@ CREATE TABLE events (
 ```
 
 **FOH / Stage crew split (migration 0007, applied 2026-04-30):**
-- `foh_crew` — single person; FOH position. Single-select dropdown in Edit modal.
-- `stage_crew` — one or more; stage crew. Multi-select checkboxes in Edit modal.
+- `foh_crew` — single person; FOH position. Single-select in Add Show and Edit modal.
+- `stage_crew` — one or more; stage crew. Multi-select in Add Show and Edit modal.
 - `crew` — kept as denormalized combined string (FOH + Stage joined) for backward compat.
 - May 2026 existing data migrated: first name in `crew` → `foh_crew`, rest → `stage_crew`.
 - Pre-May 2026 data: `foh_crew` and `stage_crew` are NULL; `crew` unchanged.
@@ -111,7 +116,46 @@ CREATE TABLE events (
 **`source` column values:**
 - `'manual'` — entered via the Add Show form. Used by short notice report.
 - `'import_word'` — uploaded via Word doc or CSV bulk import.
-- Note: historical records before March 2026 code fix may have `source = 'manual'` even if bulk-imported (old code defaulted to 'manual'). All NEW uploads are correctly tagged.
+
+---
+
+## Add Show — Crew Availability Flow (merged May 2026, PR #21)
+
+The Add Show modal now has an integrated crew availability check — previously this lived in a separate standalone `add-show` app.
+
+**How it works:**
+1. User picks a date (or date range) in the Add Show modal
+2. Frontend calls `GET /api/crew-availability?dates=YYYY-MM-DD,...` (debounced 280ms)
+3. Endpoint queries **two databases**:
+   - `DB` (`ncpa-sound-crew-db`) — finds existing shows on those dates, extracts all assigned crew from `crew`, `foh_crew`, `stage_crew` columns
+   - `DB_CREW` (`ncpa-crew-db`) — finds crew members with `crew_unavailability` records on those dates (managed by the crew-assignment automation app)
+4. Returns three lists: `available`, `assigned` (on another show that day), `unavailable` (blocked in crew-assignment app)
+5. UI renders:
+   - **Conflict warning box** if other shows exist on the selected date(s)
+   - **FOH Engineer** section — radio pill select (single select, available crew only)
+   - **Stage Crew** section — checkbox pill select (multi-select, available crew only)
+   - **Excluded** section — 🔒 assigned crew, ⛔ blocked crew
+6. On submit, `POST /api/events` receives `foh_crew` (string) + `stage_crew` (array) and stores them directly — no need to open Edit afterwards
+
+**Valid crew roster** (hardcoded in `/api/crew-availability`):
+`Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3`
+
+**`ncpa-crew-db` is read-only from this app** — its schema (`crew`, `crew_unavailability` tables) is managed by the crew-assignment automation app.
+
+---
+
+## API Endpoints
+
+| Method | Route | Purpose |
+|---|---|---|
+| `GET` | `/api/crew-availability?dates=...` | Returns available/assigned/unavailable crew for given dates |
+| `POST` | `/api/events` | Create event — accepts `foh_crew` + `stage_crew` (or legacy `crew`) |
+| `PUT` | `/api/events/:id` | Update event — full FOH/Stage/crew fields |
+| `DELETE` | `/api/events/:id` | Delete event |
+| `GET` | `/api/events` | List events (month filter) |
+| `GET` | `/api/export/csv` | Google Sheets export — FOH, Stage, program, venue, team, etc. |
+| `GET` | `/api/export/short-notice-report` | Short notice report (manual entries only, ≤12 days notice) |
+| `POST` | `/api/events/bulk` | CSV bulk upload — insert or update crew on existing events |
 
 ---
 
@@ -198,8 +242,6 @@ Notes are internal only — not exported.
 
 **CSV columns:** `Program Name, Record Creation Date, Show Date, Curation Team, Notice Period (days)`
 
-**Note:** Old `checkShortNotice()` toolbar button (yellow card UI) has been removed — it used wrong logic with no source filter.
-
 ---
 
 ## Event Card Colour Logic
@@ -230,6 +272,12 @@ Logic in `public/static/app.js` line ~337.
 - `.tab-active` — iOS segmented control active pill (white glass, shadow)
 - `.event-card-green` / `.event-card-peach` — watercolour green/red indicator cards
 
+**Crew availability pill styles** (added PR #21, prefixed `avail-*`):
+- `.avail-foh-pill input:checked+label` — solid periwinkle `#6B77C0` background
+- `.avail-stage-pill input:checked+label` — soft green `#A8C3A0` background
+- `.avail-cbox` — orange-tinted conflict warning box
+- `.avail-etag-a` — red "assigned" tag, `.avail-etag-b` — grey "blocked" tag
+
 **Tab navigation:** iOS segmented control — grey pill container, active tab = floating white glass pill.
 
 **Toolbar buttons:** All glass-style. Conflicts button removed. Old Short Notice toolbar button removed.
@@ -242,28 +290,30 @@ Logic in `public/static/app.js` line ~337.
 |---|---|
 | Conflicts button (toolbar) | Removed — not needed |
 | Short Notice toolbar button | Removed — replaced by More Actions → Short Notice Report with correct logic |
+| Standalone `add-show` app | Merged into ncpa-sound-manager (PR #21, May 2026) |
 
 ---
 
-## Recent Work (as of 2026-04-30)
+## Recent Work (as of 2026-05-06)
 
-| Commit | What |
+| PR / Commit | What |
 |---|---|
+| PR #21 | **add-show integration** — crew availability check, FOH/Stage pill UI in Add Show modal, `/api/crew-availability` endpoint, `DB_CREW` binding for `ncpa-crew-db` |
 | `bcc7b65` | FOH/Stage crew split: Edit modal UI, DB migration, CSV export update |
 | `bf1d377` | Remove old Short Notice toolbar button (wrong logic, no source filter) |
 | `71af5f8` | Short notice report: month range picker (not day range) |
 | `8a34017` | Remove Conflicts feature completely |
 | `4a3875b` | CSV bulk upload: update crew on duplicate match instead of skipping |
 | `a67f76f` | Apple liquid glass UI: subtle card colours, segmented tabs, glass buttons |
-| `e530f56` | Fix event card indicator colours (was lavender, now proper green/red) |
 
 ---
 
 ## Next Up
 
-- [ ] Run DB migration 0007 on production D1: `wrangler d1 execute ncpa-sound-crew-db --file=migrations/0007_foh_stage_crew.sql`
-- [ ] Bump Google Sheet IMPORTDATA formula `v=N` after migration so Sheets picks up new FOH/Stage columns
+- [ ] **Add `DB_CREW` binding in Cloudflare Pages dashboard** (production) — Settings → Functions → D1 database bindings → add `DB_CREW` → `ncpa-crew-db` (`3bc26aff-d41b-4d7b-bb68-7b768d02dabf`). Without this the crew availability check will fail in production.
+- [ ] **Deploy PR #21** — run `npm run deploy:prod` or merge triggers GitHub Actions deploy
+- [ ] Bump Google Sheet IMPORTDATA formula `v=N` after deploy so Sheets picks up any changes
 - [ ] Colour palette refinement — the glassmorphism is in production. Session decision needed:
   - Option A: Strip glassmorphism, go clean/flat, apply new palette
   - Option B: Keep glassmorphism, change lavender/purple tones to something better
-  - Rollback to `stable/v1.1` if anything breaks
+  - Rollback to `stable/v1.2` if anything breaks

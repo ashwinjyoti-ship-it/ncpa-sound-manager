@@ -28,9 +28,13 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
   try {
     const body: RAGQueryRequest = await c.req.json()
     const { query, session_id, max_results = 50 } = body
+    const queryText = (query || '').trim()
+    if (!queryText) {
+      return c.json({ success: false, error: 'Query is required' }, 400)
+    }
     
     // Smart defaults: Only include analytics/predictions if query explicitly asks
-    const queryLower = query.toLowerCase()
+    const queryLower = queryText.toLowerCase()
     const include_analytics = queryLower.includes('insight') || 
                              queryLower.includes('analyz') || 
                              queryLower.includes('pattern') || 
@@ -47,10 +51,6 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
                           queryLower.includes('count') ||
                           queryLower.includes('total') ||
                           queryLower.includes('number of')
-    
-    if (!query) {
-      return c.json({ success: false, error: 'Query is required' }, 400)
-    }
     
     const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substring(7)}`
     const apiKey = c.env.ANTHROPIC_API_KEY
@@ -76,7 +76,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // ============================================
     console.log('🧠 Extracting entities...')
     const entities: ExtractedEntities = await extractEntities(
-      query,
+      queryText,
       apiKey,
       conversationHistory
     )
@@ -198,9 +198,14 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // Crew filter
     if (entities.crew) {
       const crewNames = entities.crew.split(',').map(c => c.trim())
-      const crewConditions = crewNames.map(() => 'crew LIKE ?').join(' OR ')
+      const crewConditions = crewNames
+        .map(() => "(COALESCE(crew, '') LIKE ? OR COALESCE(foh_crew, '') LIKE ? OR COALESCE(stage_crew, '') LIKE ?)")
+        .join(' OR ')
       sqlQuery += ` AND (${crewConditions})`
-      crewNames.forEach(crew => sqlParams.push(`%${crew}%`))
+      crewNames.forEach(crew => {
+        const value = `%${crew}%`
+        sqlParams.push(value, value, value)
+      })
     }
     
     // Program filter
@@ -373,7 +378,7 @@ RESPONSE RULES:
 CURRENT DATE: ${new Date().toISOString().split('T')[0]}`
 
     const contextPrompt = `
-USER QUERY: "${query}"
+USER QUERY: "${queryText}"
 
 EXTRACTED INTENT: ${entities.intent}
 EXTRACTED ENTITIES: ${JSON.stringify(entities)}
@@ -396,7 +401,7 @@ Answer the user's query in 1-2 sentences. If predictions show free dates, LIST T
 
 CRITICAL RULES FOR COUNT/AGGREGATION QUERIES:
 1. LOOK AT "MATCHING EVENTS (X results)" above - that X is the EXACT count
-2. For the query "${query}", the EXACT count is: ${events.length} events
+2. For the query "${queryText}", the EXACT count is: ${events.length} events
 3. State this EXACT number in your answer: "**${events.length} events**"
 4. DO NOT use any other number. DO NOT estimate. DO NOT round.
 5. If you see "MATCHING EVENTS (${events.length} results)", answer with ${events.length}

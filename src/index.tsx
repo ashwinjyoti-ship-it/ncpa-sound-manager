@@ -136,24 +136,48 @@ app.get('/api/events/range', async (c) => {
 // Search events (MUST be before /:id route)
 app.get('/api/events/search', async (c) => {
   try {
-    const query = c.req.query('q')
+    const query = (c.req.query('q') || '').trim()
     
     if (!query) {
       return c.json({ success: false, error: 'Search query required' }, 400)
     }
-    
-    const searchTerm = `%${query}%`
-    
+
+    const rawTokens = query
+      .toLowerCase()
+      .split(/\s+/)
+      .map(t => t.trim())
+      .filter(Boolean)
+
+    const tokens = Array.from(new Set(rawTokens)).slice(0, 8)
+    const sqlClauses: string[] = []
+    const sqlParams: string[] = []
+
+    if (tokens.length) {
+      for (const token of tokens) {
+        const searchTerm = `%${token}%`
+        sqlClauses.push(`(
+          LOWER(program) LIKE ?
+          OR LOWER(venue) LIKE ?
+          OR LOWER(team) LIKE ?
+          OR LOWER(COALESCE(crew, '')) LIKE ?
+          OR LOWER(COALESCE(foh_crew, '')) LIKE ?
+          OR LOWER(COALESCE(stage_crew, '')) LIKE ?
+          OR LOWER(COALESCE(sound_requirements, '')) LIKE ?
+          OR LOWER(COALESCE(call_time, '')) LIKE ?
+          OR LOWER(COALESCE(notes, '')) LIKE ?
+          OR event_date LIKE ?
+        )`)
+        sqlParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm)
+      }
+    }
+
+    const whereClause = sqlClauses.length ? sqlClauses.join(' AND ') : '1=1'
     const { results } = await c.env.DB.prepare(`
-      SELECT * FROM events 
-      WHERE program LIKE ? 
-         OR venue LIKE ? 
-         OR team LIKE ?
-         OR crew LIKE ?
-         OR sound_requirements LIKE ?
+      SELECT * FROM events
+      WHERE ${whereClause}
       ORDER BY event_date DESC
-      LIMIT 50
-    `).bind(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm).all()
+      LIMIT 100
+    `).bind(...sqlParams).all()
     
     return c.json({ success: true, data: results })
   } catch (error: any) {
@@ -2227,7 +2251,7 @@ app.get('/', (c) => {
                 <!-- MOBILE: Simple search bar only -->
                 <div class="md:hidden mb-3">
                     <div class="relative">
-                        <input type="text" id="searchInput" placeholder="Search by name, venue, crew..." 
+                        <input type="text" id="searchInputMobile" data-search-input="events" placeholder="Search by name, venue, crew, notes..." 
                                class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7] text-sm">
                         <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                     </div>
@@ -2252,7 +2276,7 @@ app.get('/', (c) => {
                         <div class="flex items-center gap-3">
                             <!-- Search -->
                             <div class="relative">
-                                <input type="text" id="searchInput" placeholder="Search events..." 
+                                <input type="text" id="searchInputDesktop" data-search-input="events" placeholder="Search events..." 
                                        class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                                 <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
                             </div>

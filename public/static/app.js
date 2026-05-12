@@ -47,11 +47,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // Search functionality with debounce
   let searchTimeout;
-  document.getElementById('searchInput').addEventListener('input', (e) => {
-    clearTimeout(searchTimeout);
-    searchTimeout = setTimeout(() => {
-      handleSearch(e.target.value);
-    }, 500);
+  document.querySelectorAll('[data-search-input="events"]').forEach((searchInput) => {
+    searchInput.addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        const query = e.target.value;
+        document.querySelectorAll('[data-search-input="events"]').forEach((otherInput) => {
+          if (otherInput !== e.target) otherInput.value = query;
+        });
+        handleSearch(query);
+      }, 350);
+    });
   });
 });
 

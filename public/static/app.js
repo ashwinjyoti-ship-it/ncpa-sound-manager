@@ -2278,6 +2278,15 @@ if (!aiSessionId) {
   localStorage.setItem('ai_session_id', aiSessionId);
 }
 
+function escapeHtml(input) {
+  return String(input || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 async function askAI(predefinedQuery) {
   const input = document.getElementById('aiQueryInput');
   const query = predefinedQuery || input.value.trim();
@@ -2301,19 +2310,23 @@ async function askAI(predefinedQuery) {
     });
     
     if (response.data.success) {
-      const { answer, events, insights, recommendations, follow_up_suggestions } = response.data;
+      const { answer, events, insights, recommendations, follow_up_suggestions, needs_clarification, clarification_questions } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
-      document.getElementById('aiExplanation').innerHTML = answer || 'Here are the results:';
+      document.getElementById('aiExplanation').textContent = answer || 'Here are the results:';
       
       // Display results
       let resultsHTML = '';
       
       // Show events if any
-      if (events && events.length > 0) {
+      if (needs_clarification && clarification_questions?.length) {
+        resultsHTML += '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-yellow-800 mb-2">Need clarification</h4><ul class="space-y-1 text-sm list-disc list-inside">';
+        clarification_questions.forEach(q => { resultsHTML += `<li class="text-gray-700">${escapeHtml(q)}</li>`; });
+        resultsHTML += '</ul></div>';
+      } else if (events && events.length > 0) {
         resultsHTML += '<div class="space-y-3 mb-4">';
         events.forEach(event => {
           resultsHTML += `
@@ -2321,14 +2334,14 @@ async function askAI(predefinedQuery) {
               <div class="flex justify-between items-start mb-2">
                 <div class="flex-1">
                   <div class="text-sm font-semibold" style="color:#98A2D7;">${formatDate(event.event_date)}</div>
-                  <div class="text-lg font-bold text-gray-800 mt-1">${event.program}</div>
+                  <div class="text-lg font-bold text-gray-800 mt-1">${escapeHtml(event.program || '')}</div>
                 </div>
               </div>
               <div class="grid grid-cols-2 gap-2 text-sm mt-3">
-                <div><span class="text-gray-600">Venue:</span> <span class="font-medium">${event.venue || 'N/A'}</span></div>
-                <div><span class="text-gray-600">Crew:</span> <span class="font-medium">${event.crew || 'N/A'}</span></div>
-                <div><span class="text-gray-600">Call Time:</span> <span class="font-medium">${event.call_time || 'N/A'}</span></div>
-                <div><span class="text-gray-600">Team:</span> <span class="font-medium">${event.team || 'N/A'}</span></div>
+                <div><span class="text-gray-600">Venue:</span> <span class="font-medium">${escapeHtml(event.venue || 'N/A')}</span></div>
+                <div><span class="text-gray-600">Crew:</span> <span class="font-medium">${escapeHtml(event.foh_crew ? `${event.foh_crew}${event.stage_crew ? ` | ${event.stage_crew}` : ''}` : (event.stage_crew || event.crew || 'N/A'))}</span></div>
+                <div><span class="text-gray-600">Call Time:</span> <span class="font-medium">${escapeHtml(event.call_time || 'N/A')}</span></div>
+                <div><span class="text-gray-600">Team:</span> <span class="font-medium">${escapeHtml(event.team || 'N/A')}</span></div>
               </div>
               ${event.sound_requirements ? `<div class="mt-3 text-sm"><span class="text-gray-600">Sound Requirements:</span> <div class="mt-1 text-gray-700">${formatLinksInText(event.sound_requirements)}</div></div>` : ''}
             </div>
@@ -2343,7 +2356,7 @@ async function askAI(predefinedQuery) {
       if (insights && Object.keys(insights).length > 0) {
         resultsHTML += '<div class="rounded-xl p-4 mb-4" style="background:rgba(152,162,215,0.08);outline:1px solid rgba(173,179,184,0.18);"><h4 class="font-semibold mb-2" style="color:#465080;">📊 Insights</h4><ul class="space-y-1 text-sm">';
         for (const [key, value] of Object.entries(insights)) {
-          resultsHTML += `<li><span class="text-gray-600">${key}:</span> <span class="font-medium text-gray-800">${value}</span></li>`;
+          resultsHTML += `<li><span class="text-gray-600">${escapeHtml(key)}:</span> <span class="font-medium text-gray-800">${escapeHtml(String(value))}</span></li>`;
         }
         resultsHTML += '</ul></div>';
       }
@@ -2352,7 +2365,7 @@ async function askAI(predefinedQuery) {
       if (recommendations && recommendations.length > 0) {
         resultsHTML += '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-blue-800 mb-2">💡 Recommendations</h4><ul class="space-y-1 text-sm list-disc list-inside">';
         recommendations.forEach(rec => {
-          resultsHTML += `<li class="text-gray-700">${rec}</li>`;
+          resultsHTML += `<li class="text-gray-700">${escapeHtml(rec)}</li>`;
         });
         resultsHTML += '</ul></div>';
       }

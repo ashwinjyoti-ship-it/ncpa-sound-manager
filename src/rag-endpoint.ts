@@ -281,7 +281,10 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // ============================================
     let insights: any = undefined
     
-    if (include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')) {
+    if (
+      (include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')) ||
+      entities.intent === 'aggregation'
+    ) {
       console.log('📈 Generating analytics...')
       
       const dateRange = {
@@ -292,6 +295,31 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       // Venue stats
       const venueStats = await getVenueStats(dateRange.start, dateRange.end, c.env.DB)
       const busiestVenue = Object.entries(venueStats).sort((a, b) => b[1] - a[1])[0]
+
+      // Team distribution stats
+      const teamDistributionQuery = `
+        SELECT
+          COALESCE(NULLIF(TRIM(team), ''), 'Unassigned') as team,
+          COUNT(*) as count
+        FROM events
+        WHERE event_date >= ? AND event_date <= ?
+        GROUP BY COALESCE(NULLIF(TRIM(team), ''), 'Unassigned')
+        ORDER BY count DESC
+      `
+      const teamDistributionResult = await c.env.DB.prepare(teamDistributionQuery)
+        .bind(dateRange.start, dateRange.end)
+        .all()
+      const teamRows = (teamDistributionResult.results || []) as Array<{ team: string; count: number }>
+      const teamTotal = teamRows.reduce((sum, row) => sum + Number(row.count || 0), 0)
+      const teamStats = teamRows.map((row) => {
+        const count = Number(row.count || 0)
+        const percentage = teamTotal > 0 ? Number(((count / teamTotal) * 100).toFixed(2)) : 0
+        return {
+          team: row.team || 'Unassigned',
+          count,
+          percentage
+        }
+      })
       
       // Crew workload
       const crewWorkload: Record<string, number> = {}
@@ -309,7 +337,8 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
         busiest_venue: busiestVenue?.[0],
         busiest_crew: busiestCrew?.[0],
         venue_stats: venueStats,
-        crew_workload: crewWorkload
+        crew_workload: crewWorkload,
+        team_stats: teamStats
       }
       
       console.log('✅ Analytics generated')

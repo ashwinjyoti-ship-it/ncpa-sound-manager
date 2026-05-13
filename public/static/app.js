@@ -2224,6 +2224,14 @@ function openAIAssistant() {
 
 function closeAIAssistant() {
   document.getElementById('aiAssistantModal').classList.remove('active');
+  clearAIResults();
+}
+
+function clearAIResults() {
+  document.getElementById('aiResponse').style.display = 'none';
+  document.getElementById('aiLoading').style.display = 'none';
+  document.getElementById('aiExplanation').textContent = '';
+  document.getElementById('aiResultsContainer').innerHTML = '';
 }
 
 // Session management for context memory

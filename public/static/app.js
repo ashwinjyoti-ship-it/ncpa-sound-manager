@@ -40,25 +40,9 @@ function displayVenue(venue) {
   return venue;
 }
 
-// Initialize app on page load
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadEvents();
-  renderCalendar();
-  
-  // Search functionality with debounce
-  let searchTimeout;
-  document.querySelectorAll('[data-search-input="events"]').forEach((searchInput) => {
-    searchInput.addEventListener('input', (e) => {
-      clearTimeout(searchTimeout);
-      searchTimeout = setTimeout(() => {
-        const query = e.target.value;
-        document.querySelectorAll('[data-search-input="events"]').forEach((otherInput) => {
-          if (otherInput !== e.target) otherInput.value = query;
-        });
-        handleSearch(query);
-      }, 350);
-    });
-  });
+   await loadEvents();
+   renderCalendar();
 });
 
 // ============================================
@@ -1446,35 +1430,6 @@ function parseMonthName(monthStr) {
   };
   
   return months[monthStr.toLowerCase()] || null;
-}
-
-// ============================================
-// SEARCH
-// ============================================
-
-async function handleSearch(query) {
-  if (!query || query.trim() === '') {
-    loadEvents();
-    return;
-  }
-  
-  try {
-    const response = await axios.get(`${API_BASE}/events/search?q=${encodeURIComponent(query)}`);
-    
-    if (response.data.success) {
-      allEvents = response.data.data;
-      
-      // Show notification if no results found
-      if (allEvents.length === 0) {
-        showNotification(`No events found for "${query}". Clear search to see all events.`, 'info');
-      }
-      
-      renderCurrentView();
-    }
-  } catch (error) {
-    console.error('Error searching:', error);
-    showNotification('Search failed', 'error');
-  }
 }
 
 // ============================================

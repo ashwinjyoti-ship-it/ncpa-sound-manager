@@ -133,57 +133,7 @@ app.get('/api/events/range', async (c) => {
   }
 })
 
-// Search events (MUST be before /:id route)
-app.get('/api/events/search', async (c) => {
-  try {
-    const query = (c.req.query('q') || '').trim()
-    
-    if (!query) {
-      return c.json({ success: false, error: 'Search query required' }, 400)
-    }
 
-    const rawTokens = query
-      .toLowerCase()
-      .split(/\s+/)
-      .map(t => t.trim())
-      .filter(Boolean)
-
-    const tokens = Array.from(new Set(rawTokens)).slice(0, 8)
-    const sqlClauses: string[] = []
-    const sqlParams: string[] = []
-
-    if (tokens.length) {
-      for (const token of tokens) {
-        const searchTerm = `%${token}%`
-        sqlClauses.push(`(
-          LOWER(program) LIKE ?
-          OR LOWER(venue) LIKE ?
-          OR LOWER(team) LIKE ?
-          OR LOWER(COALESCE(crew, '')) LIKE ?
-          OR LOWER(COALESCE(foh_crew, '')) LIKE ?
-          OR LOWER(COALESCE(stage_crew, '')) LIKE ?
-          OR LOWER(COALESCE(sound_requirements, '')) LIKE ?
-          OR LOWER(COALESCE(call_time, '')) LIKE ?
-          OR LOWER(COALESCE(notes, '')) LIKE ?
-          OR event_date LIKE ?
-        )`)
-        sqlParams.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm)
-      }
-    }
-
-    const whereClause = sqlClauses.length ? sqlClauses.join(' AND ') : '1=1'
-    const { results } = await c.env.DB.prepare(`
-      SELECT * FROM events
-      WHERE ${whereClause}
-      ORDER BY event_date DESC
-      LIMIT 100
-    `).bind(...sqlParams).all()
-    
-    return c.json({ success: true, data: results })
-  } catch (error: any) {
-    return c.json({ success: false, error: error.message }, 500)
-  }
-})
 
 // ============================================
 // GOOGLE SHEETS AUTO-SYNC: CSV EXPORT ENDPOINT
@@ -2248,14 +2198,7 @@ app.get('/', (c) => {
                     </button>
                 </div>
                 
-                <!-- MOBILE: Simple search bar only -->
-                <div class="md:hidden mb-3">
-                    <div class="relative">
-                        <input type="text" id="searchInputMobile" data-search-input="events" placeholder="Search by name, venue, crew, notes..." 
-                               class="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7] text-sm">
-                        <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
-                    </div>
-                </div>
+                
                 
                 <!-- DESKTOP: Full toolbar with all features -->
                 <div class="hidden md:block">
@@ -2274,12 +2217,11 @@ app.get('/', (c) => {
                         
                         <!-- Desktop toolbar -->
                         <div class="flex items-center gap-3">
-                            <!-- Search -->
-                            <div class="relative">
-                                <input type="text" id="searchInputDesktop" data-search-input="events" placeholder="Search events..." 
-                                       class="w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
-                                <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
-                            </div>
+                            <!-- Ask AI Button -->
+                            <button onclick="toggleAIAssistant()"
+                                    class="btn-primary px-3 py-2 text-sm transition-all">
+                                <i class="fas fa-robot mr-1.5"></i>Ask AI
+                            </button>
                             
                             <!-- Divider -->
                             <div class="h-8 w-px bg-gray-300"></div>
@@ -3027,54 +2969,54 @@ app.get('/', (c) => {
         </button>
 
         <!-- AI Assistant Modal -->
-        <div id="aiAssistantModal" class="modal">
-            <div class="modal-content" style="max-width: 700px;">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #2d3338;">
-                        <i class="fas fa-robot mr-2"></i>AI Assistant
-                    </h2>
-                    <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
-                </div>
-                
-                <div class="mb-6">
-                    <p class="text-gray-600 mb-4">Ask me anything about your events! Try these examples:</p>
-                    <div class="grid grid-cols-2 gap-2 mb-4">
-                        <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
-                            📅 Events tomorrow
-                        </button>
-                        <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
-                            🏛️ Events at Tata Theatre
-                        </button>
-                        <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(168,195,160,0.10);color:#3d5c3d;" onmouseover="this.style.background='rgba(168,195,160,0.20)'" onmouseout="this.style.background='rgba(168,195,160,0.10)'">
-                            ⚠️ Missing requirements
-                        </button>
-                        <button onclick="askAI('Events assigned to Ashwin')" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
-                            👤 Ashwin's events
-                        </button>
-                    </div>
-                    
-                    <div class="flex space-x-2">
-                        <input type="text" id="aiQueryInput" placeholder="Ask about events..." 
-                               class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
-                               onkeypress="if(event.key==='Enter') askAI()">
-                        <button onclick="askAI()" class="btn-primary px-6 py-3">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-                
-                <div id="aiResponse" style="display: none;">
-                    <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                        <div class="flex items-center mb-2">
-                            <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
-                            <h3 class="font-semibold text-gray-700">Response:</h3>
-                        </div>
-                        <p id="aiExplanation" class="text-gray-600 mb-3"></p>
-                        <div id="aiResultsContainer" class="overflow-x-auto"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+<div id="aiAssistantModal" class="modal">
+             <div class="modal-content" style="max-width: 700px;">
+                 <div class="flex justify-between items-center mb-4">
+                     <h2 class="text-2xl font-bold" style="color: #2d3338;">
+                         <i class="fas fa-robot mr-2"></i>Ask AI
+                     </h2>
+                     <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                 </div>
+                 
+                 <div class="mb-6">
+                     <p class="text-gray-600 mb-4">Search your events using natural language. Ask anything about dates, venues, crew, or availability.</p>
+                     <div class="grid grid-cols-2 gap-2 mb-4">
+                         <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
+                             📅 Events tomorrow
+                         </button>
+                         <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
+                             🏛️ Events at Tata Theatre
+                         </button>
+                         <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(168,195,160,0.10);color:#3d5c3d;" onmouseover="this.style.background='rgba(168,195,160,0.20)'" onmouseout="this.style.background='rgba(168,195,160,0.10)'">
+                             ⚠️ Missing requirements
+                         </button>
+                         <button onclick="askAI('Events assigned to Ashwin')" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
+                             👤 Ashwin's events
+                         </button>
+                     </div>
+                     
+                     <div class="flex space-x-2">
+                         <input type="text" id="aiQueryInput" placeholder="e.g., Which dates are JBT and Tata both free in November?" 
+                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
+                                onkeypress="if(event.key==='Enter') askAI()">
+                         <button onclick="askAI()" class="btn-primary px-6 py-3">
+                             <i class="fas fa-paper-plane"></i>
+                         </button>
+                     </div>
+                 </div>
+                 
+                 <div id="aiResponse" style="display: none;">
+                     <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                         <div class="flex items-center mb-2">
+                             <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
+                             <h3 class="font-semibold text-gray-700">Response:</h3>
+                         </div>
+                         <p id="aiExplanation" class="text-gray-600 mb-3"></p>
+                         <div id="aiResultsContainer" class="overflow-x-auto"></div>
+                     </div>
+                 </div>
+             </div>
+         </div>
 
         <script>
           // Early Safari test - runs before any libraries load

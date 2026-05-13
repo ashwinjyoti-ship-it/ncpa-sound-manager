@@ -2203,6 +2203,7 @@ app.get('/', (c) => {
                 <!-- DESKTOP: Full toolbar with all features -->
                 <div class="hidden md:block">
                     <div class="flex justify-between items-center mb-6">
+                        <!-- Left: Tab navigation -->
                         <div class="flex p-1 rounded-xl" style="background:rgba(120,120,128,0.10);gap:2px;">
                             <button id="calendarTab" class="px-4 py-1.5 text-sm font-semibold tab-active rounded-lg transition-all" onclick="showTab('calendar')">
                                 <i class="fas fa-calendar-alt mr-2"></i>Calendar
@@ -2214,30 +2215,31 @@ app.get('/', (c) => {
                                 <i class="fas fa-users mr-2"></i>Crew
                             </button>
                         </div>
-                        
-                        <!-- Desktop toolbar -->
-                        <div class="flex items-center gap-3">
-                            <!-- Ask AI Button -->
+
+                        <!-- Center: Ask AI button -->
+                        <div class="flex items-center">
                             <button onclick="toggleAIAssistant()"
-                                    class="btn-primary px-3 py-2 text-sm transition-all">
-                                <i class="fas fa-robot mr-1.5"></i>Ask AI
+                                    class="btn-primary px-6 py-2.5 text-base transition-all shadow-md hover:shadow-lg">
+                                <i class="fas fa-robot mr-2"></i>Ask AI
                             </button>
-                            
+                        </div>
+
+                        <!-- Right: Toolbar actions -->
+                        <div class="flex items-center gap-3">
                             <!-- Divider -->
                             <div class="h-8 w-px bg-gray-300"></div>
-                            
+
                             <!-- Analysis Tools Group -->
                             <div class="flex gap-2">
                                 <button onclick="toggleFilterPanel()"
                                         class="btn-glass px-3 py-2 text-sm">
                                     <i class="fas fa-filter mr-1.5"></i>Filters
                                 </button>
-
                             </div>
-                            
+
                             <!-- Divider -->
                             <div class="h-8 w-px bg-gray-300"></div>
-                            
+
                             <!-- Import/Export Dropdown -->
                             <div class="relative">
                                 <button onclick="toggleActionsDropdown()"
@@ -2246,13 +2248,13 @@ app.get('/', (c) => {
                                     <span>More Actions</span>
                                     <i class="fas fa-chevron-down text-xs"></i>
                                 </button>
-                                
+
                                 <!-- Dropdown Menu -->
                                 <div id="actionsDropdown" class="hidden absolute right-0 mt-2 w-56 rounded-2xl z-50" style="background:rgba(248,249,252,0.90);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.18);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 16px 40px rgba(45,51,56,0.08);">
                                     <div class="py-2">
                                         <!-- Export Section -->
                                         <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Export</div>
-                                        <button onclick="openCSVExportModal(); toggleActionsDropdown();" 
+                                        <button onclick="openCSVExportModal(); toggleActionsDropdown();"
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
                                             <i class="fas fa-file-csv w-5" style="color: #98A2D7;"></i>
                                             <span class="text-sm text-gray-700">Export CSV</span>
@@ -2267,18 +2269,18 @@ app.get('/', (c) => {
                                             <i class="fas fa-clock text-red-500 w-5"></i>
                                             <span class="text-sm text-gray-700">Short Notice Report</span>
                                         </button>
-                                        
+
                                         <!-- Divider -->
                                         <div class="my-2 border-t border-gray-200"></div>
-                                        
+
                                         <!-- Import Section -->
                                         <div class="px-3 py-1 text-xs font-semibold text-gray-500 uppercase">Import</div>
-                                        <button onclick="document.getElementById('wordInput').click(); toggleActionsDropdown();" 
+                                        <button onclick="document.getElementById('wordInput').click(); toggleActionsDropdown();"
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
                                             <i class="fas fa-file-word text-blue-600 w-5"></i>
                                             <span class="text-sm text-gray-700">Upload Word</span>
                                         </button>
-                                        <button onclick="document.getElementById('csvInput').click(); toggleActionsDropdown();" 
+                                        <button onclick="document.getElementById('csvInput').click(); toggleActionsDropdown();"
                                                 class="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-center gap-3">
                                             <i class="fas fa-file-upload text-teal-600 w-5"></i>
                                             <span class="text-sm text-gray-700">Upload CSV</span>
@@ -2286,14 +2288,14 @@ app.get('/', (c) => {
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Hidden file inputs -->
                             <input type="file" id="wordInput" accept=".doc,.docx" style="display: none;" onchange="handleWordUpload(event)">
                             <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
-                            
+
                             <!-- Add Show Button -->
                             <button onclick="openAddShowModal()"
-                                class="btn-primary px-3 py-2 text-sm transition-all">
+                                    class="btn-primary px-3 py-2 text-sm transition-all">
                                 <i class="fas fa-plus mr-1.5"></i>Add Show
                             </button>
                         </div>
@@ -2991,16 +2993,21 @@ app.get('/', (c) => {
                       </div>
                   </div>
                  
-                 <div id="aiResponse" style="display: none;">
-                     <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                         <div class="flex items-center mb-2">
-                             <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
-                             <h3 class="font-semibold text-gray-700">Response:</h3>
-                         </div>
-                         <p id="aiExplanation" class="text-gray-600 mb-3"></p>
-                         <div id="aiResultsContainer" class="overflow-x-auto"></div>
-                     </div>
-                 </div>
+                  <div id="aiResponse" style="display: none;">
+                      <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                          <div class="flex items-center justify-between mb-2">
+                              <div class="flex items-center">
+                                  <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
+                                  <h3 class="font-semibold text-gray-700">Response:</h3>
+                              </div>
+                              <button onclick="clearAIResults()" class="text-sm px-3 py-1.5 rounded-lg transition-colors" style="background:rgba(152,162,215,0.12);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.22)'" onmouseout="this.style.background='rgba(152,162,215,0.12)'">
+                                  Clear Results
+                              </button>
+                          </div>
+                          <p id="aiExplanation" class="text-gray-600 mb-3"></p>
+                          <div id="aiResultsContainer" class="overflow-x-auto"></div>
+                      </div>
+                  </div>
              </div>
          </div>
 

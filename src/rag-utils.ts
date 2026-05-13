@@ -68,6 +68,11 @@ INTENT CLASSIFICATION:
 - "comparison": Compare venues/crew (e.g., "Ashwin vs Naren workload")
 - "aggregation": Count, sum, totals (e.g., "Total events in December")
 
+PERCENTAGE / SHARE HINTS:
+- Phrases like "%", "percent", "percentage", "share", "ratio", "proportion", or "out of" should map to "aggregation" or "analytics" intents.
+- Use "aggregation" for direct split/count asks (e.g., "What % of shows were in TT?").
+- Use "analytics" when asking for interpreted trend/pattern insights from those percentages.
+
 EXAMPLES:
 
 Q: "Show me all Ashwin's events in December"
@@ -90,6 +95,12 @@ A: {"intent":"aggregation","venue":null,"crew":null,"date":null,"start_date":"20
 
 Q: "Events on December 25th" (clearly asking for single day)
 A: {"intent":"search","venue":null,"crew":null,"date":"2025-12-25","start_date":null,"end_date":null,"month":"2025-12","year":"2025","program":null,"confidence":0.95}
+
+Q: "What % of shows were in TT in the last 6 months?"
+A: {"intent":"aggregation","venue":"Tata Theatre","crew":null,"date":null,"start_date":"2025-06-01","end_date":"2025-11-30","month":null,"year":"2025","program":null,"confidence":0.90}
+
+Q: "Team-wise percentage split for last quarter"
+A: {"intent":"analytics","venue":null,"crew":null,"date":null,"start_date":"2025-10-01","end_date":"2025-12-31","month":null,"year":"2025","program":"team-wise split","confidence":0.88}
 
 IMPORTANT RULES:
 1. "December 25" without "th" or "25th" → interpret as year 2025 (month December)

@@ -40,7 +40,14 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
                              queryLower.includes('pattern') || 
                              queryLower.includes('busiest') ||
                              queryLower.includes('most') ||
-                             queryLower.includes('compare')
+                             queryLower.includes('compare') ||
+                             queryLower.includes('percent') ||
+                             queryLower.includes('percentage') ||
+                             queryLower.includes('share') ||
+                             queryLower.includes('ratio') ||
+                             queryLower.includes('proportion') ||
+                             queryLower.includes('%') ||
+                             queryLower.includes('out of')
     
     const include_predictions = queryLower.includes('available') || 
                                 queryLower.includes('free') || 
@@ -50,7 +57,14 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     const is_aggregation = queryLower.includes('how many') ||
                           queryLower.includes('count') ||
                           queryLower.includes('total') ||
-                          queryLower.includes('number of')
+                          queryLower.includes('number of') ||
+                          queryLower.includes('percent') ||
+                          queryLower.includes('percentage') ||
+                          queryLower.includes('share') ||
+                          queryLower.includes('ratio') ||
+                          queryLower.includes('proportion') ||
+                          queryLower.includes('%') ||
+                          queryLower.includes('out of')
     
     const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substring(7)}`
     const apiKey = c.env.ANTHROPIC_API_KEY

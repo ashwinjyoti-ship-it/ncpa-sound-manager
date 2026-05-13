@@ -2978,32 +2978,18 @@ app.get('/', (c) => {
                      <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
                  </div>
                  
-                 <div class="mb-6">
-                     <p class="text-gray-600 mb-4">Search your events using natural language. Ask anything about dates, venues, crew, or availability.</p>
-                     <div class="grid grid-cols-2 gap-2 mb-4">
-                         <button onclick="askAI('Show all events tomorrow')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
-                             📅 Events tomorrow
-                         </button>
-                         <button onclick="askAI('Events at Tata Theatre this month')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(152,162,215,0.08);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.16)'" onmouseout="this.style.background='rgba(152,162,215,0.08)'">
-                             🏛️ Events at Tata Theatre
-                         </button>
-                         <button onclick="askAI('Events with missing sound requirements')" class="px-3 py-2 text-sm rounded-lg text-left transition-colors" style="background:rgba(168,195,160,0.10);color:#3d5c3d;" onmouseover="this.style.background='rgba(168,195,160,0.20)'" onmouseout="this.style.background='rgba(168,195,160,0.10)'">
-                             ⚠️ Missing requirements
-                         </button>
-                         <button onclick="askAI('Events assigned to Ashwin')" class="px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 text-left">
-                             👤 Ashwin's events
-                         </button>
-                     </div>
-                     
-                     <div class="flex space-x-2">
-                         <input type="text" id="aiQueryInput" placeholder="e.g., Which dates are JBT and Tata both free in November?" 
-                                class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
-                                onkeypress="if(event.key==='Enter') askAI()">
-                         <button onclick="askAI()" class="btn-primary px-6 py-3">
-                             <i class="fas fa-paper-plane"></i>
-                         </button>
-                     </div>
-                 </div>
+                  <div class="mb-6">
+                      <p class="text-gray-400 italic mb-4">Search your events using natural language. Ask anything about dates, venues, crew, or availability.</p>
+                      
+                      <div class="flex space-x-2">
+                          <input type="text" id="aiQueryInput" placeholder="Ask a question about your events..." 
+                                 class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
+                                 onkeypress="if(event.key==='Enter') askAI()">
+                          <button onclick="askAI()" class="btn-primary px-6 py-3">
+                              <i class="fas fa-paper-plane"></i>
+                          </button>
+                      </div>
+                  </div>
                  
                  <div id="aiResponse" style="display: none;">
                      <div class="bg-gray-50 rounded-lg p-4 mb-4">

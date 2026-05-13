@@ -410,6 +410,7 @@ export function formatRAGResponse(
 ): Partial<RAGQueryResponse> {
   
   const follow_up_queries: string[] = []
+  let formattedAnswer = answer
   
   // Generate contextual follow-ups based on intent
   if (entities.intent === 'search' && events.length > 0) {
@@ -431,9 +432,24 @@ export function formatRAGResponse(
       `What's the booking pattern?`
     )
   }
+
+  if (insights?.team_stats && Array.isArray(insights.team_stats) && insights.team_stats.length > 0) {
+    const periodLabel = entities.month
+      ? entities.month
+      : (entities.start_date && entities.end_date
+          ? `${entities.start_date} to ${entities.end_date}`
+          : 'this period')
+
+    const teamSummary = insights.team_stats
+      .slice(0, 5)
+      .map((stat: any) => `${stat.team} accounts for ${Math.round(Number(stat.percentage) || 0)}% of shows in ${periodLabel}.`)
+      .join(' ')
+
+    formattedAnswer = `${answer}\n\n${teamSummary}`.trim()
+  }
   
   return {
-    answer,
+    answer: formattedAnswer,
     events,
     insights,
     recommendations,

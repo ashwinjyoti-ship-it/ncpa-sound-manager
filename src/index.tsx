@@ -2106,6 +2106,54 @@ app.get('/', (c) => {
           .avail-etag-a{background:rgba(192,80,60,.08);color:#8b3020;border:1px solid rgba(192,80,60,.15)}
           .avail-etag-b{background:rgba(140,140,155,.10);color:#777;border:1px solid rgba(140,140,155,.20)}
           .avail-no-crew{text-align:center;padding:20px 0 8px;color:#7280a8;font-size:14px}
+
+          /* ── Landscape phone: collapse all chrome, maximise calendar rows ── */
+          @media (orientation: landscape) and (max-height: 500px) {
+            /* Thin the sticky app header to ~28px */
+            header .container {
+              padding-top: 0.2rem !important;
+              padding-bottom: 0.2rem !important;
+            }
+            header h1 { font-size: 0.8rem !important; }
+
+            /* Hide the mobile action bar — saves ~36px */
+            #mobileActionBar { display: none !important; }
+
+            /* Squeeze the outer content container vertical padding */
+            #mainContent {
+              padding-top: 0.15rem !important;
+              padding-bottom: 0.15rem !important;
+            }
+
+            /* Compact calendar sticky section (month nav + day names) */
+            #calendarView .sticky {
+              padding: 0.2rem 0.5rem 0 !important;
+            }
+            #calendarView .sticky .flex.justify-between {
+              margin-bottom: 0.2rem !important;
+            }
+            #currentMonthYear { font-size: 0.85rem !important; }
+            #monthEventCount { display: none !important; }
+            #calendarView .sticky .grid > div {
+              padding-top: 0.1rem !important;
+              padding-bottom: 0.1rem !important;
+              font-size: 0.6rem !important;
+            }
+
+            /* Compact scrollable grid area */
+            #calendarView > div:last-child { padding: 0.2rem !important; }
+
+            /* Shorter calendar cells */
+            .calendar-day { min-height: 55px !important; }
+
+            /* Tighter event cards */
+            .event-card-green, .event-card-peach {
+              padding: 2px 3px !important;
+              margin-bottom: 2px !important;
+              font-size: 0.6rem !important;
+              line-height: 1.15 !important;
+            }
+          }
         </style>
     </head>
     <body style="background-color: #f8f9fc;">
@@ -2159,15 +2207,20 @@ app.get('/', (c) => {
             </header>
 
             <!-- Tab Navigation -->
-            <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
-                <!-- MOBILE: Compact action bar -->
-                <div class="md:hidden flex justify-end items-center gap-2 mb-2">
-                    <button onclick="toggleAIAssistant()" class="btn-glass px-3 py-1.5 text-xs">
-                        <i class="fas fa-robot mr-1"></i>AI
-                    </button>
-                    <button onclick="openAddShowModal()" class="btn-primary px-3 py-1.5 text-xs font-semibold">
-                        <i class="fas fa-plus mr-1"></i>Add Show
-                    </button>
+            <div id="mainContent" class="container mx-auto px-4 md:px-6 py-2 md:py-4">
+                <!-- MOBILE: Compact action bar — AI centred, Add Show right -->
+                <div id="mobileActionBar" class="md:hidden grid grid-cols-3 items-center mb-2">
+                    <div></div>
+                    <div class="flex justify-center">
+                        <button onclick="toggleAIAssistant()" class="btn-glass px-3 py-1.5 text-xs">
+                            <i class="fas fa-robot mr-1"></i>Ask AI
+                        </button>
+                    </div>
+                    <div class="flex justify-end">
+                        <button onclick="openAddShowModal()" class="btn-primary px-3 py-1.5 text-xs font-semibold">
+                            <i class="fas fa-plus mr-1"></i>Add Show
+                        </button>
+                    </div>
                 </div>
                 
                 

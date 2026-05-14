@@ -1929,36 +1929,37 @@ app.get('/', (c) => {
           }
           
           /* Mobile-optimized event cards */
-          @media (max-width: 768px) {
+          @media (max-width: 767px) {
             .calendar-day {
-              min-height: 100px;
+              min-height: 80px;
             }
-            
+
             .event-card-green, .event-card-peach {
-              font-size: 0.75rem;
-              padding: 0.5rem;
-              margin-bottom: 0.25rem;
+              font-size: 0.7rem;
+              padding: 3px 4px;
+              margin-bottom: 3px;
+              line-height: 1.3;
             }
-            
-            /* Larger touch targets */
-            button, .event-card-green, .event-card-peach {
+
+            /* Larger touch targets for buttons only, not event cards */
+            button {
               min-height: 44px;
             }
-            
+
             /* Hide Dashboard tab on mobile */
             #dashboardTab {
               display: none !important;
             }
-            
+
             /* More readable event text on mobile */
             .event-card-green p, .event-card-peach p {
-              line-height: 1.4;
-              margin-bottom: 0.25rem;
+              line-height: 1.3;
+              margin-bottom: 0.15rem;
             }
-            
+
             /* Better icon spacing on mobile */
             .event-card-green i, .event-card-peach i {
-              width: 14px;
+              width: 12px;
               text-align: center;
             }
           }
@@ -2047,60 +2048,31 @@ app.get('/', (c) => {
           }
           
           /* Mobile Responsiveness */
-          @media (max-width: 768px) {
+          @media (max-width: 767px) {
             .container {
-              padding: 1rem !important;
+              padding: 0.75rem !important;
             }
-            
+
             .flex.space-x-3, .flex.space-x-6 {
               flex-wrap: wrap;
               gap: 0.5rem;
             }
-            
+
             #searchInput {
               width: 100% !important;
               max-width: 200px;
             }
-            
-            .calendar-day {
-              min-height: 80px !important;
-              font-size: 0.75rem;
-            }
-            
-            .event-card-green, .event-card-peach {
-              padding: 4px !important;
-              margin-bottom: 4px !important;
-            }
-            
+
             table {
               font-size: 0.75rem !important;
             }
-            
+
             .modal-content {
               width: 95% !important;
               margin: 1rem;
               max-height: 90vh !important;
             }
-            
-            button {
-              font-size: 0.75rem !important;
-              padding: 0.375rem 0.75rem !important;
-            }
-            
-            h1 {
-              font-size: 1.5rem !important;
-            }
-            
-            h2 {
-              font-size: 1.25rem !important;
-            }
-          }
-          
-          @media (max-width: 480px) {
-            .grid {
-              grid-template-columns: 1fr !important;
-            }
-            
+
             .hidden-mobile {
               display: none !important;
             }
@@ -2140,15 +2112,14 @@ app.get('/', (c) => {
         <div class="min-h-screen">
             <!-- Header -->
             <header class="glass-header sticky top-0 z-30" style="background:rgba(248,249,252,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.45);box-shadow:0 1px 24px rgba(45,51,56,0.07);">
-                <div class="container mx-auto px-6 py-4">
+                <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
                     <div class="flex justify-between items-center">
-                        <div class="flex-1"></div>
+                        <div class="hidden md:block flex-1"></div>
                         <div class="flex-1 text-center">
-                            <h1 class="text-3xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;">
-                                <i class="fas fa-music mr-2"></i>
-                                NCPA Sound Crew
+                            <h1 class="text-xl md:text-3xl font-bold whitespace-nowrap" style="color: #98A2D7; letter-spacing: -0.01em;">
+                                <i class="fas fa-music mr-1 md:mr-2"></i>NCPA Sound Crew
                             </h1>
-                            <p class="text-gray-600 mt-1">Event Schedule & Technical Dashboard</p>
+                            <p class="hidden md:block text-gray-600 mt-1">Event Schedule & Technical Dashboard</p>
                         </div>
                         <div class="flex-1 flex justify-end items-center gap-3">
                             <!-- User Menu (shown when logged in) -->
@@ -2189,11 +2160,12 @@ app.get('/', (c) => {
 
             <!-- Tab Navigation -->
             <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
-                <!-- MOBILE: Simple header with Add Show button only -->
-                <div class="md:hidden flex justify-between items-center mb-3">
-                    <div></div>
-                    <!-- Add Show Button (Mobile) -->
-                    <button onclick="openAddShowModal()" class="btn-primary px-3 py-2 text-sm font-semibold shadow-md hover:shadow-lg transition-all">
+                <!-- MOBILE: Compact action bar -->
+                <div class="md:hidden flex justify-end items-center gap-2 mb-2">
+                    <button onclick="toggleAIAssistant()" class="btn-glass px-3 py-1.5 text-xs">
+                        <i class="fas fa-robot mr-1"></i>AI
+                    </button>
+                    <button onclick="openAddShowModal()" class="btn-primary px-3 py-1.5 text-xs font-semibold">
                         <i class="fas fa-plus mr-1"></i>Add Show
                     </button>
                 </div>
@@ -2202,30 +2174,30 @@ app.get('/', (c) => {
                 
                 <!-- DESKTOP: Full toolbar with all features -->
                 <div class="hidden md:block">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex flex-wrap justify-between items-center gap-y-2 mb-4 md:mb-6">
                         <!-- Left: Tab navigation -->
-                        <div class="flex p-1 rounded-xl" style="background:rgba(120,120,128,0.10);gap:2px;">
-                            <button id="calendarTab" class="px-4 py-1.5 text-sm font-semibold tab-active rounded-lg transition-all" onclick="showTab('calendar')">
-                                <i class="fas fa-calendar-alt mr-2"></i>Calendar
+                        <div class="flex shrink-0 p-1 rounded-xl" style="background:rgba(120,120,128,0.10);gap:2px;">
+                            <button id="calendarTab" class="px-3 py-1.5 text-sm font-semibold tab-active rounded-lg transition-all" onclick="showTab('calendar')">
+                                <i class="fas fa-calendar-alt mr-1.5"></i>Calendar
                             </button>
-                            <button id="tableTab" class="px-4 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('table')">
-                                <i class="fas fa-table mr-2"></i>Table
+                            <button id="tableTab" class="px-3 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('table')">
+                                <i class="fas fa-table mr-1.5"></i>Table
                             </button>
-                            <button id="crewTab" class="px-4 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('crew')">
-                                <i class="fas fa-users mr-2"></i>Crew
+                            <button id="crewTab" class="px-3 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('crew')">
+                                <i class="fas fa-users mr-1.5"></i>Crew
                             </button>
                         </div>
 
                         <!-- Center: Ask AI button -->
-                        <div class="flex items-center">
+                        <div class="flex items-center shrink-0">
                             <button onclick="toggleAIAssistant()"
-                                    class="btn-primary px-6 py-2.5 text-base transition-all shadow-md hover:shadow-lg">
-                                <i class="fas fa-robot mr-2"></i>Ask AI
+                                    class="btn-primary px-4 py-2 text-sm transition-all shadow-md hover:shadow-lg">
+                                <i class="fas fa-robot mr-1.5"></i>Ask AI
                             </button>
                         </div>
 
                         <!-- Right: Toolbar actions -->
-                        <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2 shrink-0">
                             <!-- Divider -->
                             <div class="h-8 w-px bg-gray-300"></div>
 

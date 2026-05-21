@@ -2168,10 +2168,10 @@ app.get('/', (c) => {
           }
         </style>
     </head>
-    <body style="background-color: #f8f9fc;">
+    <body style="background-color: #f8f9fc; padding-bottom: env(safe-area-inset-bottom);">
         <div class="min-h-screen">
             <!-- Header -->
-            <header class="glass-header sticky top-0 z-30" style="background:rgba(248,249,252,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.45);box-shadow:0 1px 24px rgba(45,51,56,0.07);">
+            <header class="glass-header sticky top-0 z-30" style="background:rgba(248,249,252,0.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid rgba(255,255,255,0.45);box-shadow:0 1px 24px rgba(45,51,56,0.07);padding-top:env(safe-area-inset-top);">
                 <div class="container mx-auto px-4 md:px-6 py-2 md:py-4">
                     <div class="flex justify-between items-center">
                         <div class="hidden md:block flex-1"></div>

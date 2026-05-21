@@ -1,0 +1,26 @@
+{
+  "name": "NCPA Sound Manager",
+  "short_name": "NCPA Sound",
+  "description": "Monthly event calendar and crew management for the NCPA Sound department.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8f9fc",
+  "theme_color": "#465080",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "lang": "en"
+}

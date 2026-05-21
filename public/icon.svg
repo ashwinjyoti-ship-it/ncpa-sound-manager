@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#2d3256"/>
+  <!-- Glassmorphism overlay -->
+  <rect width="512" height="512" rx="112" fill="url(#glass)" opacity="0.15"/>
+  <defs>
+    <linearGradient id="glass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#98A2D7"/>
+      <stop offset="100%" stop-color="#c4aef0"/>
+    </linearGradient>
+  </defs>
+  <!-- Sound wave bars (equaliser style) -->
+  <rect x="96"  y="206" width="44" height="100" rx="22" fill="url(#wave)" opacity="0.9"/>
+  <rect x="160" y="156" width="44" height="200" rx="22" fill="url(#wave)"/>
+  <rect x="224" y="126" width="44" height="260" rx="22" fill="url(#wave)"/>
+  <rect x="288" y="156" width="44" height="200" rx="22" fill="url(#wave)"/>
+  <rect x="352" y="206" width="44" height="100" rx="22" fill="url(#wave)" opacity="0.9"/>
+  <!-- Subtle top shine -->
+  <ellipse cx="256" cy="80" rx="140" ry="30" fill="white" opacity="0.06"/>
+</svg>

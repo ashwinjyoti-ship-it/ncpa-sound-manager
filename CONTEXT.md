@@ -1,7 +1,7 @@
 # ncpa-sound-manager — Session Context
 
 > Reference file for Claude Code sessions. Updated after each significant work block.
-> Last updated: 2026-05-06
+> Last updated: 2026-05-25
 
 ---
 
@@ -78,6 +78,10 @@ Push with: `git push origin master:main`
 | `public/static/app.js` | Frontend calendar logic — event cards, modals, upload handling, Add Show UI |
 | `public/static/auth.js` | Admin panel — user management, crew stats, pending approvals |
 | `public/static/v41-features.js` | V4.1 feature set — old short notice logic (dormant), analytics etc. |
+| `public/manifest.json` | PWA install metadata for Add to Home Screen / standalone app mode |
+| `public/sw.js` | Service worker — caches app shell/static assets, keeps `/api/*` network-first |
+| `public/_headers` | Cloudflare Pages headers for CORS, manifest MIME type, and service-worker cache control |
+| `public/icon.svg` | Shared PWA and Apple touch icon |
 | `wrangler.jsonc` | Cloudflare config — D1 (`DB` + `DB_CREW`), AI, Vectorize bindings |
 | `.github/workflows/deploy.yml` | CI/CD — deploys on push to `main` only |
 
@@ -284,6 +288,41 @@ Logic in `public/static/app.js` line ~337.
 
 ---
 
+## PWA + Mobile Shell (added May 2026)
+
+The app can be installed from mobile browsers as a standalone PWA. The PWA shell is intentionally lightweight: it improves launch/install behavior and caches static assets, but it does **not** make event data usable offline.
+
+**Source of truth:**
+- `src/index.tsx` links the manifest, sets mobile web-app meta tags, registers `/sw.js`, and enables safe-area rendering with `viewport-fit=cover`.
+- `public/manifest.json` sets `name`, `short_name`, `start_url: "/"`, `display: "standalone"`, `orientation: "portrait-primary"`, `background_color: "#f8f9fc"`, `theme_color: "#465080"`, and SVG icon entries.
+- `public/sw.js` defines cache `ncpa-sound-v1`, pre-caches `/`, `/static/app.js`, `/static/auth.js`, `/static/style.css`, `/manifest.json`, and `/icon.svg`.
+- `public/_headers` serves `/manifest.json` as `application/manifest+json`, keeps `/sw.js` on `Cache-Control: no-cache`, and gives long-lived cache headers to static files.
+
+**Runtime behavior:**
+- `/api/*` requests are **network-first**. If the network fails, the service worker returns JSON `{ "error": "offline" }`.
+- Non-API GET requests are **cache-first**. Cached HTML/static assets may stay in use until the service worker changes and activates.
+- `install` calls `skipWaiting()` and `activate` deletes old cache names before `clients.claim()`.
+
+**iOS safe-area constraints:**
+- Keep `<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">`.
+- Body uses `padding-bottom: env(safe-area-inset-bottom)` so content avoids the home indicator.
+- The sticky header uses `padding-top: env(safe-area-inset-top)` and `apple-mobile-web-app-status-bar-style=black-translucent` so the title area clears the iOS status bar in standalone mode.
+- When editing header height, sticky positioning, or top-level body padding, smoke-test both Safari tab mode and Add-to-Home-Screen standalone mode.
+
+**Operational pitfalls:**
+- Bump the `CACHE` constant in `public/sw.js` when changing cached shell assets (`/`, `/static/app.js`, `/static/auth.js`, `/static/style.css`, manifest, icon). Otherwise installed PWAs can continue serving stale cached assets.
+- Do not change `/api/*` to cache-first; calendar/event data must come from D1 and should fail visibly when offline.
+- The current icon is SVG-only. Verify target browsers/devices if a platform requires PNG icons before publishing to a wider audience.
+
+**Smoke test checklist:**
+1. Run `npm run build`.
+2. Serve the build with Pages dev or Cloudflare Pages and verify `/manifest.json`, `/sw.js`, and `/icon.svg` return 200.
+3. In Safari/Chrome mobile, add the app to the home screen and launch it standalone.
+4. Confirm the header is not hidden under the status bar and bottom content is not blocked by the home indicator.
+5. Toggle network offline: static shell may load, but event/API actions should show the network/API failure path rather than stale event data.
+
+---
+
 ## Removed Features
 
 | Feature | Reason |
@@ -298,6 +337,9 @@ Logic in `public/static/app.js` line ~337.
 
 | PR / Commit | What |
 |---|---|
+| `79b7df2` | iOS PWA safe-area fix — `viewport-fit=cover`, sticky header top inset, body bottom inset |
+| `85277bb` | PWA install support — manifest, service worker, app icon, Cloudflare headers, registration in `src/index.tsx` |
+| PR #28 | Responsive/mobile layout tuning — landscape phone compaction, mobile toolbar AI button centering |
 | PR #21 | **add-show integration** — crew availability check, FOH/Stage pill UI in Add Show modal, `/api/crew-availability` endpoint, `DB_CREW` binding for `ncpa-crew-db` |
 | `bcc7b65` | FOH/Stage crew split: Edit modal UI, DB migration, CSV export update |
 | `bf1d377` | Remove old Short Notice toolbar button (wrong logic, no source filter) |

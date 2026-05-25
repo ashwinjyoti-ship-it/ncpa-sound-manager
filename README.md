@@ -145,7 +145,14 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - SQL generation from plain English
    - Results displayed in formatted table
 
-8. **📈 Analytics API**
+8. **📱 Installable PWA Shell**
+   - Add to Home Screen support through `public/manifest.json`
+   - Standalone mobile launch mode with NCPA Sound app title and icon
+   - Service worker caches the app shell and static assets
+   - API calls remain network-first so stale event data is not shown when offline
+   - iOS safe-area handling keeps the header below the status bar and content above the home indicator
+
+9. **📈 Analytics API**
    - `/api/analytics/stats` endpoint ready for AI queries
    - Provides:
      - Total events count (last 6 months default)
@@ -386,6 +393,7 @@ The system uses intelligent duplicate detection to protect your data:
 - **Runtime:** Cloudflare Workers - Edge computing platform
 - **Database:** Cloudflare D1 (SQLite) - Globally distributed SQL database
 - **Frontend:** Vanilla JavaScript + TailwindCSS
+- **PWA:** Web App Manifest + service worker (`public/sw.js`) for app-shell caching
 - **Libraries:**
   - Axios - HTTP client
   - PapaParse - CSV parsing
@@ -606,6 +614,18 @@ WHERE program LIKE '%Dance%';
 - Progress notification shows real-time status
 - Document is processed in chunks (you'll see: "AI is analyzing in 3 chunks...")
 - After upload, calendar automatically navigates to the uploaded month
+
+**Issue: Installed PWA shows an old UI**
+- The service worker caches `/`, static scripts, the manifest, and icon.
+- Bump the `CACHE` constant in `public/sw.js` when changing cached shell assets.
+- On iOS, remove and re-add the home screen app if Safari keeps an old standalone shell.
+- API data is network-first; offline mode intentionally returns an API error instead of stale event data.
+
+**Issue: Header overlaps iOS status bar / bottom content hits home indicator**
+- Keep `viewport-fit=cover` in the viewport meta tag.
+- Keep `env(safe-area-inset-top)` padding on the sticky header.
+- Keep `env(safe-area-inset-bottom)` body padding.
+- Test both Safari tab mode and Add-to-Home-Screen standalone mode after layout changes.
 
 **Issue: Edits not saving**
 - Check network connection
@@ -1041,9 +1061,9 @@ Developed for: **NCPA Sound Crew**
 
 ---
 
-**Last Updated:** December 6, 2025
+**Last Updated:** May 25, 2026
 **Status:** ✅ **Version 4.1 DEPLOYED** - LIVE at https://6862a26b.ncpa-sound.pages.dev 🚀  
-**Latest:** 🎉 **v4.1 Enhancements** - Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics
+**Latest:** 📱 **PWA + iOS Safe-Area Updates** - Add to Home Screen support, service worker app-shell cache, standalone mobile safe-area handling
 
 **Latest Features (v4.1):** 
 - 🔍 Advanced filtering & sorting (venue, crew, status, date range)
@@ -1051,5 +1071,6 @@ Developed for: **NCPA Sound Crew**
 - 🎯 Bulk crew assignment with smart suggestions
 - 📊 Dashboard view with metrics, charts, analytics
 - 📱 Mobile-optimized responsive design
+- 📱 Installable PWA shell with network-first API behavior
 - 📤 Export with change tracking (Google Sheets sync)
 - ✅ **841 events** in production database

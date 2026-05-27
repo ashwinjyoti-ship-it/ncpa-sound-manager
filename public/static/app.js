@@ -1052,17 +1052,23 @@ async function handleEditEvent(e) {
       });
 
       if (response.data.success) {
-        // Propagate crew to sibling events if requested
+        // Propagate crew to sibling events if requested — isolated so a
+        // propagation failure doesn't leave the modal open / calendar stale
         var propagateCb = document.getElementById('editPropagateCrew');
         if (propagateCb && propagateCb.checked) {
           var propagateRow = document.getElementById('editCrewPropagateRow');
           var siblingIds = JSON.parse((propagateRow && propagateRow.dataset.siblingIds) || '[]');
           if (siblingIds.length > 0) {
-            await axios.put(`${API_BASE}/events/bulk-crew`, {
-              ids: siblingIds,
-              foh_crew: fohCrew || null,
-              stage_crew: stageCrewString,
-            });
+            try {
+              await axios.put(`${API_BASE}/events/bulk-crew`, {
+                ids: siblingIds,
+                foh_crew: fohCrew || null,
+                stage_crew: stageCrewString,
+              });
+            } catch (propErr) {
+              console.error('Crew propagation failed:', propErr);
+              showNotification('Event saved, but crew propagation to other dates failed', 'warning');
+            }
           }
         }
         showNotification('Event updated successfully', 'success');

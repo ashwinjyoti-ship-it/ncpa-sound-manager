@@ -2827,9 +2827,9 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     <!-- Crew propagation row — shown only when sibling events exist -->
-                    <div id="editCrewPropagateRow" style="display:none;"
+                    <div id="editCrewPropagateRow"
                          class="p-3 rounded-lg border border-amber-200 mt-2"
-                         style="background:rgba(255,251,235,0.85)">
+                         style="display:none; background:rgba(255,251,235,0.85)">
                         <label class="flex items-center gap-2 cursor-pointer text-sm font-medium" style="color:#92400e">
                             <input type="checkbox" id="editPropagateCrew" class="rounded">
                             <span id="editPropagateLabel">Apply crew to all other dates of this show</span>

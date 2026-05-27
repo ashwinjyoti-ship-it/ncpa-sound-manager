@@ -839,7 +839,7 @@ function classifyIntent(query: string, pastContext: any[]) {
   
   // Detect venues mentioned
   const venues = {
-    jbt: lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha'),
+    jbt: (lowerQuery.includes('jbt') && !lowerQuery.includes('jbt museum')) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha'),
     tata: lowerQuery.includes('tata') || lowerQuery.includes('tt '),
     tet: lowerQuery.includes('tet') || lowerQuery.includes('experimental'),
     all: lowerQuery.includes('all venues') || lowerQuery.includes('no events')
@@ -1222,7 +1222,7 @@ app.post('/api/ai/query', async (c) => {
         venueName = 'JBT'
         venueFilter = (v: string) => {
           const lv = v.toLowerCase()
-          return (lv.startsWith('jbt') || lv.includes('jamshed') || lv.includes('bhabha')) && !lv.startsWith('tet')
+          return (lv.startsWith('jbt') || lv.includes('jamshed') || lv.includes('bhabha')) && !lv.startsWith('tet') && !lv.includes('museum')
         }
       } else if (hasTata) {
         venueName = 'Tata Theatre'

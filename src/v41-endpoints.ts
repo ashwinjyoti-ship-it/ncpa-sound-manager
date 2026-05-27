@@ -139,7 +139,8 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
       // Define main venues (without time variations or combinations)
       const MAIN_VENUES = [
         'JBT',
-        'TET', 
+        'JBT Museum',
+        'TET',
         'GDT',
         'LT',
         'TT',
@@ -517,7 +518,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
 
         // Check if starts with main venue codes
         for (const mainVenue of MAIN_VENUES) {
-          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper === mainVenue.toUpperCase()) {
+          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper.startsWith(mainVenue.toUpperCase())) {
             return mainVenue
           }
         }
@@ -705,7 +706,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
 
         // If still no match, check if it starts with main venue codes
         for (const mainVenue of MAIN_VENUES) {
-          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper === mainVenue.toUpperCase()) {
+          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper.startsWith(mainVenue.toUpperCase())) {
             return mainVenue
           }
         }

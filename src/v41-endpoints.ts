@@ -139,7 +139,8 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
       // Define main venues (without time variations or combinations)
       const MAIN_VENUES = [
         'JBT',
-        'TET', 
+        'JBT Museum',
+        'TET',
         'GDT',
         'LT',
         'TT',
@@ -483,18 +484,21 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       `).bind(dateFrom, dateTo).all()
       
       // Define main venues and normalization function
-      const MAIN_VENUES = ['JBT', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
-      
+      const MAIN_VENUES = ['JBT', 'JBT Museum', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+
       function normalizeVenue(venueName: string): string {
         if (!venueName) return 'Unknown'
-        
+
         // Remove time variations
         let cleaned = venueName.replace(/\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
                                .replace(/\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
                                .trim()
-        
+
         const upper = cleaned.toUpperCase()
-        
+
+        // JBT Museum must be checked before JBT to avoid prefix collision
+        if (upper === 'JBT MUSEUM' || upper.startsWith('JBT MUSEUM')) return 'JBT Museum'
+
         // Exact match first
         if (upper === 'JBT') return 'JBT'
         if (upper === 'TET') return 'TET'
@@ -503,7 +507,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         if (upper === 'TT') return 'TT'
         if (upper === 'SVR') return 'SVR'
         if (upper === 'DPAG' || upper === 'DP ART GALLERY') return 'DP Art Gallery'
-        
+
         // Partial matches
         if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
         if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
@@ -511,14 +515,14 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
         if (upper.includes('EXPERIMENTAL')) return 'TT'
         if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
-        
+
         // Check if starts with main venue codes
         for (const mainVenue of MAIN_VENUES) {
-          if (upper.startsWith(mainVenue + ' ') || upper.startsWith(mainVenue)) {
+          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper.startsWith(mainVenue.toUpperCase())) {
             return mainVenue
           }
         }
-        
+
         return venueName
       }
       
@@ -666,20 +670,23 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       const targetMonth = month || new Date().toISOString().slice(0, 7)
       
       // Main venues to normalize to
-      const MAIN_VENUES = ['JBT', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
-      
+      const MAIN_VENUES = ['JBT', 'JBT Museum', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+
       // Function to normalize venue names (remove times, variations)
       function normalizeVenue(venueName: string): string {
         if (!venueName) return 'Unknown'
-        
+
         // Remove time variations (e.g., "TET 7pm", "GDT 6.30pm", "JBT 7:29pm")
         // Match patterns like: "7pm", "6.30pm", "7:29pm", "Sat 4:32pm", etc.
         let cleaned = venueName.replace(/\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
                                .replace(/\s+(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\d{1,2}(:\d{2})?(am|pm|AM|PM)/gi, '')
                                .trim()
-        
+
         const upper = cleaned.toUpperCase()
-        
+
+        // JBT Museum must be checked before JBT to avoid prefix collision
+        if (upper === 'JBT MUSEUM' || upper.startsWith('JBT MUSEUM')) return 'JBT Museum'
+
         // Exact match first (after cleaning)
         if (upper === 'JBT') return 'JBT'
         if (upper === 'TET') return 'TET'
@@ -688,7 +695,7 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         if (upper === 'TT') return 'TT'
         if (upper === 'SVR') return 'SVR'
         if (upper === 'DPAG' || upper === 'DP ART GALLERY') return 'DP Art Gallery'
-        
+
         // Partial matches for full names
         if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
         if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
@@ -696,14 +703,14 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
         if (upper.includes('EXPERIMENTAL')) return 'TT'
         if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
-        
+
         // If still no match, check if it starts with main venue codes
-        for (const mainVenue of ['JBT', 'TET', 'GDT', 'LT', 'TT', 'SVR']) {
-          if (upper.startsWith(mainVenue + ' ') || upper.startsWith(mainVenue)) {
+        for (const mainVenue of MAIN_VENUES) {
+          if (upper.startsWith(mainVenue.toUpperCase() + ' ') || upper.startsWith(mainVenue.toUpperCase())) {
             return mainVenue
           }
         }
-        
+
         // If no match, return original (will be filtered out)
         return venueName
       }

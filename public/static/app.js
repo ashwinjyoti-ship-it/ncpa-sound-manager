@@ -712,22 +712,28 @@ async function handleAddShow(e) {
         renderCalendar();
       }
     } else {
-      // Multiple dates (date range)
-      const startDate = new Date(data.start_date);
-      const endDate = new Date(data.end_date);
-      
-      if (startDate > endDate) {
+      // Multiple dates (date range) — create each date as an individual event
+      // using POST /api/events (same path as single-date) so that:
+      //   - source is 'manual' (not 'import_word')
+      //   - stage_crew array is normalised correctly
+      //   - rider, notes, and all other fields are preserved
+      const startUTC = new Date(data.start_date + 'T00:00:00Z');
+      const endUTC   = new Date(data.end_date   + 'T00:00:00Z');
+
+      if (startUTC > endUTC) {
         showNotification('Start date must be before or equal to end date', 'error');
         return;
       }
-      
-      // Generate array of events for all dates in range
-      const events = [];
-      const currentDateIter = new Date(startDate);
-      
-      while (currentDateIter <= endDate) {
-        events.push({
-          event_date: currentDateIter.toISOString().split('T')[0],
+
+      const totalDays = Math.round((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
+      showNotification(`Creating ${totalDays} event${totalDays > 1 ? 's' : ''}...`, 'info');
+
+      const iter = new Date(startUTC);
+      let created = 0;
+      while (iter <= endUTC) {
+        const dateStr = iter.toISOString().slice(0, 10);
+        await axios.post(`${API_BASE}/events`, {
+          event_date: dateStr,
           program: data.program,
           venue: data.venue,
           team: data.team || null,
@@ -735,33 +741,20 @@ async function handleAddShow(e) {
           call_time: data.call_time || null,
           foh_crew: fohCrewSelected,
           stage_crew: stageCrewSelected,
-          crew: crewString
+          rider: data.rider || null,
+          notes: data.notes || null,
         });
-        currentDateIter.setDate(currentDateIter.getDate() + 1);
+        created++;
+        iter.setUTCDate(iter.getUTCDate() + 1);
       }
-      
-      // Upload all events at once using bulk API
-      showNotification(`Creating ${events.length} events...`, 'info');
-      const response = await axios.post(`${API_BASE}/events/bulk`, { events });
-      
-      if (response.data.success) {
-        const stats = response.data.stats || {};
-        const inserted = stats.inserted || 0;
-        const skipped = stats.skipped || 0;
-        
-        let message = `${inserted} events created`;
-        if (skipped > 0) {
-          message += ` (${skipped} duplicates skipped)`;
-        }
-        
-        showNotification(message, 'success');
-        closeAddShowModal();
-        await loadEvents();
-        
-        // Navigate to the month of the first date
-        currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-        renderCalendar();
-      }
+
+      showNotification(`${created} event${created > 1 ? 's' : ''} created`, 'success');
+      closeAddShowModal();
+      await loadEvents();
+
+      // Navigate to the month of the first date
+      currentDate = new Date(startUTC.getUTCFullYear(), startUTC.getUTCMonth(), 1);
+      renderCalendar();
     }
   } catch (error) {
     console.error('Error adding show:', error);

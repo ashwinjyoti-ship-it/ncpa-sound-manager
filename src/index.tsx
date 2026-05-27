@@ -1035,7 +1035,7 @@ app.post('/api/ai/query', async (c) => {
     
     // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
     // Also apply learned venue preferences
-    let hasJBT = lowerQuery.includes('jbt') || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
+    let hasJBT = (lowerQuery.includes('jbt') && !lowerQuery.includes('jbt museum')) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
     let hasTata = lowerQuery.includes('tata')
     let hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule') || lowerQuery.includes('workshop')
     
@@ -1082,7 +1082,8 @@ app.post('/api/ai/query', async (c) => {
         // Match: "JBT", "JBT 5pm", "Jamshed Bhabha", etc.
         // But NOT: "TET & JBT Museum" (that's TET, not JBT)
         const isJBT = (venue.startsWith('jbt') || venue.includes('jamshed') || venue.includes('bhabha')) &&
-                      !venue.startsWith('tet')
+                      !venue.startsWith('tet') &&
+                      !venue.includes('museum')
         return isJBT && dateMatches
       })
       
@@ -2564,6 +2565,7 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"
                                    placeholder="Select or type venue">
                             <datalist id="venueList">
+                                <option value="JBT Museum">JBT Museum</option>
                                 <option value="JBT">Jamshed Bhabha Theatre</option>
                                 <option value="TET">Tata Theatre</option>
                                 <option value="GDT">Godrej Dance Theatre</option>

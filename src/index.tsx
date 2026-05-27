@@ -847,7 +847,7 @@ function classifyIntent(query: string, pastContext: any[]) {
   
   // Detect venues mentioned
   const venues = {
-    jbt: (lowerQuery.includes('jbt') && !lowerQuery.includes('jbt museum')) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha'),
+    jbt: /jbt(?! museum)/i.test(lowerQuery) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha'),
     tata: lowerQuery.includes('tata') || lowerQuery.includes('tt '),
     tet: lowerQuery.includes('tet') || lowerQuery.includes('experimental'),
     all: lowerQuery.includes('all venues') || lowerQuery.includes('no events')
@@ -1043,7 +1043,7 @@ app.post('/api/ai/query', async (c) => {
     
     // Smart detection: Handle "both venues free" or "JBT and Tata" queries directly in code
     // Also apply learned venue preferences
-    let hasJBT = (lowerQuery.includes('jbt') && !lowerQuery.includes('jbt museum')) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
+    let hasJBT = /jbt(?! museum)/i.test(lowerQuery) || lowerQuery.includes('jamshed') || lowerQuery.includes('bhabha')
     let hasTata = lowerQuery.includes('tata')
     let hasAvailability = lowerQuery.includes('free') || lowerQuery.includes('available') || lowerQuery.includes('maintenance') || lowerQuery.includes('schedule') || lowerQuery.includes('workshop')
     

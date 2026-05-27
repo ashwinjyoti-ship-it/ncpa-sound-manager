@@ -966,6 +966,29 @@ async function editEventFromModal(eventId) {
       document.querySelector('input[name="editDateType"][value="single"]').checked = true;
       toggleEditDateFields();
 
+      // Detect sibling events (same program + venue, different ID) for crew propagation
+      const siblings = allEvents.filter(function(e) {
+        return e.program === event.program && e.venue === event.venue && e.id !== event.id;
+      });
+      var propagateRow = document.getElementById('editCrewPropagateRow');
+      var propagateCb  = document.getElementById('editPropagateCrew');
+      if (propagateRow && propagateCb) {
+        if (siblings.length > 0) {
+          var siblingsHaveNoCrew = siblings.every(function(e) { return !e.foh_crew && !e.stage_crew && !e.crew; });
+          var sibDates = siblings.map(function(e) { return e.event_date; }).sort().join(', ');
+          document.getElementById('editPropagateLabel').textContent =
+            'Apply crew to ' + siblings.length + ' other date' + (siblings.length > 1 ? 's' : '') +
+            ' of this show (' + sibDates + ')';
+          propagateCb.checked = siblingsHaveNoCrew;
+          propagateRow.style.display = 'block';
+          propagateRow.dataset.siblingIds = JSON.stringify(siblings.map(function(e) { return e.id; }));
+        } else {
+          propagateRow.style.display = 'none';
+          propagateCb.checked = false;
+          propagateRow.dataset.siblingIds = '[]';
+        }
+      }
+
       // Open edit modal
       document.getElementById('editEventModal').classList.add('active');
     }
@@ -980,6 +1003,13 @@ function closeEditEventModal() {
   const fohSelect = document.getElementById('editFohCrew');
   if (fohSelect) fohSelect.value = '';
   document.querySelectorAll('.stage-checkbox').forEach(cb => { cb.checked = false; });
+  var propagateRow = document.getElementById('editCrewPropagateRow');
+  if (propagateRow) {
+    propagateRow.style.display = 'none';
+    propagateRow.dataset.siblingIds = '[]';
+  }
+  var propagateCb = document.getElementById('editPropagateCrew');
+  if (propagateCb) propagateCb.checked = false;
 }
 
 async function handleEditEvent(e) {
@@ -1022,6 +1052,19 @@ async function handleEditEvent(e) {
       });
 
       if (response.data.success) {
+        // Propagate crew to sibling events if requested
+        var propagateCb = document.getElementById('editPropagateCrew');
+        if (propagateCb && propagateCb.checked) {
+          var propagateRow = document.getElementById('editCrewPropagateRow');
+          var siblingIds = JSON.parse((propagateRow && propagateRow.dataset.siblingIds) || '[]');
+          if (siblingIds.length > 0) {
+            await axios.put(`${API_BASE}/events/bulk-crew`, {
+              ids: siblingIds,
+              foh_crew: fohCrew || null,
+              stage_crew: stageCrewString,
+            });
+          }
+        }
         showNotification('Event updated successfully', 'success');
         closeEditEventModal();
         await loadEvents();

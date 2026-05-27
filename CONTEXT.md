@@ -294,26 +294,28 @@ Logic in `public/static/app.js` line ~337.
 
 ---
 
-## Recent Work (as of 2026-05-06)
+## Recent Work (as of 2026-05-27)
 
 | PR / Commit | What |
 |---|---|
+| PR #30 (merged) | **Multi-date Add Show fix** — events now created via `POST /api/events` per date (not bulk); `source='manual'`; `stage_crew` array normalised; UTC-safe date iteration; fixed duplicate `id="editTeam"` DOM bug |
+| PR #30 commit 2 | **Crew propagation for multi-date shows** — edit crew on one date → checkbox to apply to all sibling dates; new `PUT /api/events/bulk-crew` endpoint; auto pre-checked when siblings have no crew |
 | PR #21 | **add-show integration** — crew availability check, FOH/Stage pill UI in Add Show modal, `/api/crew-availability` endpoint, `DB_CREW` binding for `ncpa-crew-db` |
 | `bcc7b65` | FOH/Stage crew split: Edit modal UI, DB migration, CSV export update |
-| `bf1d377` | Remove old Short Notice toolbar button (wrong logic, no source filter) |
-| `71af5f8` | Short notice report: month range picker (not day range) |
-| `8a34017` | Remove Conflicts feature completely |
-| `4a3875b` | CSV bulk upload: update crew on duplicate match instead of skipping |
-| `a67f76f` | Apple liquid glass UI: subtle card colours, segmented tabs, glass buttons |
+
+---
+
+## New API Endpoint (PR #30)
+
+| Method | Route | Purpose |
+|---|---|---|
+| `PUT` | `/api/events/bulk-crew` | Update `foh_crew`, `stage_crew`, `crew` for a list of event IDs — used by crew propagation feature |
+
+Body: `{ ids: number[], foh_crew: string|null, stage_crew: string|string[]|null }`
 
 ---
 
 ## Next Up
 
 - [ ] **Add `DB_CREW` binding in Cloudflare Pages dashboard** (production) — Settings → Functions → D1 database bindings → add `DB_CREW` → `ncpa-crew-db` (`3bc26aff-d41b-4d7b-bb68-7b768d02dabf`). Without this the crew availability check will fail in production.
-- [ ] **Deploy PR #21** — run `npm run deploy:prod` or merge triggers GitHub Actions deploy
 - [ ] Bump Google Sheet IMPORTDATA formula `v=N` after deploy so Sheets picks up any changes
-- [ ] Colour palette refinement — the glassmorphism is in production. Session decision needed:
-  - Option A: Strip glassmorphism, go clean/flat, apply new palette
-  - Option B: Keep glassmorphism, change lavender/purple tones to something better
-  - Rollback to `stable/v1.2` if anything breaks

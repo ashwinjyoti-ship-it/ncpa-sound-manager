@@ -528,6 +528,31 @@ app.post('/api/events', async (c) => {
   }
 })
 
+// Bulk-update crew fields across multiple events (for multi-date show propagation)
+app.put('/api/events/bulk-crew', async (c) => {
+  try {
+    const { ids, foh_crew, stage_crew } = await c.req.json()
+    if (!Array.isArray(ids) || ids.length === 0)
+      return c.json({ success: false, error: 'ids array required' }, 400)
+
+    const stageCrew = Array.isArray(stage_crew)
+      ? (stage_crew as string[]).filter(Boolean).join(', ')
+      : (stage_crew as string || '')
+    const fohCrew  = (foh_crew as string || '')
+    const combined = [fohCrew, stageCrew].filter(Boolean).join(', ') || null
+    const ph       = ids.map(() => '?').join(',')
+
+    await c.env.DB.prepare(
+      `UPDATE events SET foh_crew = ?, stage_crew = ?, crew = ?,
+       updated_at = CURRENT_TIMESTAMP WHERE id IN (${ph})`
+    ).bind(fohCrew || null, stageCrew || null, combined, ...ids).run()
+
+    return c.json({ success: true, updated: ids.length })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
 // Update event
 app.put('/api/events/:id', async (c) => {
   try {
@@ -2801,8 +2826,18 @@ app.get('/', (c) => {
                             </div>
                         </div>
                     </div>
+                    <!-- Crew propagation row — shown only when sibling events exist -->
+                    <div id="editCrewPropagateRow" style="display:none;"
+                         class="p-3 rounded-lg border border-amber-200 mt-2"
+                         style="background:rgba(255,251,235,0.85)">
+                        <label class="flex items-center gap-2 cursor-pointer text-sm font-medium" style="color:#92400e">
+                            <input type="checkbox" id="editPropagateCrew" class="rounded">
+                            <span id="editPropagateLabel">Apply crew to all other dates of this show</span>
+                        </label>
+                        <p class="text-xs mt-1 ml-5" style="color:#b45309">Only crew fields are updated — call times, notes, and other details stay independent per date.</p>
+                    </div>
                     <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" onclick="closeEditEventModal()" 
+                        <button type="button" onclick="closeEditEventModal()"
                                 class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
                             Cancel
                         </button>

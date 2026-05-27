@@ -682,12 +682,20 @@ app.post('/api/events/bulk', async (c) => {
     const invalid = []
     
     for (const event of events) {
-      const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = event
+      const { event_date, program, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = event
+      let { venue } = event
 
       // Validate required fields
       if (!event_date || !program || !venue) {
         invalid.push({ ...event, reason: 'Missing required fields (date, program, or venue)' })
         continue
+      }
+
+      // Normalise JBT Museum variants only (e.g. "JBT Museum 7pm", "JBT Museum 9am to 8pm").
+      // All other venues are stored exactly as received — nothing else is touched.
+      const venueUpper = venue.trim().toUpperCase()
+      if (venueUpper === 'JBT MUSEUM' || venueUpper.startsWith('JBT MUSEUM ') || venueUpper.startsWith('JBT MUSEUM\t')) {
+        venue = 'JBT Museum'
       }
 
       // Check for duplicate: same date + program + venue

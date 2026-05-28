@@ -953,9 +953,11 @@ async function editEventFromModal(eventId) {
 
       // Stage — multi-select checkboxes
       // Prefer stage_crew; fall back to full crew list for pre-FOH/Stage events
-      const stageList = event.stage_crew
-        ? event.stage_crew.split(',').map(c => c.trim())
-        : (!event.foh_crew && event.crew)
+      // Guard against stage_crew being a non-string (e.g. empty BLOB returned as [] by D1)
+      const _sc = event.stage_crew;
+      const stageList = (typeof _sc === 'string' && _sc)
+        ? _sc.split(',').map(c => c.trim())
+        : (!event.foh_crew && event.crew && typeof event.crew === 'string')
           ? event.crew.split(',').map(c => c.trim())
           : [];
       document.querySelectorAll('.stage-checkbox').forEach(cb => {

@@ -563,10 +563,19 @@ app.put('/api/events/:id', async (c) => {
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
 
+    // Normalise crew strings: convert arrays (empty or otherwise) to string/null
+    // so D1 never receives a raw JS array and stores an empty BLOB
+    const normStr = (v: any): string | null => {
+      if (Array.isArray(v)) return v.filter(Boolean).join(', ') || null
+      return (v as string) || null
+    }
+    const normStageCrew = normStr(stage_crew)
+    const normFohCrew   = normStr(foh_crew)
+
     // Build combined crew string from FOH + Stage for backward-compat columns
     let combinedCrew = crew || null
     if (foh_crew !== undefined || stage_crew !== undefined) {
-      const parts = [foh_crew, stage_crew].filter(Boolean).join(', ')
+      const parts = [normFohCrew, normStageCrew].filter(Boolean).join(', ')
       combinedCrew = parts || null
     }
 
@@ -594,8 +603,8 @@ app.put('/api/events/:id', async (c) => {
       sound_requirements || null,
       call_time || null,
       combinedCrew,
-      foh_crew || null,
-      stage_crew || null,
+      normFohCrew,
+      normStageCrew,
       rider || null,
       notes || null,
       requirements_updated,

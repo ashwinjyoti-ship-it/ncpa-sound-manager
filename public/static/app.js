@@ -2275,6 +2275,7 @@ function clearAIResults() {
   document.getElementById('aiResponse').style.display = 'none';
   document.getElementById('aiLoading').style.display = 'none';
   document.getElementById('aiExplanation').textContent = '';
+  document.getElementById('aiExplanation').style.display = 'block';
   document.getElementById('aiResultsContainer').innerHTML = '';
   setAILastQuery('');
 }
@@ -2383,6 +2384,7 @@ function escapeHtml(input) {
 
 async function askAI(predefinedQuery) {
   const input = document.getElementById('aiQueryInput');
+  const explanationEl = document.getElementById('aiExplanation');
   const query = predefinedQuery || input.value.trim();
   
   if (!query) {
@@ -2393,7 +2395,8 @@ async function askAI(predefinedQuery) {
   // Show loading
   document.getElementById('aiResponse').style.display = 'block';
   document.getElementById('aiLoading').style.display = 'inline-block';
-  document.getElementById('aiExplanation').textContent = 'Thinking...';
+  explanationEl.style.display = 'block';
+  explanationEl.textContent = 'Thinking...';
   document.getElementById('aiResultsContainer').innerHTML = '';
   
   try {
@@ -2410,7 +2413,9 @@ async function askAI(predefinedQuery) {
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
-      document.getElementById('aiExplanation').textContent = answer || 'Here are the results:';
+      const shouldHideExplanation = Boolean(events && events.length > 0 && !needs_clarification);
+      explanationEl.textContent = answer || 'Here are the results:';
+      explanationEl.style.display = shouldHideExplanation ? 'none' : 'block';
       setAILastQuery(query);
       
       // Display results
@@ -2487,7 +2492,8 @@ async function askAI(predefinedQuery) {
   } catch (error) {
     console.error('AI query error:', error);
     document.getElementById('aiLoading').style.display = 'none';
-    document.getElementById('aiExplanation').textContent = 'Sorry, I encountered an error processing your question.';
+    explanationEl.style.display = 'block';
+    explanationEl.textContent = 'Sorry, I encountered an error processing your question.';
     document.getElementById('aiResultsContainer').innerHTML = `<p class="text-red-600 text-sm">${error.response?.data?.error || error.message}</p>`;
     setAILastQuery(query);
     showNotification('AI query failed', 'error');

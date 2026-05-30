@@ -22,8 +22,9 @@ export async function extractEntities(
   apiKey: string,
   conversationHistory?: Array<{user: string; assistant: string}>
 ): Promise<ExtractedEntities> {
-  
-  const historyContext = conversationHistory?.length
+
+  const shouldUseHistory = shouldUseConversationHistory(query)
+  const historyContext = shouldUseHistory && conversationHistory?.length
     ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map(h => 
         `User: ${h.user}\nAssistant: ${h.assistant}`
       ).join('\n\n')}`
@@ -96,6 +97,15 @@ A: {"intent":"aggregation","venue":null,"crew":null,"date":null,"start_date":"20
 Q: "Events on December 25th" (clearly asking for single day)
 A: {"intent":"search","venue":null,"crew":null,"date":"2025-12-25","start_date":null,"end_date":null,"month":"2025-12","year":"2025","program":null,"confidence":0.95}
 
+Q: "What shows is Viraj assigned to after June 21?"
+A: {"intent":"search","venue":null,"crew":"Viraj","date":null,"start_date":"2026-06-22","end_date":null,"month":null,"year":"2026","program":null,"confidence":0.96}
+
+Q: "What shows is Viraj assigned to on or after June 21?"
+A: {"intent":"search","venue":null,"crew":"Viraj","date":null,"start_date":"2026-06-21","end_date":null,"month":null,"year":"2026","program":null,"confidence":0.96}
+
+Q: "What shows is Viraj assigned to before June 21?"
+A: {"intent":"search","venue":null,"crew":"Viraj","date":null,"start_date":null,"end_date":"2026-06-20","month":null,"year":"2026","program":null,"confidence":0.96}
+
 Q: "What % of shows were in TT in the last 6 months?"
 A: {"intent":"aggregation","venue":"Tata Theatre","crew":null,"date":null,"start_date":"2025-06-01","end_date":"2025-11-30","month":null,"year":"2025","program":null,"confidence":0.90}
 
@@ -106,7 +116,9 @@ IMPORTANT RULES:
 1. "December 25" without "th" or "25th" → interpret as year 2025 (month December)
 2. "December 25th" or "25th December" → interpret as single day (December 25, 2025)
 3. If no date is specified, default to current/next month only (not past months)
-4. Current date context: ${new Date().toISOString().split('T')[0]}`
+4. If the query includes "after", "before", "since", "from", "until", "between", or "on or after/on or before" with a date, prefer start_date/end_date over month-only interpretation
+5. "June 21", "21 June", or "June 21st" should normally be treated as a specific day, not as year 2021 or the full month of June
+6. Current date context: ${new Date().toISOString().split('T')[0]}`
 
   const request: ClaudeSonnetRequest = {
     model: 'claude-sonnet-4-20250514',
@@ -143,6 +155,7 @@ IMPORTANT RULES:
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
     
     const entities: ExtractedEntities = JSON.parse(cleaned)
+    applyDeterministicDateOverrides(query, entities)
     
     // ============================================
     // SMART DATE DEFAULTS: If no dates specified, use current month onwards
@@ -173,6 +186,127 @@ IMPORTANT RULES:
       confidence: 0.3
     }
   }
+}
+
+function shouldUseConversationHistory(query: string): boolean {
+  const normalized = query.toLowerCase()
+  const explicitDate =
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(normalized) ||
+    /\b\d{4}-\d{2}-\d{2}\b/.test(normalized) ||
+    /\b\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(normalized)
+  const explicitCrew =
+    /\b(ashwin|naren|sandeep|coni|nikhil|ns|aditya|viraj|shridhar|nazar|omkar|akshay|oc1|oc2|oc3)\b/.test(normalized)
+  const explicitVenue =
+    /\b(tt|tata|jbt|jamshed bhabha|experimental|tet|gdt|godrej|lt|little theatre|svr|sea view)\b/.test(normalized)
+  const followUpLanguage =
+    /\b(those|them|there|that|same|also|what about|how about|and after that|next one)\b/.test(normalized)
+
+  if (followUpLanguage) return true
+  if (explicitDate || explicitCrew || explicitVenue) return false
+  return true
+}
+
+function applyDeterministicDateOverrides(query: string, entities: ExtractedEntities): void {
+  const normalized = query.toLowerCase()
+  const parsedDate = parseExplicitMonthDay(query)
+  if (!parsedDate) return
+
+  const nextDay = addDays(parsedDate, 1)
+  const previousDay = addDays(parsedDate, -1)
+
+  if (/\bon or after\b/.test(normalized) || /\bsince\b/.test(normalized) || /\bfrom\b/.test(normalized)) {
+    entities.date = undefined
+    entities.start_date = parsedDate
+    entities.end_date = undefined
+    entities.month = undefined
+    entities.year = parsedDate.slice(0, 4)
+    return
+  }
+
+  if (/\bon or before\b/.test(normalized) || /\buntil\b/.test(normalized)) {
+    entities.date = undefined
+    entities.start_date = undefined
+    entities.end_date = parsedDate
+    entities.month = undefined
+    entities.year = parsedDate.slice(0, 4)
+    return
+  }
+
+  if (/\bafter\b/.test(normalized)) {
+    entities.date = undefined
+    entities.start_date = nextDay
+    entities.end_date = undefined
+    entities.month = undefined
+    entities.year = parsedDate.slice(0, 4)
+    return
+  }
+
+  if (/\bbefore\b/.test(normalized)) {
+    entities.date = undefined
+    entities.start_date = undefined
+    entities.end_date = previousDay
+    entities.month = undefined
+    entities.year = parsedDate.slice(0, 4)
+    return
+  }
+
+  if (/\bon\b/.test(normalized)) {
+    entities.date = parsedDate
+    entities.start_date = undefined
+    entities.end_date = undefined
+    entities.month = parsedDate.slice(0, 7)
+    entities.year = parsedDate.slice(0, 4)
+  }
+}
+
+function parseExplicitMonthDay(query: string): string | null {
+  const normalized = query.toLowerCase()
+  const months = [
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december'
+  ]
+
+  let monthIndex = -1
+  let day = 0
+  let year: number | null = null
+
+  const monthDayMatch = normalized.match(
+    /\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{1,2})(?:st|nd|rd|th)?(?:[,\s]+(\d{4}))?\b/
+  )
+  const dayMonthMatch = normalized.match(
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+(january|february|march|april|may|june|july|august|september|october|november|december)(?:[,\s]+(\d{4}))?\b/
+  )
+
+  if (monthDayMatch) {
+    monthIndex = months.indexOf(monthDayMatch[1])
+    day = parseInt(monthDayMatch[2], 10)
+    year = monthDayMatch[3] ? parseInt(monthDayMatch[3], 10) : null
+  } else if (dayMonthMatch) {
+    monthIndex = months.indexOf(dayMonthMatch[2])
+    day = parseInt(dayMonthMatch[1], 10)
+    year = dayMonthMatch[3] ? parseInt(dayMonthMatch[3], 10) : null
+  }
+
+  if (monthIndex < 0 || !day) return null
+
+  const now = new Date()
+  const resolvedYear = year ?? now.getFullYear()
+  const resolved = new Date(Date.UTC(resolvedYear, monthIndex, day))
+  if (
+    resolved.getUTCFullYear() !== resolvedYear ||
+    resolved.getUTCMonth() !== monthIndex ||
+    resolved.getUTCDate() !== day
+  ) {
+    return null
+  }
+
+  return resolved.toISOString().slice(0, 10)
+}
+
+function addDays(dateString: string, days: number): string {
+  const date = new Date(`${dateString}T00:00:00Z`)
+  date.setUTCDate(date.getUTCDate() + days)
+  return date.toISOString().slice(0, 10)
 }
 
 // ============================================

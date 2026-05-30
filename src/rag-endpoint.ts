@@ -170,6 +170,12 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     if (entities.start_date && entities.end_date) {
       sqlQuery += ' AND event_date >= ? AND event_date <= ?'
       sqlParams.push(entities.start_date, entities.end_date)
+    } else if (entities.start_date) {
+      sqlQuery += ' AND event_date >= ?'
+      sqlParams.push(entities.start_date)
+    } else if (entities.end_date) {
+      sqlQuery += ' AND event_date <= ?'
+      sqlParams.push(entities.end_date)
     } else if (entities.date) {
       sqlQuery += ' AND event_date = ?'
       sqlParams.push(entities.date)

@@ -2276,6 +2276,7 @@ function clearAIResults() {
   document.getElementById('aiLoading').style.display = 'none';
   document.getElementById('aiExplanation').textContent = '';
   document.getElementById('aiResultsContainer').innerHTML = '';
+  setAILastQuery('');
 }
 
 // Session management for context memory
@@ -2285,6 +2286,90 @@ let aiSessionId = sessionStorage.getItem('ai_session_id');
 if (!aiSessionId) {
   aiSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
   sessionStorage.setItem('ai_session_id', aiSessionId);
+}
+
+const DEFAULT_AI_PLACEHOLDER = 'Ask a question about your events...';
+
+function setAILastQuery(query) {
+  const input = document.getElementById('aiQueryInput');
+  if (!input) return;
+
+  let helper = document.getElementById('aiLastQuery');
+  if (!helper) {
+    helper = document.createElement('p');
+    helper.id = 'aiLastQuery';
+    helper.className = 'text-sm text-gray-400 mt-2';
+    helper.style.display = 'none';
+    const helperContainer = input.parentElement?.parentElement;
+    if (helperContainer) {
+      helperContainer.appendChild(helper);
+    }
+  }
+  if (!helper) return;
+
+  if (query) {
+    helper.textContent = `Last question: ${query}`;
+    helper.style.display = 'block';
+    input.placeholder = query;
+  } else {
+    helper.textContent = '';
+    helper.style.display = 'none';
+    input.placeholder = DEFAULT_AI_PLACEHOLDER;
+  }
+}
+
+function formatInsightLabel(key) {
+  const labels = {
+    total_events: 'Total events',
+    date_range: 'Date range',
+    busiest_venue: 'Busiest venue',
+    busiest_crew: 'Busiest crew',
+    venue_stats: 'Venue breakdown',
+    crew_workload: 'Crew workload',
+    team_stats: 'Team breakdown'
+  };
+  return labels[key] || key.replace(/_/g, ' ');
+}
+
+function formatInsightValue(key, value) {
+  if (!value && value !== 0) return 'N/A';
+
+  if (key === 'date_range' && typeof value === 'object' && value.start && value.end) {
+    return `${value.start} to ${value.end}`;
+  }
+
+  if (key === 'venue_stats' && typeof value === 'object') {
+    return Object.entries(value)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(', ');
+  }
+
+  if (key === 'crew_workload' && typeof value === 'object') {
+    return Object.entries(value)
+      .sort((a, b) => Number(b[1]) - Number(a[1]))
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(', ');
+  }
+
+  if (key === 'team_stats' && Array.isArray(value)) {
+    return value
+      .slice(0, 5)
+      .map(stat => `${stat.team} (${Math.round(Number(stat.percentage) || 0)}%)`)
+      .join(', ');
+  }
+
+  if (Array.isArray(value)) {
+    return value.join(', ');
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
 }
 
 function escapeHtml(input) {
@@ -2319,13 +2404,14 @@ async function askAI(predefinedQuery) {
     });
     
     if (response.data.success) {
-      const { answer, events, insights, recommendations, follow_up_suggestions, needs_clarification, clarification_questions } = response.data;
+      const { answer, events, insights, recommendations, follow_up_queries, needs_clarification, clarification_questions } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
       document.getElementById('aiExplanation').textContent = answer || 'Here are the results:';
+      setAILastQuery(query);
       
       // Display results
       let resultsHTML = '';
@@ -2365,7 +2451,8 @@ async function askAI(predefinedQuery) {
       if (insights && Object.keys(insights).length > 0) {
         resultsHTML += '<div class="rounded-xl p-4 mb-4" style="background:rgba(152,162,215,0.08);outline:1px solid rgba(173,179,184,0.18);"><h4 class="font-semibold mb-2" style="color:#465080;">📊 Insights</h4><ul class="space-y-1 text-sm">';
         for (const [key, value] of Object.entries(insights)) {
-          resultsHTML += `<li><span class="text-gray-600">${escapeHtml(key)}:</span> <span class="font-medium text-gray-800">${escapeHtml(String(value))}</span></li>`;
+          const formattedValue = formatInsightValue(key, value);
+          resultsHTML += `<li><span class="text-gray-600">${escapeHtml(formatInsightLabel(key))}:</span> <span class="font-medium text-gray-800">${escapeHtml(formattedValue)}</span></li>`;
         }
         resultsHTML += '</ul></div>';
       }
@@ -2380,9 +2467,9 @@ async function askAI(predefinedQuery) {
       }
       
       // Show follow-up suggestions
-      if (follow_up_suggestions && follow_up_suggestions.length > 0) {
+      if (follow_up_queries && follow_up_queries.length > 0) {
         resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
-        follow_up_suggestions.forEach(suggestion => {
+        follow_up_queries.forEach(suggestion => {
           resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${suggestion}</button>`;
         });
         resultsHTML += '</div></div>';
@@ -2402,6 +2489,7 @@ async function askAI(predefinedQuery) {
     document.getElementById('aiLoading').style.display = 'none';
     document.getElementById('aiExplanation').textContent = 'Sorry, I encountered an error processing your question.';
     document.getElementById('aiResultsContainer').innerHTML = `<p class="text-red-600 text-sm">${error.response?.data?.error || error.message}</p>`;
+    setAILastQuery(query);
     showNotification('AI query failed', 'error');
   }
 }

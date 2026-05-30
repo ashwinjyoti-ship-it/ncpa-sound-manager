@@ -2295,26 +2295,9 @@ function setAILastQuery(query) {
   const input = document.getElementById('aiQueryInput');
   if (!input) return;
 
-  let helper = document.getElementById('aiLastQuery');
-  if (!helper) {
-    helper = document.createElement('p');
-    helper.id = 'aiLastQuery';
-    helper.className = 'text-sm text-gray-400 mt-2';
-    helper.style.display = 'none';
-    const helperContainer = input.parentElement?.parentElement;
-    if (helperContainer) {
-      helperContainer.appendChild(helper);
-    }
-  }
-  if (!helper) return;
-
   if (query) {
-    helper.textContent = `Last question: ${query}`;
-    helper.style.display = 'block';
     input.placeholder = query;
   } else {
-    helper.textContent = '';
-    helper.style.display = 'none';
     input.placeholder = DEFAULT_AI_PLACEHOLDER;
   }
 }
@@ -2407,12 +2390,14 @@ async function askAI(predefinedQuery) {
     });
     
     if (response.data.success) {
-      const { answer, events, insights, recommendations, follow_up_queries, needs_clarification, clarification_questions } = response.data;
+      const { answer, events, insights, recommendations, follow_up_queries, needs_clarification, clarification_questions, metadata } = response.data;
       
       // Hide loading
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
+      const queryIntent = metadata?.query_intent;
+      const showSecondaryAnalysis = queryIntent === 'analytics' || queryIntent === 'comparison';
       const hasInsights = Boolean(insights && Object.keys(insights).length > 0);
       const hasRecommendations = Boolean(recommendations && recommendations.length > 0);
       const shouldHideExplanation = Boolean(
@@ -2461,7 +2446,7 @@ async function askAI(predefinedQuery) {
       // The answer already contains the count/summary
       
       // Show insights
-      if (insights && Object.keys(insights).length > 0) {
+      if (showSecondaryAnalysis && insights && Object.keys(insights).length > 0) {
         resultsHTML += '<div class="rounded-xl p-4 mb-4" style="background:rgba(152,162,215,0.08);outline:1px solid rgba(173,179,184,0.18);"><h4 class="font-semibold mb-2" style="color:#465080;">📊 Insights</h4><ul class="space-y-1 text-sm">';
         for (const [key, value] of Object.entries(insights)) {
           const formattedValue = formatInsightValue(key, value);
@@ -2471,7 +2456,7 @@ async function askAI(predefinedQuery) {
       }
       
       // Show recommendations
-      if (recommendations && recommendations.length > 0) {
+      if (showSecondaryAnalysis && recommendations && recommendations.length > 0) {
         resultsHTML += '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-blue-800 mb-2">💡 Recommendations</h4><ul class="space-y-1 text-sm list-disc list-inside">';
         recommendations.forEach(rec => {
           resultsHTML += `<li class="text-gray-700">${escapeHtml(rec)}</li>`;
@@ -2480,7 +2465,7 @@ async function askAI(predefinedQuery) {
       }
       
       // Show follow-up suggestions
-      if (follow_up_queries && follow_up_queries.length > 0) {
+      if (showSecondaryAnalysis && follow_up_queries && follow_up_queries.length > 0) {
         resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
         follow_up_queries.forEach(suggestion => {
           resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${suggestion}</button>`;

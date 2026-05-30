@@ -243,7 +243,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // - Availability: Need ALL events to calculate truly free dates
     // - Analytics: Need ALL events for accurate analysis (crew workload, venue stats)
     // - Other queries: Limit for performance
-    const is_analytics = include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')
+    const is_analytics = include_analytics || entities.intent === 'analytics' || entities.intent === 'comparison'
     if (!is_aggregation && entities.intent !== 'availability' && !is_analytics) {
       sqlQuery += ` ORDER BY event_date ASC LIMIT ${max_results * 2}` // Get more results for filtering
     } else {
@@ -287,10 +287,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // ============================================
     let insights: any = undefined
     
-    if (
-      (include_analytics && (entities.intent === 'analytics' || entities.intent === 'comparison')) ||
-      entities.intent === 'aggregation'
-    ) {
+    if (is_analytics) {
       console.log('📈 Generating analytics...')
       
       const dateRange = {

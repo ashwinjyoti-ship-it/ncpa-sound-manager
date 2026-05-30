@@ -3082,6 +3082,7 @@ app.get('/', (c) => {
                               <i class="fas fa-paper-plane"></i>
                           </button>
                       </div>
+                      <p id="aiLastQuery" class="text-sm text-gray-400 mt-2" style="display:none;"></p>
                   </div>
                  
                   <div id="aiResponse" style="display: none;">

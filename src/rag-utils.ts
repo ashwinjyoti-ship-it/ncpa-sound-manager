@@ -155,6 +155,7 @@ IMPORTANT RULES:
     const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
     
     const entities: ExtractedEntities = JSON.parse(cleaned)
+    applyDeterministicIntentOverrides(query, entities)
     applyDeterministicDateOverrides(query, entities)
     
     // ============================================
@@ -168,7 +169,7 @@ IMPORTANT RULES:
     
     // For queries without dates, default to current month
     // Applies to: availability, prediction, analytics, search
-    if (!entities.start_date && !entities.date && !entities.month) {
+    if (!entities.start_date && !entities.end_date && !entities.date && !entities.month) {
       entities.start_date = firstOfMonth
       entities.end_date = lastOfMonth
       entities.month = currentMonth
@@ -185,6 +186,24 @@ IMPORTANT RULES:
       intent: 'search',
       confidence: 0.3
     }
+  }
+}
+
+function applyDeterministicIntentOverrides(query: string, entities: ExtractedEntities): void {
+  const normalized = query.toLowerCase()
+  const wantsList =
+    /\b(list|show|find)\b/.test(normalized) ||
+    /\bwhat shows\b/.test(normalized) ||
+    /\bwhich shows\b/.test(normalized) ||
+    /\bwhat events\b/.test(normalized) ||
+    /\bwhich events\b/.test(normalized)
+  const wantsCount =
+    /\b(how many|count|total|number of)\b/.test(normalized) ||
+    /\b(percent|percentage|share|ratio|proportion|out of)\b/.test(normalized) ||
+    normalized.includes('%')
+
+  if (wantsList && !wantsCount) {
+    entities.intent = 'search'
   }
 }
 
@@ -211,10 +230,14 @@ function applyDeterministicDateOverrides(query: string, entities: ExtractedEntit
   const parsedDate = parseExplicitMonthDay(query)
   if (!parsedDate) return
 
+  // Preserve explicit ranges that the model already extracted correctly.
+  if (entities.start_date && entities.end_date) return
+
   const nextDay = addDays(parsedDate, 1)
   const previousDay = addDays(parsedDate, -1)
+  const hasTemporalFrom = /\bfrom\s+((\d{1,2})(?:st|nd|rd|th)?\s+)?(january|february|march|april|may|june|july|august|september|october|november|december)\b/.test(normalized)
 
-  if (/\bon or after\b/.test(normalized) || /\bsince\b/.test(normalized) || /\bfrom\b/.test(normalized)) {
+  if (/\bon or after\b/.test(normalized) || /\bsince\b/.test(normalized) || hasTemporalFrom) {
     entities.date = undefined
     entities.start_date = parsedDate
     entities.end_date = undefined
@@ -578,7 +601,12 @@ export function formatRAGResponse(
     )
   }
 
-  if (insights?.team_stats && Array.isArray(insights.team_stats) && insights.team_stats.length > 0) {
+  if (
+    (entities.intent === 'analytics' || entities.intent === 'comparison') &&
+    insights?.team_stats &&
+    Array.isArray(insights.team_stats) &&
+    insights.team_stats.length > 0
+  ) {
     const periodLabel = entities.month
       ? entities.month
       : (entities.start_date && entities.end_date

@@ -2295,26 +2295,9 @@ function setAILastQuery(query) {
   const input = document.getElementById('aiQueryInput');
   if (!input) return;
 
-  let helper = document.getElementById('aiLastQuery');
-  if (!helper) {
-    helper = document.createElement('p');
-    helper.id = 'aiLastQuery';
-    helper.className = 'text-sm text-gray-400 mt-2';
-    helper.style.display = 'none';
-    const helperContainer = input.parentElement?.parentElement;
-    if (helperContainer) {
-      helperContainer.appendChild(helper);
-    }
-  }
-  if (!helper) return;
-
   if (query) {
-    helper.textContent = `Last question: ${query}`;
-    helper.style.display = 'block';
     input.placeholder = query;
   } else {
-    helper.textContent = '';
-    helper.style.display = 'none';
     input.placeholder = DEFAULT_AI_PLACEHOLDER;
   }
 }

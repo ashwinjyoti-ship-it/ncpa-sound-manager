@@ -2413,7 +2413,15 @@ async function askAI(predefinedQuery) {
       document.getElementById('aiLoading').style.display = 'none';
       
       // Show natural language answer
-      const shouldHideExplanation = Boolean(events && events.length > 0 && !needs_clarification);
+      const hasInsights = Boolean(insights && Object.keys(insights).length > 0);
+      const hasRecommendations = Boolean(recommendations && recommendations.length > 0);
+      const shouldHideExplanation = Boolean(
+        events &&
+        events.length > 0 &&
+        !needs_clarification &&
+        !hasInsights &&
+        !hasRecommendations
+      );
       explanationEl.textContent = answer || 'Here are the results:';
       explanationEl.style.display = shouldHideExplanation ? 'none' : 'block';
       setAILastQuery(query);

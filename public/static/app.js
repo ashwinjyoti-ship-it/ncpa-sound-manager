@@ -2279,10 +2279,12 @@ function clearAIResults() {
 }
 
 // Session management for context memory
-let aiSessionId = localStorage.getItem('ai_session_id');
+// Keep AI context scoped to the current browser tab so older unrelated chats
+// don't keep biasing new queries days later.
+let aiSessionId = sessionStorage.getItem('ai_session_id');
 if (!aiSessionId) {
   aiSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  localStorage.setItem('ai_session_id', aiSessionId);
+  sessionStorage.setItem('ai_session_id', aiSessionId);
 }
 
 function escapeHtml(input) {

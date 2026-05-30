@@ -2292,8 +2292,20 @@ const DEFAULT_AI_PLACEHOLDER = 'Ask a question about your events...';
 
 function setAILastQuery(query) {
   const input = document.getElementById('aiQueryInput');
-  const helper = document.getElementById('aiLastQuery');
-  if (!input || !helper) return;
+  if (!input) return;
+
+  let helper = document.getElementById('aiLastQuery');
+  if (!helper) {
+    helper = document.createElement('p');
+    helper.id = 'aiLastQuery';
+    helper.className = 'text-sm text-gray-400 mt-2';
+    helper.style.display = 'none';
+    const helperContainer = input.parentElement?.parentElement;
+    if (helperContainer) {
+      helperContainer.appendChild(helper);
+    }
+  }
+  if (!helper) return;
 
   if (query) {
     helper.textContent = `Last question: ${query}`;

@@ -287,7 +287,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // ============================================
     let insights: any = undefined
     
-    if (is_analytics) {
+    if (is_analytics || entities.intent === 'aggregation') {
       console.log('📈 Generating analytics...')
       
       const dateRange = {

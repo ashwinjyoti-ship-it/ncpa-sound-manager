@@ -16,6 +16,7 @@ import {
   semanticSearch,
   getCrewWorkload,
   getVenueStats,
+  buildCrewWorkload,
   predictAvailability,
   formatRAGResponse,
   resolveVenueName,
@@ -325,13 +326,7 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
       })
       
       // Crew workload
-      const crewWorkload: Record<string, number> = {}
-      for (const event of events) {
-        const crewNames = event.crew.split(',').map(c => c.trim())
-        for (const crew of crewNames) {
-          crewWorkload[crew] = (crewWorkload[crew] || 0) + 1
-        }
-      }
+      const crewWorkload = buildCrewWorkload(events)
       const busiestCrew = Object.entries(crewWorkload).sort((a, b) => b[1] - a[1])[0]
       
       insights = {

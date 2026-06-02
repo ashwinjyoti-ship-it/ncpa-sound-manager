@@ -519,6 +519,34 @@ export async function getVenueStats(
   return stats
 }
 
+type CrewSource = {
+  crew?: string | null
+  foh_crew?: string | null
+  stage_crew?: string | null
+}
+
+export function buildCrewWorkload(events: CrewSource[]): Record<string, number> {
+  const workload: Record<string, number> = {}
+
+  for (const event of events) {
+    const roleCrew = [event.foh_crew, event.stage_crew]
+      .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+    const crewText = roleCrew.length > 0
+      ? roleCrew.join(', ')
+      : (typeof event.crew === 'string' ? event.crew : '')
+    const crewNames = crewText
+      .split(',')
+      .map((crew) => crew.trim())
+      .filter(Boolean)
+
+    for (const crew of crewNames) {
+      workload[crew] = (workload[crew] || 0) + 1
+    }
+  }
+
+  return workload
+}
+
 export async function predictAvailability(
   venue: string,
   startDate: string,

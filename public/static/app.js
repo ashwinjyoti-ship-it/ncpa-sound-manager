@@ -42,7 +42,45 @@ function displayVenue(venue) {
 
 document.addEventListener('DOMContentLoaded', async () => {
    await loadEvents();
-   renderCalendar();
+   renderCurrentView();
+
+   // Wire mobile week navigation
+   var prevWeekBtn = document.getElementById('mobilePrevWeek');
+   var nextWeekBtn = document.getElementById('mobileNextWeek');
+   var todayBtn = document.getElementById('mobileTodayBtn');
+
+   if (prevWeekBtn) {
+     prevWeekBtn.addEventListener('click', function() {
+       currentDate.setDate(currentDate.getDate() - 7);
+       renderMobileCalendar();
+     });
+   }
+   if (nextWeekBtn) {
+     nextWeekBtn.addEventListener('click', function() {
+       currentDate.setDate(currentDate.getDate() + 7);
+       renderMobileCalendar();
+     });
+   }
+   if (todayBtn) {
+     todayBtn.addEventListener('click', function() {
+       currentDate = getWeekStart(new Date());
+       renderMobileCalendar();
+     });
+   }
+
+   // Resize listener to switch between desktop and mobile renderers
+   var lastMobile = isMobileView();
+   var resizeTimer = null;
+   window.addEventListener('resize', function() {
+     clearTimeout(resizeTimer);
+     resizeTimer = setTimeout(function() {
+       var nowMobile = isMobileView();
+       if (nowMobile !== lastMobile && currentView === 'calendar') {
+         lastMobile = nowMobile;
+         renderCurrentView();
+       }
+     }, 200);
+  });
 });
 
 // ============================================
@@ -84,7 +122,7 @@ function showTab(tab) {
   if (tab === 'calendar') {
     document.getElementById('calendarTab').classList.add('tab-active');
     document.getElementById('calendarView').style.display = 'block';
-    renderCalendar();
+    renderCurrentView();
   } else if (tab === 'table') {
     document.getElementById('tableTab').classList.add('tab-active');
     document.getElementById('tableView').style.display = 'block';
@@ -102,7 +140,11 @@ function showTab(tab) {
 
 function renderCurrentView() {
   if (currentView === 'calendar') {
-    renderCalendar();
+    if (isMobileView()) {
+      renderMobileCalendar();
+    } else {
+      renderCalendar();
+    }
   } else {
     renderTable();
   }
@@ -351,7 +393,160 @@ function renderCalendar() {
 
 function changeMonth(delta) {
   currentDate.setMonth(currentDate.getMonth() + delta);
-  renderCalendar();
+  if (isMobileView()) {
+    renderMobileCalendar();
+  } else {
+    renderCalendar();
+  }
+}
+
+// ============================================
+// MOBILE WEEK AGENDA VIEW
+// ============================================
+
+function isMobileView() {
+  return window.innerWidth < 768;
+}
+
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay(); // 0 = Sun, 1 = Mon
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(d.setDate(diff));
+}
+
+function formatMobileDate(date) {
+  const opts = { day: 'numeric', month: 'short' };
+  return date.toLocaleDateString('en-GB', opts);
+}
+
+function formatMobileDayHeader(date) {
+  const dayName = date.toLocaleDateString('en-GB', { weekday: 'long' });
+  const dateStr = formatMobileDate(date);
+  return dayName + ' ' + dateStr;
+}
+
+function renderMobileCalendar() {
+  const weekStart = getWeekStart(currentDate);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+
+  // Update week label
+  const weekLabel = document.getElementById('mobileWeekLabel');
+  const startStr = formatMobileDate(weekStart);
+  const endStr = formatMobileDate(weekEnd);
+  const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
+  const yearStr = weekStart.getFullYear();
+  if (sameMonth) {
+    weekLabel.textContent = startStr + ' – ' + weekEnd.getDate() + ' ' + formatMobileDate(weekEnd).split(' ')[1] + ' ' + yearStr;
+  } else {
+    weekLabel.textContent = startStr + ' – ' + endStr + ' ' + yearStr;
+  }
+
+  // Show/hide Today button
+  const todayBtn = document.getElementById('mobileTodayBtn');
+  const today = new Date();
+  const todayWeekStart = getWeekStart(today);
+  const isCurrentWeek = weekStart.getTime() === todayWeekStart.getTime();
+  if (isCurrentWeek) {
+    todayBtn.classList.add('hidden');
+  } else {
+    todayBtn.classList.remove('hidden');
+  }
+
+  renderMobileWeekEvents(weekStart, weekEnd);
+}
+
+function renderMobileWeekEvents(weekStart, weekEnd) {
+  const container = document.getElementById('mobileWeekEvents');
+  container.innerHTML = '';
+
+  // Pre-compute eventsByDate from allEvents
+  const eventsByDate = {};
+  allEvents.forEach(function(event) {
+    const date = event.event_date;
+    if (!eventsByDate[date]) {
+      eventsByDate[date] = [];
+    }
+    eventsByDate[date].push(event);
+  });
+
+  const today = new Date();
+  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+  for (let i = 0; i < 7; i++) {
+    const dayDate = new Date(weekStart);
+    dayDate.setDate(weekStart.getDate() + i);
+    const dateStr = dayDate.getFullYear() + '-' + String(dayDate.getMonth() + 1).padStart(2, '0') + '-' + String(dayDate.getDate()).padStart(2, '0');
+
+    // Day section
+    const daySection = document.createElement('div');
+
+    // Day header
+    const dayHeader = document.createElement('div');
+    dayHeader.className = 'mobile-day-header' + (dateStr === todayStr ? ' today' : '');
+    dayHeader.textContent = formatMobileDayHeader(dayDate);
+    daySection.appendChild(dayHeader);
+
+    // Events
+    const dayEvents = eventsByDate[dateStr] || [];
+    if (dayEvents.length === 0) {
+      const noShows = document.createElement('div');
+      noShows.className = 'mobile-no-shows';
+      noShows.textContent = 'No shows';
+      daySection.appendChild(noShows);
+    } else {
+      dayEvents.forEach(function(event) {
+        daySection.appendChild(renderMobileEventCard(event));
+      });
+    }
+
+    container.appendChild(daySection);
+  }
+}
+
+function renderMobileEventCard(event) {
+  const card = document.createElement('div');
+  const isGreen = event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified';
+  card.className = 'mobile-event-card ' + (isGreen ? 'event-card-green' : 'event-card-peach');
+  card.setAttribute('role', 'button');
+  card.setAttribute('tabindex', '0');
+  card.onclick = function() { openEventModal(event); };
+  card.onkeypress = function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      openEventModal(event);
+    }
+  };
+
+  // Crew display
+  let crewHtml = '';
+  if (event.foh_crew || event.stage_crew) {
+    if (event.foh_crew) {
+      crewHtml += '<div class="mt-1" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>' + escHtml(event.foh_crew) + '</div>';
+    }
+    if (event.stage_crew) {
+      crewHtml += '<div class="text-gray-600 mt-1"><i class="fas fa-volume-up mr-1 text-xs"></i>' + escHtml(event.stage_crew) + '</div>';
+    }
+  } else if (event.crew) {
+    crewHtml = '<div class="text-gray-600 mt-1"><i class="fas fa-users mr-1"></i>' + escHtml(event.crew) + '</div>';
+  }
+
+  card.innerHTML =
+    '<div class="font-semibold text-sm">' + escHtml(event.program) + '</div>' +
+    '<div class="text-xs text-gray-600 mt-1"><i class="fas fa-map-marker-alt mr-1"></i>' + escHtml(displayVenue(event.venue)) + '</div>' +
+    crewHtml;
+
+  return card;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 // ============================================
@@ -606,7 +801,7 @@ async function deleteEventFromModal(eventId) {
     if (response.data.success) {
       showNotification('✅ Event deleted successfully', 'success');
       await loadEvents();
-      renderCalendar(); // Refresh calendar view
+      renderCurrentView();
     }
   } catch (error) {
     console.error('Error deleting event:', error);
@@ -709,7 +904,10 @@ async function handleAddShow(e) {
         // Navigate to the month of the added show
         const eventDate = new Date(data.event_date);
         currentDate = new Date(eventDate.getFullYear(), eventDate.getMonth(), 1);
-        renderCalendar();
+        if (isMobileView()) {
+          currentDate = getWeekStart(new Date(data.event_date + 'T00:00:00'));
+        }
+        renderCurrentView();
       }
     } else {
       // Multiple dates (date range) — create each date as an individual event
@@ -754,7 +952,10 @@ async function handleAddShow(e) {
 
       // Navigate to the month of the first date
       currentDate = new Date(startUTC.getUTCFullYear(), startUTC.getUTCMonth(), 1);
-      renderCalendar();
+      if (isMobileView()) {
+        currentDate = getWeekStart(new Date(startUTC));
+      }
+      renderCurrentView();
     }
   } catch (error) {
     console.error('Error adding show:', error);
@@ -1074,10 +1275,10 @@ async function handleEditEvent(e) {
           }
         }
         showNotification('Event updated successfully', 'success');
-        closeEditEventModal();
-        await loadEvents();
-        renderCalendar();
-      }
+      closeEditEventModal();
+      await loadEvents();
+      renderCurrentView();
+    }
     } else {
       // Multiple dates - update original and create copies for additional dates
       const startDate = new Date(data.start_date);
@@ -1129,7 +1330,7 @@ async function handleEditEvent(e) {
       showNotification(`Event extended to ${totalDays} dates`, 'success');
       closeEditEventModal();
       await loadEvents();
-      renderCalendar();
+      renderCurrentView();
     }
   } catch (error) {
     console.error('Error updating event:', error);
@@ -1309,7 +1510,10 @@ async function handleWordUpload(e) {
       await loadEvents();
       if (uploadedMonth !== null && uploadedYear !== null) {
         currentDate = new Date(uploadedYear, uploadedMonth, 1);
-        renderCalendar();
+        if (isMobileView()) {
+          currentDate = getWeekStart(new Date(uploadedYear, uploadedMonth, 1));
+        }
+        renderCurrentView();
       }
 
       let message = `✅ ${uploaded} events added`;

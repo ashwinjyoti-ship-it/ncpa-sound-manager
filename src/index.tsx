@@ -2549,46 +2549,6 @@ app.get('/', (c) => {
                         <div id="mobileWeekEvents" class="space-y-6 pb-6 px-1"></div>
                     </div>
                 </div>
-                            <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
-                                <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-
-                        <!-- Calendar grid header -->
-                        <div class="grid grid-cols-7 gap-1 md:gap-2">
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
-                        </div>
-                    </div>
-                    <!-- Scrollable desktop calendar grid -->
-                    <div class="hidden md:block p-3 md:p-6 pt-2 md:pt-2">
-                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
-                    </div>
-
-                    <!-- MOBILE: Week Agenda View -->
-                    <div id="mobileCalendarView" class="md:hidden">
-                        <!-- Sticky week nav -->
-                        <div class="sticky top-0 z-10 mb-3 px-3 py-2 flex justify-between items-center" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(173,179,184,0.12);">
-                            <button id="mobilePrevWeek" class="btn-glass px-3 py-1.5 text-sm">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <div class="flex items-center gap-2">
-                                <span id="mobileWeekLabel" class="text-sm font-semibold text-gray-700">1 – 7 Jun 2026</span>
-                                <button id="mobileTodayBtn" class="hidden text-xs px-2 py-1 rounded-full font-medium" style="background:rgba(152,162,215,0.18);color:#465080;">Today</button>
-                            </div>
-                            <button id="mobileNextWeek" class="btn-glass px-3 py-1.5 text-sm">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
-                        <!-- Week events list -->
-                        <div id="mobileWeekEvents" class="space-y-5 pb-6 px-3"></div>
-                    </div>
-                </div>
 
                 <!-- Table View -->
                 <div id="tableView" class="glass-card rounded-2xl p-3 md:p-6" style="display: none;">

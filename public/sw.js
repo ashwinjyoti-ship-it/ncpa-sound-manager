@@ -1,4 +1,4 @@
-const CACHE = 'ncpa-sound-v1';
+const CACHE = 'ncpa-sound-v2';
 const STATIC = [
   '/',
   '/static/app.js',

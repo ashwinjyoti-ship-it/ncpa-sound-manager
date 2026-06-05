@@ -1989,11 +1989,51 @@ app.get('/', (c) => {
               min-height: 80px;
             }
 
-            .event-card-green, .event-card-peach {
+            #calendarGrid .event-card-green, #calendarGrid .event-card-peach {
               font-size: 0.7rem;
               padding: 3px 4px;
               margin-bottom: 3px;
               line-height: 1.3;
+            }
+
+            /* Mobile agenda view styles */
+            .mobile-day-header {
+              position: sticky;
+              top: 52px;
+              z-index: 5;
+              padding: 10px 12px 8px;
+              font-size: 0.85rem;
+              font-weight: 600;
+              color: #5a6065;
+              background: rgba(248,249,252,0.90);
+              backdrop-filter: blur(8px);
+              -webkit-backdrop-filter: blur(8px);
+              border-bottom: 1px solid rgba(173,179,184,0.18);
+              border-radius: 8px 8px 0 0;
+            }
+            .mobile-day-header.today {
+              color: #465080;
+              background: rgba(152,162,215,0.12);
+              border-left: 3px solid #98A2D7;
+            }
+            .mobile-event-card {
+              padding: 12px 16px;
+              border-radius: 10px;
+              margin-bottom: 8px;
+              font-size: 0.875rem;
+              line-height: 1.45;
+              cursor: pointer;
+              transition: transform 0.12s ease, box-shadow 0.12s ease;
+            }
+            .mobile-event-card:active {
+              transform: scale(0.985);
+            }
+            .mobile-no-shows {
+              text-align: center;
+              padding: 14px 12px;
+              color: #9ca3af;
+              font-size: 0.8rem;
+              font-style: italic;
             }
 
             /* Larger touch targets for buttons only, not event cards */
@@ -2209,6 +2249,80 @@ app.get('/', (c) => {
               line-height: 1.15 !important;
             }
           }
+
+          /* ── Mobile Week Agenda View ── */
+          .mobile-day-header {
+            position: sticky;
+            top: 48px;
+            z-index: 5;
+            padding: 10px 4px 6px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid rgba(173,179,184,0.18);
+            background: rgba(248,249,252,0.90);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #5a6065;
+            letter-spacing: 0.02em;
+          }
+          .mobile-day-header.today {
+            color: #465080;
+          }
+          .mobile-day-header.today::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #98A2D7;
+            margin-right: 6px;
+            vertical-align: middle;
+          }
+          .mobile-event-card {
+            padding: 12px 14px;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.12s ease;
+          }
+          .mobile-event-card:active {
+            transform: scale(0.985);
+          }
+          .mobile-event-card .program {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1f2937;
+            line-height: 1.35;
+            margin-bottom: 4px;
+          }
+          .mobile-event-card .meta {
+            font-size: 0.8rem;
+            color: #6b7280;
+            line-height: 1.4;
+          }
+          .mobile-event-card .meta i {
+            width: 14px;
+            text-align: center;
+            margin-right: 4px;
+          }
+          .mobile-event-card .crew-foh {
+            color: #1d4ed8;
+          }
+          .mobile-event-card .crew-stage {
+            color: #15803d;
+          }
+          .mobile-no-shows {
+            text-align: center;
+            padding: 14px 0;
+            color: #9ca3af;
+            font-size: 0.85rem;
+          }
+          .mobile-no-shows i {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 1.1rem;
+          }
         </style>
     </head>
     <body style="background-color: #f8f9fc; padding-bottom: env(safe-area-inset-bottom);">
@@ -2384,8 +2498,8 @@ app.get('/', (c) => {
 
                 <!-- Calendar View -->
                 <div id="calendarView" class="rounded-2xl glass-card overflow-y-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-180px)]">
-                    <!-- Sticky header: month controls + days-of-week -->
-                    <div class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                    <!-- Sticky header: month controls + days-of-week (desktop only) -->
+                    <div class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0 hidden md:block" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
                         <!-- Calendar controls with event count -->
                         <div class="flex justify-between items-center mb-4 md:mb-6">
                             <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
@@ -2411,9 +2525,68 @@ app.get('/', (c) => {
                             <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
                         </div>
                     </div>
-                    <!-- Scrollable calendar grid -->
-                    <div class="p-3 md:p-6 pt-2 md:pt-2">
+                    <!-- Scrollable calendar grid (desktop only) -->
+                    <div class="p-3 md:p-6 pt-2 md:pt-2 hidden md:block">
                         <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
+                    </div>
+
+                    <!-- Mobile week-agenda view (hidden on desktop) -->
+                    <div id="mobileCalendarView" class="md:hidden">
+                        <!-- Sticky week nav -->
+                        <div class="sticky top-0 z-10 mb-3 px-1 py-2 flex justify-between items-center" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                            <button id="mobilePrevWeek" class="btn-glass px-3 py-1.5 text-sm">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="flex items-center gap-2">
+                                <span id="mobileWeekLabel" class="text-sm font-semibold text-gray-700"></span>
+                                <button id="mobileTodayBtn" class="hidden text-xs px-2 py-1 rounded-full" style="background:rgba(152,162,215,0.15);color:#465080;">Today</button>
+                            </div>
+                            <button id="mobileNextWeek" class="btn-glass px-3 py-1.5 text-sm">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <!-- Week events list -->
+                        <div id="mobileWeekEvents" class="space-y-6 pb-6 px-1"></div>
+                    </div>
+                </div>
+                            <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                                <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <!-- Calendar grid header -->
+                        <div class="grid grid-cols-7 gap-1 md:gap-2">
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
+                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
+                        </div>
+                    </div>
+                    <!-- Scrollable desktop calendar grid -->
+                    <div class="hidden md:block p-3 md:p-6 pt-2 md:pt-2">
+                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
+                    </div>
+
+                    <!-- MOBILE: Week Agenda View -->
+                    <div id="mobileCalendarView" class="md:hidden">
+                        <!-- Sticky week nav -->
+                        <div class="sticky top-0 z-10 mb-3 px-3 py-2 flex justify-between items-center" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid rgba(173,179,184,0.12);">
+                            <button id="mobilePrevWeek" class="btn-glass px-3 py-1.5 text-sm">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="flex items-center gap-2">
+                                <span id="mobileWeekLabel" class="text-sm font-semibold text-gray-700">1 – 7 Jun 2026</span>
+                                <button id="mobileTodayBtn" class="hidden text-xs px-2 py-1 rounded-full font-medium" style="background:rgba(152,162,215,0.18);color:#465080;">Today</button>
+                            </div>
+                            <button id="mobileNextWeek" class="btn-glass px-3 py-1.5 text-sm">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <!-- Week events list -->
+                        <div id="mobileWeekEvents" class="space-y-5 pb-6 px-3"></div>
                     </div>
                 </div>
 

@@ -2533,7 +2533,7 @@ app.get('/', (c) => {
                     <!-- Mobile week-agenda view (hidden on desktop) -->
                     <div id="mobileCalendarView" class="md:hidden">
                         <!-- Sticky week nav -->
-                        <div class="sticky top-0 z-10 mb-3 px-1 py-2 flex justify-between items-center" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                        <div id="mobileWeekNav" class="sticky top-0 z-10 mb-3 px-1 py-2 flex justify-between items-center" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
                             <button id="mobilePrevWeek" class="btn-glass px-3 py-1.5 text-sm">
                                 <i class="fas fa-chevron-left"></i>
                             </button>

@@ -63,8 +63,9 @@ document.addEventListener('DOMContentLoaded', async () => {
    }
    if (todayBtn) {
      todayBtn.addEventListener('click', function() {
-       currentDate = getWeekStart(new Date());
-       renderMobileCalendar();
+       const today = new Date();
+       currentDate = today;
+       renderMobileCalendar({ scrollToDate: formatDateKeyLocal(today) });
      });
    }
 
@@ -426,6 +427,10 @@ function isMobileView() {
   return window.innerWidth < 768;
 }
 
+function formatDateKeyLocal(date) {
+  return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+}
+
 function getWeekStart(date) {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
@@ -446,7 +451,8 @@ function formatMobileDayHeader(date) {
   return dayName + ' ' + dateStr;
 }
 
-function renderMobileCalendar() {
+function renderMobileCalendar(options) {
+  options = options || {};
   const weekStart = getWeekStart(currentDate);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
@@ -479,6 +485,10 @@ function renderMobileCalendar() {
   }
 
   renderMobileWeekEvents(weekStart, weekEnd);
+
+  if (options.scrollToDate) {
+    scrollMobileAgendaToDate(options.scrollToDate);
+  }
 }
 
 function renderMobileWeekEvents(weekStart, weekEnd) {
@@ -497,15 +507,17 @@ function renderMobileWeekEvents(weekStart, weekEnd) {
   });
 
   const today = new Date();
-  const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  const todayStr = formatDateKeyLocal(today);
 
   for (let i = 0; i < 7; i++) {
     const dayDate = new Date(weekStart);
     dayDate.setDate(weekStart.getDate() + i);
-    const dateStr = dayDate.getFullYear() + '-' + String(dayDate.getMonth() + 1).padStart(2, '0') + '-' + String(dayDate.getDate()).padStart(2, '0');
+    const dateStr = formatDateKeyLocal(dayDate);
 
     // Day section
     const daySection = document.createElement('div');
+    daySection.id = 'mobile-day-' + dateStr;
+    daySection.dataset.mobileDate = dateStr;
 
     // Day header
     const dayHeader = document.createElement('div');
@@ -528,6 +540,23 @@ function renderMobileWeekEvents(weekStart, weekEnd) {
 
     container.appendChild(daySection);
   }
+}
+
+function scrollMobileAgendaToDate(dateStr) {
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      const target = document.querySelector('[data-mobile-date="' + dateStr + '"]');
+      const scroller = document.getElementById('calendarView');
+      const weekNav = document.getElementById('mobileWeekNav');
+      if (!target || !scroller) return;
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      const stickyOffset = weekNav ? weekNav.offsetHeight + 8 : 0;
+      const targetTop = scroller.scrollTop + (targetRect.top - scrollerRect.top) - stickyOffset;
+      scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    });
+  });
 }
 
 function renderMobileEventCard(event) {

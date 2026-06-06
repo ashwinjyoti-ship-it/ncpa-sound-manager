@@ -25,7 +25,10 @@ function networkFirst(request) {
       caches.open(CACHE).then(c => c.put(request, clone));
     }
     return res;
-  }).catch(() => caches.match(request));
+  }).catch(() => {
+    const url = new URL(request.url);
+    return caches.match(request).then(cached => cached || caches.match(url.pathname));
+  });
 }
 
 self.addEventListener('fetch', e => {

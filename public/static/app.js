@@ -140,13 +140,31 @@ function showTab(tab) {
 
 function renderCurrentView() {
   if (currentView === 'calendar') {
-    if (isMobileView()) {
+    const mobile = isMobileView();
+    setCalendarShellForViewport(mobile);
+    if (mobile) {
       renderMobileCalendar();
     } else {
       renderCalendar();
     }
   } else {
     renderTable();
+  }
+}
+
+function setCalendarShellForViewport(mobile) {
+  const desktopChrome = document.getElementById('desktopCalendarChrome');
+  const desktopGridWrap = document.getElementById('desktopCalendarGridWrap');
+  const mobileView = document.getElementById('mobileCalendarView');
+
+  if (desktopChrome) {
+    desktopChrome.style.display = mobile ? 'none' : 'block';
+  }
+  if (desktopGridWrap) {
+    desktopGridWrap.style.display = mobile ? 'none' : 'block';
+  }
+  if (mobileView) {
+    mobileView.style.display = mobile ? 'block' : 'none';
   }
 }
 
@@ -410,9 +428,11 @@ function isMobileView() {
 
 function getWeekStart(date) {
   const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
   const day = d.getDay(); // 0 = Sun, 1 = Mon
   const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  return new Date(d.setDate(diff));
+  d.setDate(diff);
+  return d;
 }
 
 function formatMobileDate(date) {
@@ -437,10 +457,12 @@ function renderMobileCalendar() {
   const endStr = formatMobileDate(weekEnd);
   const sameMonth = weekStart.getMonth() === weekEnd.getMonth();
   const yearStr = weekStart.getFullYear();
-  if (sameMonth) {
-    weekLabel.textContent = startStr + ' – ' + weekEnd.getDate() + ' ' + formatMobileDate(weekEnd).split(' ')[1] + ' ' + yearStr;
-  } else {
-    weekLabel.textContent = startStr + ' – ' + endStr + ' ' + yearStr;
+  if (weekLabel) {
+    if (sameMonth) {
+      weekLabel.textContent = startStr + ' – ' + weekEnd.getDate() + ' ' + formatMobileDate(weekEnd).split(' ')[1] + ' ' + yearStr;
+    } else {
+      weekLabel.textContent = startStr + ' – ' + endStr + ' ' + yearStr;
+    }
   }
 
   // Show/hide Today button
@@ -448,10 +470,12 @@ function renderMobileCalendar() {
   const today = new Date();
   const todayWeekStart = getWeekStart(today);
   const isCurrentWeek = weekStart.getTime() === todayWeekStart.getTime();
-  if (isCurrentWeek) {
-    todayBtn.classList.add('hidden');
-  } else {
-    todayBtn.classList.remove('hidden');
+  if (todayBtn) {
+    if (isCurrentWeek) {
+      todayBtn.classList.add('hidden');
+    } else {
+      todayBtn.classList.remove('hidden');
+    }
   }
 
   renderMobileWeekEvents(weekStart, weekEnd);
@@ -459,6 +483,7 @@ function renderMobileCalendar() {
 
 function renderMobileWeekEvents(weekStart, weekEnd) {
   const container = document.getElementById('mobileWeekEvents');
+  if (!container) return;
   container.innerHTML = '';
 
   // Pre-compute eventsByDate from allEvents

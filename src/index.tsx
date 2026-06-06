@@ -2499,7 +2499,7 @@ app.get('/', (c) => {
                 <!-- Calendar View -->
                 <div id="calendarView" class="rounded-2xl glass-card overflow-y-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-180px)]">
                     <!-- Sticky header: month controls + days-of-week (desktop only) -->
-                    <div class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0 hidden md:block" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                    <div id="desktopCalendarChrome" class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0 hidden md:block" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
                         <!-- Calendar controls with event count -->
                         <div class="flex justify-between items-center mb-4 md:mb-6">
                             <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
@@ -2526,7 +2526,7 @@ app.get('/', (c) => {
                         </div>
                     </div>
                     <!-- Scrollable calendar grid (desktop only) -->
-                    <div class="p-3 md:p-6 pt-2 md:pt-2 hidden md:block">
+                    <div id="desktopCalendarGridWrap" class="p-3 md:p-6 pt-2 md:pt-2 hidden md:block">
                         <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
                     </div>
 
@@ -3375,7 +3375,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.0"></script>
+        <script src="/static/app.js?v=4.2.1"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

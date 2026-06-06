@@ -44,6 +44,13 @@ document.addEventListener('DOMContentLoaded', async () => {
    await loadEvents();
    renderCurrentView();
 
+   // Scroll to today's date on initial mobile load
+   if (isMobileView() && currentView === 'calendar') {
+     setTimeout(function() {
+       scrollMobileAgendaToDate(formatDateKeyLocal(new Date()));
+     }, 150);
+   }
+
    // Wire mobile week navigation
    var prevWeekBtn = document.getElementById('mobilePrevWeek');
    var nextWeekBtn = document.getElementById('mobileNextWeek');
@@ -543,20 +550,24 @@ function renderMobileWeekEvents(weekStart, weekEnd) {
 }
 
 function scrollMobileAgendaToDate(dateStr) {
-  requestAnimationFrame(function() {
-    requestAnimationFrame(function() {
-      const target = document.querySelector('[data-mobile-date="' + dateStr + '"]');
-      const scroller = document.getElementById('calendarView');
-      const weekNav = document.getElementById('mobileWeekNav');
-      if (!target || !scroller) return;
+  setTimeout(function() {
+    var target = document.querySelector('[data-mobile-date="' + dateStr + '"]');
+    var scroller = document.getElementById('calendarView');
+    var weekNav = document.getElementById('mobileWeekNav');
+    if (!target || !scroller) return;
 
-      const scrollerRect = scroller.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const stickyOffset = weekNav ? weekNav.offsetHeight + 8 : 0;
-      const targetTop = scroller.scrollTop + (targetRect.top - scrollerRect.top) - stickyOffset;
-      scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-    });
-  });
+    var scrollerRect = scroller.getBoundingClientRect();
+    var targetRect = target.getBoundingClientRect();
+    var stickyOffset = weekNav ? weekNav.offsetHeight + 8 : 0;
+    var targetTop = Math.max(0, scroller.scrollTop + (targetRect.top - scrollerRect.top) - stickyOffset);
+
+    // Use smooth scroll when supported, otherwise instant fallback
+    try {
+      scroller.scrollTo({ top: targetTop, behavior: 'smooth' });
+    } catch (e) {
+      scroller.scrollTop = targetTop;
+    }
+  }, 100);
 }
 
 function renderMobileEventCard(event) {

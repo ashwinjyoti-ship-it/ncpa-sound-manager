@@ -1,9 +1,5 @@
-const CACHE = 'ncpa-sound-v2';
+const CACHE = 'ncpa-sound-v3';
 const STATIC = [
-  '/',
-  '/static/app.js',
-  '/static/auth.js',
-  '/static/style.css',
   '/manifest.json',
   '/icon.svg'
 ];
@@ -22,6 +18,16 @@ self.addEventListener('activate', e => {
   );
 });
 
+function networkFirst(request) {
+  return fetch(request).then(res => {
+    if (res.ok && request.method === 'GET') {
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(request, clone));
+    }
+    return res;
+  }).catch(() => caches.match(request));
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
@@ -35,7 +41,13 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Cache-first for everything else
+  // HTML, JS and CSS must be network-first so mobile UX fixes deploy immediately.
+  if (e.request.mode === 'navigate' || url.pathname.startsWith('/static/')) {
+    e.respondWith(networkFirst(e.request));
+    return;
+  }
+
+  // Cache-first only for stable app assets like icons/manifest.
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       if (res.ok && e.request.method === 'GET') {

@@ -1,4 +1,4 @@
-const CACHE = 'ncpa-sound-v3';
+const CACHE = 'ncpa-sound-v4';
 const STATIC = [
   '/manifest.json',
   '/icon.svg'

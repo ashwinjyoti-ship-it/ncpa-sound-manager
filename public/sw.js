@@ -1,5 +1,9 @@
-const CACHE = 'ncpa-sound-v4';
+const CACHE = 'ncpa-sound-v2';
 const STATIC = [
+  '/',
+  '/static/app.js',
+  '/static/auth.js',
+  '/static/style.css',
   '/manifest.json',
   '/icon.svg'
 ];
@@ -25,7 +29,10 @@ function networkFirst(request) {
       caches.open(CACHE).then(c => c.put(request, clone));
     }
     return res;
-  }).catch(() => caches.match(request));
+  }).catch(() => {
+    const url = new URL(request.url);
+    return caches.match(request).then(cached => cached || caches.match(url.pathname));
+  });
 }
 
 self.addEventListener('fetch', e => {

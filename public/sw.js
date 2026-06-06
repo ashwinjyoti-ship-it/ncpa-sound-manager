@@ -1,9 +1,5 @@
-const CACHE = 'ncpa-sound-v2';
+const CACHE = 'ncpa-sound-v3';
 const STATIC = [
-  '/',
-  '/static/app.js',
-  '/static/auth.js',
-  '/static/style.css',
   '/manifest.json',
   '/icon.svg'
 ];

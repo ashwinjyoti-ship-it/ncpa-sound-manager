@@ -161,15 +161,11 @@ function renderCurrentView() {
 }
 
 function setCalendarShellForViewport(mobile) {
-  const desktopChrome = document.getElementById('desktopCalendarChrome');
-  const desktopGridWrap = document.getElementById('desktopCalendarGridWrap');
+  const desktopLayout = document.getElementById('desktopCalendarLayout');
   const mobileView = document.getElementById('mobileCalendarView');
 
-  if (desktopChrome) {
-    desktopChrome.style.display = mobile ? 'none' : 'block';
-  }
-  if (desktopGridWrap) {
-    desktopGridWrap.style.display = mobile ? 'none' : 'block';
+  if (desktopLayout) {
+    desktopLayout.style.display = mobile ? 'none' : 'flex';
   }
   if (mobileView) {
     mobileView.style.display = mobile ? 'block' : 'none';
@@ -179,6 +175,97 @@ function setCalendarShellForViewport(mobile) {
 // ============================================
 // CALENDAR VIEW
 // ============================================
+
+function isEventGreen(event) {
+  return event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified';
+}
+
+function appendDesktopEventCrew(card, event) {
+  if (event.foh_crew || event.stage_crew) {
+    if (event.foh_crew) {
+      const row = document.createElement('div');
+      row.className = 'truncate';
+      row.style.color = '#1d4ed8';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-headphones mr-1 text-xs';
+      row.appendChild(icon);
+      row.appendChild(document.createTextNode(event.foh_crew));
+      card.appendChild(row);
+    }
+    if (event.stage_crew) {
+      const row = document.createElement('div');
+      row.className = 'text-gray-600 truncate';
+      const icon = document.createElement('i');
+      icon.className = 'fas fa-volume-up mr-1 text-xs';
+      row.appendChild(icon);
+      row.appendChild(document.createTextNode(event.stage_crew));
+      card.appendChild(row);
+    }
+  } else if (event.crew) {
+    const row = document.createElement('div');
+    row.className = 'text-gray-600 truncate';
+    const icon = document.createElement('i');
+    icon.className = 'fas fa-users mr-1';
+    row.appendChild(icon);
+    row.appendChild(document.createTextNode(event.crew));
+    card.appendChild(row);
+  }
+}
+
+function createDesktopEventCard(event, options) {
+  const truncateProgram = (options && options.truncateProgram) || 30;
+  const card = document.createElement('div');
+  card.className = 'text-xs p-2 mb-1 rounded cursor-pointer ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  card.onclick = function() { openEventModal(event); };
+
+  const title = document.createElement('div');
+  title.className = 'font-semibold truncate';
+  title.textContent = truncateText(event.program, truncateProgram);
+  card.appendChild(title);
+
+  const venue = document.createElement('div');
+  venue.className = 'text-gray-600 truncate';
+  const venueIcon = document.createElement('i');
+  venueIcon.className = 'fas fa-map-marker-alt mr-1';
+  venue.appendChild(venueIcon);
+  venue.appendChild(document.createTextNode(displayVenue(event.venue)));
+  card.appendChild(venue);
+
+  appendDesktopEventCrew(card, event);
+  return card;
+}
+
+function renderTodaySidebar() {
+  const dayNumberEl = document.getElementById('todaySidebarDayNumber');
+  const dateLabelEl = document.getElementById('todaySidebarDateLabel');
+  const eventsEl = document.getElementById('todaySidebarEvents');
+  if (!dayNumberEl || !dateLabelEl || !eventsEl) return;
+
+  const today = new Date();
+  const todayStr = formatDateKeyLocal(today);
+  const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+
+  dayNumberEl.textContent = today.getDate();
+  dateLabelEl.textContent = weekdayNames[today.getDay()] + ' · ' + monthNames[today.getMonth()] + ' ' + today.getFullYear();
+
+  const todayEvents = allEvents.filter(function(e) {
+    return normalizeEventDateKey(e.event_date) === todayStr;
+  });
+
+  eventsEl.replaceChildren();
+  if (todayEvents.length === 0) {
+    const empty = document.createElement('p');
+    empty.id = 'todaySidebarEmpty';
+    empty.textContent = 'No events today';
+    eventsEl.appendChild(empty);
+  } else {
+    todayEvents.forEach(function(event) {
+      eventsEl.appendChild(createDesktopEventCard(event, { truncateProgram: 40 }));
+    });
+  }
+}
 
 function renderCalendar() {
   const year = currentDate.getFullYear();
@@ -313,7 +400,8 @@ function renderCalendar() {
   }
   
   uniqueMonthEvents.forEach(event => {
-    const date = event.event_date;
+    const date = normalizeEventDateKey(event.event_date);
+    if (!date) return;
     if (!eventsByDate[date]) {
       eventsByDate[date] = [];
     }
@@ -390,31 +478,13 @@ function renderCalendar() {
     
     // Event cards
     dayEvents.forEach(event => {
-      const card = document.createElement('div');
-      card.className = `text-xs p-2 mb-1 rounded cursor-pointer ${
-        (event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified') ? 'event-card-green' : 'event-card-peach'
-      }`;
-      card.onclick = () => openEventModal(event);
-      
-      // Build crew display: prefer foh_crew/stage_crew, fall back to crew
-      let crewHtml = '';
-      if (event.foh_crew || event.stage_crew) {
-        if (event.foh_crew) crewHtml += `<div class="truncate" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>${event.foh_crew}</div>`;
-        if (event.stage_crew) crewHtml += `<div class="text-gray-600 truncate"><i class="fas fa-volume-up mr-1 text-xs"></i>${event.stage_crew}</div>`;
-      } else if (event.crew) {
-        crewHtml = `<div class="text-gray-600 truncate"><i class="fas fa-users mr-1"></i>${event.crew}</div>`;
-      }
-      card.innerHTML = `
-        <div class="font-semibold truncate">${truncateText(event.program, 30)}</div>
-        <div class="text-gray-600 truncate"><i class="fas fa-map-marker-alt mr-1"></i>${displayVenue(event.venue)}</div>
-        ${crewHtml}
-      `;
-      
-      cell.appendChild(card);
+      cell.appendChild(createDesktopEventCard(event));
     });
     
     grid.appendChild(cell);
   }
+
+  renderTodaySidebar();
 }
 
 function changeMonth(delta) {
@@ -436,6 +506,11 @@ function isMobileView() {
 
 function formatDateKeyLocal(date) {
   return date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+}
+
+function normalizeEventDateKey(dateValue) {
+  if (!dateValue) return '';
+  return String(dateValue).trim().slice(0, 10);
 }
 
 function getWeekStart(date) {
@@ -572,8 +647,7 @@ function scrollMobileAgendaToDate(dateStr) {
 
 function renderMobileEventCard(event) {
   const card = document.createElement('div');
-  const isGreen = event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified';
-  card.className = 'mobile-event-card ' + (isGreen ? 'event-card-green' : 'event-card-peach');
+  card.className = 'mobile-event-card ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
   card.onclick = function() { openEventModal(event); };

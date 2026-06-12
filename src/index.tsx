@@ -1982,6 +1982,56 @@ app.get('/', (c) => {
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
           }
+
+          #todaySidebar {
+            flex-shrink: 0;
+            width: 280px;
+            max-width: 30%;
+            min-width: 260px;
+            display: flex;
+            flex-direction: column;
+            padding: 0.75rem 0.75rem 0.5rem;
+            background: rgba(255,255,255,0.68);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            outline: 1px solid rgba(173,179,184,0.15);
+            border-right: 1px solid rgba(173,179,184,0.15);
+          }
+
+          #todaySidebarHeader {
+            flex-shrink: 0;
+            padding: 1rem 1.25rem 1.1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 1.25rem;
+            background: linear-gradient(135deg, rgba(152,162,215,0.82) 0%, rgba(70,80,128,0.88) 100%);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow:
+              0 4px 18px rgba(70,80,128,0.28),
+              0 2px 8px rgba(45,51,56,0.10),
+              inset 0 1px 0 rgba(255,255,255,0.42);
+          }
+
+          #todaySidebarEvents {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.25rem 0.35rem 0.75rem;
+          }
+
+          #todaySidebarEvents .event-card-green,
+          #todaySidebarEvents .event-card-peach {
+            font-size: 0.75rem;
+            padding: 6px 8px;
+            margin-bottom: 6px;
+            line-height: 1.35;
+          }
+
+          #todaySidebarEmpty {
+            color: #5a6065;
+            font-size: 0.875rem;
+            padding: 0.5rem 0;
+          }
           
           /* Mobile-optimized event cards */
           @media (max-width: 767px) {
@@ -2498,36 +2548,49 @@ app.get('/', (c) => {
 
                 <!-- Calendar View -->
                 <div id="calendarView" class="rounded-2xl glass-card overflow-y-auto max-h-[calc(100vh-240px)] md:max-h-[calc(100vh-180px)]">
-                    <!-- Sticky header: month controls + days-of-week (desktop only) -->
-                    <div id="desktopCalendarChrome" class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0 hidden md:block" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
-                        <!-- Calendar controls with event count -->
-                        <div class="flex justify-between items-center mb-4 md:mb-6">
-                            <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
-                                <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
-                            </button>
-                            <div class="text-center">
-                                <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
-                                <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
+                    <!-- Desktop two-column layout: today sidebar + month calendar -->
+                    <div id="desktopCalendarLayout" class="hidden md:flex min-h-0">
+                        <aside id="todaySidebar">
+                            <div id="todaySidebarHeader">
+                                <div class="text-xs font-bold uppercase tracking-wide mb-1" style="color: rgba(255,255,255,0.82);">Today</div>
+                                <div id="todaySidebarDayNumber" class="text-3xl font-bold leading-none mb-1" style="color: #ffffff;"></div>
+                                <div id="todaySidebarDateLabel" class="text-sm font-semibold" style="color: rgba(255,255,255,0.90);"></div>
                             </div>
-                            <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
-                                <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
-                            </button>
+                            <div id="todaySidebarEvents"></div>
+                        </aside>
+                        <div id="desktopCalendarMain" class="flex-1 min-w-0 flex flex-col">
+                            <!-- Sticky header: month controls + days-of-week (desktop only) -->
+                            <div id="desktopCalendarChrome" class="sticky top-0 z-10 p-3 md:p-6 pb-0 md:pb-0" style="background:rgba(255,255,255,0.70);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);">
+                                <!-- Calendar controls with event count -->
+                                <div class="flex justify-between items-center mb-4 md:mb-6">
+                                    <button onclick="changeMonth(-1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                                        <i class="fas fa-chevron-left"></i><span class="hidden md:inline"> Previous</span>
+                                    </button>
+                                    <div class="text-center">
+                                        <h2 id="currentMonthYear" class="text-lg md:text-2xl font-bold" style="color: #98A2D7; letter-spacing: -0.01em;"></h2>
+                                        <p id="monthEventCount" class="text-sm text-gray-600 mt-1"></p>
+                                    </div>
+                                    <button onclick="changeMonth(1)" class="px-3 py-2 text-sm md:text-base rounded-xl touch-manipulation" style="background-color: rgba(168,195,160,0.22); color: #2d3338;">
+                                        <span class="hidden md:inline">Next </span><i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                
+                                <!-- Calendar grid - Mobile optimized -->
+                                <div class="grid grid-cols-7 gap-1 md:gap-2">
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
+                                    <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
+                                </div>
+                            </div>
+                            <!-- Scrollable calendar grid (desktop only) -->
+                            <div id="desktopCalendarGridWrap" class="p-3 md:p-6 pt-2 md:pt-2">
+                                <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
+                            </div>
                         </div>
-                        
-                        <!-- Calendar grid - Mobile optimized -->
-                        <div class="grid grid-cols-7 gap-1 md:gap-2">
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SUN</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">MON</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">TUE</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">WED</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">THU</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">FRI</div>
-                            <div class="font-bold text-center py-1.5 md:py-2 text-xs md:text-sm" style="background-color: rgba(248,249,252,0.55); color: #5a6065;">SAT</div>
-                        </div>
-                    </div>
-                    <!-- Scrollable calendar grid (desktop only) -->
-                    <div id="desktopCalendarGridWrap" class="p-3 md:p-6 pt-2 md:pt-2 hidden md:block">
-                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
                     </div>
 
                     <!-- Mobile week-agenda view (hidden on desktop) -->
@@ -3375,7 +3438,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.1"></script>
+        <script src="/static/app.js?v=4.2.3"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

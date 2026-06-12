@@ -1998,10 +1998,19 @@ app.get('/', (c) => {
             right: 0;
             height: 44px;
             border-radius: 0.375rem;
-            background: rgba(248,249,252,0.85);
-            border: 1px solid rgba(173,179,184,0.22);
-            box-shadow: 0 1px 4px rgba(45,51,56,0.06);
             pointer-events: none;
+          }
+
+          #calendarGrid .day-events-collapsed-ghost.is-green {
+            background: rgba(240,253,244,0.55);
+            border: 1px solid rgba(74,172,100,0.22);
+            box-shadow: 0 1px 4px rgba(45,51,56,0.05);
+          }
+
+          #calendarGrid .day-events-collapsed-ghost.is-peach {
+            background: rgba(254,242,242,0.55);
+            border: 1px solid rgba(220,88,88,0.20);
+            box-shadow: 0 1px 4px rgba(45,51,56,0.05);
           }
 
           #calendarGrid .day-events-collapsed-ghost-1 {
@@ -2022,40 +2031,43 @@ app.get('/', (c) => {
             position: relative;
             z-index: 2;
             display: flex;
-            align-items: center;
+            flex-direction: column;
+            align-items: flex-start;
             justify-content: center;
             min-height: 44px;
             padding: 6px 8px;
-            border-radius: 0.375rem;
-            cursor: pointer;
-            text-align: center;
-            background: rgba(255,255,255,0.82);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(152,162,215,0.35);
-            box-shadow: 0 2px 10px rgba(70,80,128,0.12);
+            margin-bottom: 0;
             outline: none;
-            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+            transition: box-shadow 0.15s ease;
           }
 
-          #calendarGrid .day-events-collapsed-summary:hover,
-          #calendarGrid .day-events-collapsed-summary:focus-visible {
-            border-color: rgba(152,162,215,0.65);
-            box-shadow: 0 4px 14px rgba(70,80,128,0.18);
+          #calendarGrid .day-events-collapsed-summary.event-card-green:hover,
+          #calendarGrid .day-events-collapsed-summary.event-card-green:focus-visible {
+            box-shadow: 0 4px 14px rgba(74,172,100,0.18);
           }
 
-          #calendarGrid .day-events-collapsed-count {
-            font-size: 0.65rem;
-            font-weight: 700;
-            letter-spacing: 0.04em;
+          #calendarGrid .day-events-collapsed-summary.event-card-peach:hover,
+          #calendarGrid .day-events-collapsed-summary.event-card-peach:focus-visible {
+            box-shadow: 0 4px 14px rgba(220,88,88,0.16);
+          }
+
+          #calendarGrid .day-events-collapsed-title {
+            width: 100%;
             line-height: 1.25;
-            color: #465080;
+          }
+
+          #calendarGrid .day-events-collapsed-more {
+            margin-top: 2px;
+            font-size: 0.6rem;
+            font-weight: 600;
+            color: #5a6065;
+            line-height: 1.2;
           }
 
           .day-events-dropdown {
             display: none;
             position: fixed;
-            z-index: 60;
+            z-index: 100;
             max-height: 280px;
             overflow-y: auto;
             padding: 6px;
@@ -2125,6 +2137,127 @@ app.get('/', (c) => {
             box-shadow: none;
             outline: none;
             border-left: 4px solid rgba(220,88,88,0.55);
+          }
+
+          /* Desktop calendar — compact proportional grid */
+          @media (min-width: 768px) {
+            #desktopCalendarGridWrap {
+              padding: 0.5rem 0.75rem 0.75rem;
+            }
+
+            #desktopCalendarChrome {
+              padding: 0.65rem 1rem 0 !important;
+            }
+
+            #desktopCalendarChrome .flex.justify-between {
+              margin-bottom: 0.65rem !important;
+            }
+
+            #currentMonthYear {
+              font-size: 1.2rem !important;
+              line-height: 1.2;
+            }
+
+            #monthEventCount {
+              font-size: 0.75rem !important;
+              margin-top: 0.15rem !important;
+            }
+
+            #desktopCalendarChrome .grid.grid-cols-7 {
+              gap: 0.25rem;
+            }
+
+            #desktopCalendarChrome .grid.grid-cols-7 > div {
+              padding-top: 0.25rem !important;
+              padding-bottom: 0.25rem !important;
+              font-size: 0.65rem !important;
+              letter-spacing: 0.04em;
+            }
+
+            #calendarGrid {
+              gap: 0.25rem;
+            }
+
+            .calendar-day {
+              min-height: 72px;
+              padding: 4px 5px 5px;
+            }
+
+            .calendar-day.calendar-day-today {
+              background: rgba(239,246,255,0.85);
+              outline: 2px solid rgba(37,99,235,0.45);
+              outline-offset: -1px;
+            }
+
+            #calendarGrid .calendar-day-number {
+              font-size: 0.68rem;
+              font-weight: 700;
+              line-height: 1;
+              margin-bottom: 3px;
+              color: #5a6065;
+            }
+
+            #calendarGrid .calendar-day-number-today {
+              color: #2563eb;
+            }
+
+            #calendarGrid .calendar-grid-event-card {
+              font-size: 0.625rem;
+              line-height: 1.2;
+              padding: 3px 5px;
+              margin-bottom: 2px;
+              border-left-width: 3px;
+            }
+
+            #calendarGrid .calendar-grid-event-venue {
+              font-size: 0.575rem;
+              margin-top: 1px;
+              opacity: 0.9;
+            }
+
+            #calendarGrid .calendar-grid-event-venue i {
+              font-size: 0.5rem;
+            }
+
+            #calendarGrid .day-events-collapsed {
+              min-height: 36px;
+              margin-top: 1px;
+              margin-bottom: 2px;
+              padding-bottom: 3px;
+            }
+
+            #calendarGrid .day-events-collapsed-ghost {
+              height: 30px;
+              border-radius: 0.25rem;
+            }
+
+            #calendarGrid .day-events-collapsed-ghost-1 {
+              top: 3px;
+              left: 2px;
+              right: 2px;
+            }
+
+            #calendarGrid .day-events-collapsed-ghost-2 {
+              top: 6px;
+              left: 4px;
+              right: 4px;
+            }
+
+            #calendarGrid .day-events-collapsed-summary {
+              min-height: 30px;
+              padding: 3px 5px;
+              border-left-width: 3px;
+            }
+
+            #calendarGrid .day-events-collapsed-title {
+              font-size: 0.625rem;
+              line-height: 1.15;
+            }
+
+            #calendarGrid .day-events-collapsed-more {
+              font-size: 0.55rem;
+              margin-top: 1px;
+            }
           }
 
           #todaySidebar {
@@ -2732,7 +2865,7 @@ app.get('/', (c) => {
                             </div>
                             <!-- Scrollable calendar grid (desktop only) -->
                             <div id="desktopCalendarGridWrap" class="p-3 md:p-6 pt-2 md:pt-2">
-                                <div id="calendarGrid" class="grid grid-cols-7 gap-1 md:gap-2"></div>
+                                <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
                             </div>
                         </div>
                     </div>
@@ -3582,7 +3715,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.5"></script>
+        <script src="/static/app.js?v=4.2.7"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

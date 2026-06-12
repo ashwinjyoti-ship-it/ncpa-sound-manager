@@ -2093,7 +2093,7 @@ app.get('/', (c) => {
             text-align: left;
             cursor: pointer;
             background: transparent;
-            transition: background 0.12s ease;
+            transition: background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
           }
 
           .day-events-dropdown-item:last-child {
@@ -2102,8 +2102,10 @@ app.get('/', (c) => {
 
           .day-events-dropdown-item:hover,
           .day-events-dropdown-item:focus-visible {
-            background: rgba(152,162,215,0.10);
+            background: rgba(152,162,215,0.14);
+            box-shadow: 0 3px 10px rgba(70,80,128,0.14);
             outline: none;
+            transform: translateY(-1px);
           }
 
           .day-events-dropdown-item-title {
@@ -2132,11 +2134,23 @@ app.get('/', (c) => {
             border-left: 4px solid rgba(74,172,100,0.60);
           }
 
+          .day-events-dropdown-item.event-card-green:hover,
+          .day-events-dropdown-item.event-card-green:focus-visible {
+            background: rgba(240,253,244,0.92);
+            box-shadow: 0 3px 12px rgba(74,172,100,0.22);
+          }
+
           .day-events-dropdown-item.event-card-peach {
             background: transparent;
             box-shadow: none;
             outline: none;
             border-left: 4px solid rgba(220,88,88,0.55);
+          }
+
+          .day-events-dropdown-item.event-card-peach:hover,
+          .day-events-dropdown-item.event-card-peach:focus-visible {
+            background: rgba(254,242,242,0.92);
+            box-shadow: 0 3px 12px rgba(220,88,88,0.18);
           }
 
           /* Desktop calendar — compact proportional grid */
@@ -3715,7 +3729,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.7"></script>
+        <script src="/static/app.js?v=4.2.8"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

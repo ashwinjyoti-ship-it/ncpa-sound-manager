@@ -41,9 +41,6 @@ function displayVenue(venue) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-   // #region agent log
-   fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'D',location:'app.js:DOMContentLoaded',message:'DOM ready - rendering shell before events load',data:{readyState:document.readyState},timestamp:Date.now()})}).catch(()=>{});
-   // #endregion
    renderCurrentView();
    await loadEvents();
    renderCurrentView();
@@ -100,26 +97,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 
 async function loadEvents() {
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:start',message:'loadEvents started',data:{},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   try {
     const response = await axios.get(`${API_BASE}/events`, { timeout: 60000 });
     if (response.data.success) {
       allEvents = response.data.data;
-      // #region agent log
-      fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:success',message:'loadEvents succeeded',data:{count:allEvents.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       renderCurrentView();
     } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:api-fail',message:'API returned success=false',data:{},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     }
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:error',message:'loadEvents failed',data:{error:String(error&&error.message||error)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     console.error('Error loading events:', error);
     showNotification('Failed to load events', 'error');
   }
@@ -166,9 +151,6 @@ function showTab(tab) {
 function renderCurrentView() {
   if (currentView === 'calendar') {
     const mobile = isMobileView();
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'E',location:'app.js:renderCurrentView',message:'renderCurrentView calendar branch',data:{mobile:mobile,allEventsCount:allEvents.length,hasGrid:!!document.getElementById('calendarGrid'),hasMonthYear:!!document.getElementById('currentMonthYear')},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     setCalendarShellForViewport(mobile);
     if (mobile) {
       renderMobileCalendar();
@@ -292,9 +274,6 @@ function renderTodaySidebar() {
 }
 
 function renderCalendar() {
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:start',message:'renderCalendar started',data:{allEventsCount:allEvents.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   try {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -465,9 +444,6 @@ function renderCalendar() {
   // Render calendar grid
   const grid = document.getElementById('calendarGrid');
   if (!grid) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'C',location:'app.js:renderCalendar:no-grid',message:'calendarGrid element missing',data:{},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     return;
   }
   grid.innerHTML = '';
@@ -519,13 +495,7 @@ function renderCalendar() {
   }
 
   renderTodaySidebar();
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:done',message:'renderCalendar completed',data:{gridChildren:grid.children.length,monthYear:document.getElementById('currentMonthYear')?.textContent||''},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:error',message:'renderCalendar threw',data:{error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     console.error('renderCalendar failed:', err);
   }
 }

@@ -2092,20 +2092,47 @@ app.get('/', (c) => {
             border-radius: 0.5rem;
             text-align: left;
             cursor: pointer;
-            background: transparent;
-            transition: background 0.14s ease, box-shadow 0.14s ease, transform 0.14s ease;
+            background: rgba(248,249,252,0.65);
+            border-left: 4px solid rgba(173,179,184,0.35);
+            box-shadow: none;
+            outline: none;
+            transition: background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease, border-color 0.12s ease;
           }
 
           .day-events-dropdown-item:last-child {
             margin-bottom: 0;
           }
 
-          .day-events-dropdown-item:hover,
+          .day-events-dropdown-item--green {
+            background: rgba(240,253,244,0.45);
+            border-left-color: rgba(74,172,100,0.55);
+          }
+
+          .day-events-dropdown-item--peach {
+            background: rgba(254,242,242,0.45);
+            border-left-color: rgba(220,88,88,0.50);
+          }
+
+          .day-events-dropdown-item.is-hovered,
           .day-events-dropdown-item:focus-visible {
-            background: rgba(152,162,215,0.14);
-            box-shadow: 0 3px 10px rgba(70,80,128,0.14);
-            outline: none;
             transform: translateY(-1px);
+            outline: none;
+          }
+
+          .day-events-dropdown-item--green.is-hovered,
+          .day-events-dropdown-item--green:hover,
+          .day-events-dropdown-item--green:focus-visible {
+            background: rgb(220, 252, 231) !important;
+            border-left-color: rgb(22, 163, 74) !important;
+            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.38), inset 0 0 0 1px rgba(22, 163, 74, 0.35) !important;
+          }
+
+          .day-events-dropdown-item--peach.is-hovered,
+          .day-events-dropdown-item--peach:hover,
+          .day-events-dropdown-item--peach:focus-visible {
+            background: rgb(254, 226, 226) !important;
+            border-left-color: rgb(220, 38, 38) !important;
+            box-shadow: 0 4px 14px rgba(220, 38, 38, 0.32), inset 0 0 0 1px rgba(220, 38, 38, 0.28) !important;
           }
 
           .day-events-dropdown-item-title {
@@ -2118,6 +2145,11 @@ app.get('/', (c) => {
             text-overflow: ellipsis;
           }
 
+          .day-events-dropdown-item.is-hovered .day-events-dropdown-item-title,
+          .day-events-dropdown-item:focus-visible .day-events-dropdown-item-title {
+            color: #1a1f24;
+          }
+
           .day-events-dropdown-item-venue {
             margin-top: 2px;
             font-size: 0.65rem;
@@ -2125,32 +2157,6 @@ app.get('/', (c) => {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-          }
-
-          .day-events-dropdown-item.event-card-green {
-            background: transparent;
-            box-shadow: none;
-            outline: none;
-            border-left: 4px solid rgba(74,172,100,0.60);
-          }
-
-          .day-events-dropdown-item.event-card-green:hover,
-          .day-events-dropdown-item.event-card-green:focus-visible {
-            background: rgba(240,253,244,0.92);
-            box-shadow: 0 3px 12px rgba(74,172,100,0.22);
-          }
-
-          .day-events-dropdown-item.event-card-peach {
-            background: transparent;
-            box-shadow: none;
-            outline: none;
-            border-left: 4px solid rgba(220,88,88,0.55);
-          }
-
-          .day-events-dropdown-item.event-card-peach:hover,
-          .day-events-dropdown-item.event-card-peach:focus-visible {
-            background: rgba(254,242,242,0.92);
-            box-shadow: 0 3px 12px rgba(220,88,88,0.18);
           }
 
           /* Desktop calendar — compact proportional grid */
@@ -3729,7 +3735,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.8"></script>
+        <script src="/static/app.js?v=4.3.0"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

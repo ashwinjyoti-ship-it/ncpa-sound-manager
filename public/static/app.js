@@ -302,6 +302,7 @@ function closeDayEventsDropdown() {
   dropdown.classList.remove('is-open');
   dropdown.setAttribute('aria-hidden', 'true');
   summary.setAttribute('aria-expanded', 'false');
+  clearDayEventsDropdownHoveredItems(dropdown);
   resetDayEventsDropdownStyles(dropdown);
   activeDayEventsDropdown = null;
 }
@@ -401,10 +402,67 @@ function scheduleCloseDayEventsDropdown() {
   }, 250);
 }
 
+var dayEventsDropdownHoverStyles = {
+  green: {
+    background: 'rgb(220, 252, 231)',
+    borderLeftColor: 'rgb(22, 163, 74)',
+    boxShadow: '0 4px 14px rgba(22, 163, 74, 0.38), inset 0 0 0 1px rgba(22, 163, 74, 0.35)',
+    transform: 'translateY(-1px)'
+  },
+  peach: {
+    background: 'rgb(254, 226, 226)',
+    borderLeftColor: 'rgb(220, 38, 38)',
+    boxShadow: '0 4px 14px rgba(220, 38, 38, 0.32), inset 0 0 0 1px rgba(220, 38, 38, 0.28)',
+    transform: 'translateY(-1px)'
+  }
+};
+
+function resetDayEventsDropdownItemHoverStyle(item) {
+  item.classList.remove('is-hovered');
+  item.style.background = '';
+  item.style.borderLeftColor = '';
+  item.style.boxShadow = '';
+  item.style.transform = '';
+}
+
+function setDayEventsDropdownHoveredItem(item) {
+  const dropdown = item.closest('.day-events-dropdown');
+  if (!dropdown) return;
+  dropdown.querySelectorAll('.day-events-dropdown-item.is-hovered').forEach(resetDayEventsDropdownItemHoverStyle);
+  item.classList.add('is-hovered');
+  const palette = item.classList.contains('day-events-dropdown-item--green')
+    ? dayEventsDropdownHoverStyles.green
+    : dayEventsDropdownHoverStyles.peach;
+  item.style.background = palette.background;
+  item.style.borderLeftColor = palette.borderLeftColor;
+  item.style.boxShadow = palette.boxShadow;
+  item.style.transform = palette.transform;
+}
+
+function clearDayEventsDropdownHoveredItems(dropdown) {
+  if (!dropdown) return;
+  dropdown.querySelectorAll('.day-events-dropdown-item.is-hovered').forEach(resetDayEventsDropdownItemHoverStyle);
+}
+
+function bindDayEventsDropdownHoverTracking(dropdown) {
+  dropdown.addEventListener('mouseover', function(e) {
+    const item = e.target.closest('.day-events-dropdown-item');
+    if (item && item.parentElement === dropdown) {
+      setDayEventsDropdownHoveredItem(item);
+    }
+  });
+  dropdown.addEventListener('mouseleave', function(e) {
+    if (!dropdown.contains(e.relatedTarget)) {
+      clearDayEventsDropdownHoveredItems(dropdown);
+    }
+  });
+}
+
 function createDayEventsDropdownItem(event) {
   const item = document.createElement('button');
   item.type = 'button';
-  item.className = 'day-events-dropdown-item ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  item.className = 'day-events-dropdown-item ' +
+    (isEventGreen(event) ? 'day-events-dropdown-item--green' : 'day-events-dropdown-item--peach');
   item.setAttribute('role', 'menuitem');
 
   const title = document.createElement('div');
@@ -420,6 +478,12 @@ function createDayEventsDropdownItem(event) {
   venue.appendChild(document.createTextNode(displayVenue(event.venue)));
   item.appendChild(venue);
 
+  item.addEventListener('mouseenter', function() {
+    setDayEventsDropdownHoveredItem(item);
+  });
+  item.addEventListener('focus', function() {
+    setDayEventsDropdownHoveredItem(item);
+  });
   item.addEventListener('click', function(e) {
     e.stopPropagation();
     closeDayEventsDropdown();
@@ -471,6 +535,7 @@ function createCollapsedDayEventsStack(dayEvents) {
   dayEvents.forEach(function(event) {
     dropdown.appendChild(createDayEventsDropdownItem(event));
   });
+  bindDayEventsDropdownHoverTracking(dropdown);
   document.body.appendChild(dropdown);
 
   function handleOpen() {

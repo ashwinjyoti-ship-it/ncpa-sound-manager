@@ -41,9 +41,6 @@ function displayVenue(venue) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-   // #region agent log
-   fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'D',location:'app.js:DOMContentLoaded',message:'DOM ready - rendering shell before events load',data:{readyState:document.readyState},timestamp:Date.now()})}).catch(()=>{});
-   // #endregion
    renderCurrentView();
    await loadEvents();
    renderCurrentView();
@@ -100,26 +97,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ============================================
 
 async function loadEvents() {
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:start',message:'loadEvents started',data:{},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   try {
     const response = await axios.get(`${API_BASE}/events`, { timeout: 60000 });
     if (response.data.success) {
       allEvents = response.data.data;
-      // #region agent log
-      fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:success',message:'loadEvents succeeded',data:{count:allEvents.length},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       renderCurrentView();
-    } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:api-fail',message:'API returned success=false',data:{},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
     }
   } catch (error) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'A',location:'app.js:loadEvents:error',message:'loadEvents failed',data:{error:String(error&&error.message||error)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     console.error('Error loading events:', error);
     showNotification('Failed to load events', 'error');
   }
@@ -166,9 +150,6 @@ function showTab(tab) {
 function renderCurrentView() {
   if (currentView === 'calendar') {
     const mobile = isMobileView();
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'E',location:'app.js:renderCurrentView',message:'renderCurrentView calendar branch',data:{mobile:mobile,allEventsCount:allEvents.length,hasGrid:!!document.getElementById('calendarGrid'),hasMonthYear:!!document.getElementById('currentMonthYear')},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     setCalendarShellForViewport(mobile);
     if (mobile) {
       renderMobileCalendar();
@@ -195,6 +176,11 @@ function setCalendarShellForViewport(mobile) {
 // ============================================
 // CALENDAR VIEW
 // ============================================
+
+const CALENDAR_DAY_COLLAPSE_THRESHOLD = 4;
+let activeDayEventsDropdown = null;
+let dayEventsDropdownCloseTimer = null;
+let dayEventsDropdownDocListeners = null;
 
 function isEventGreen(event) {
   return event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified';
@@ -255,6 +241,234 @@ function createDesktopEventCard(event, options) {
   return card;
 }
 
+function clearDayEventsDropdownTimer() {
+  if (dayEventsDropdownCloseTimer) {
+    clearTimeout(dayEventsDropdownCloseTimer);
+    dayEventsDropdownCloseTimer = null;
+  }
+}
+
+function removeDayEventsDropdownDocListeners() {
+  if (!dayEventsDropdownDocListeners) return;
+  document.removeEventListener('click', dayEventsDropdownDocListeners.click);
+  document.removeEventListener('keydown', dayEventsDropdownDocListeners.keydown);
+  if (dayEventsDropdownDocListeners.scroll) {
+    window.removeEventListener('scroll', dayEventsDropdownDocListeners.scroll, true);
+  }
+  dayEventsDropdownDocListeners = null;
+}
+
+function closeDayEventsDropdown() {
+  clearDayEventsDropdownTimer();
+  removeDayEventsDropdownDocListeners();
+  if (!activeDayEventsDropdown) return;
+
+  const dropdown = activeDayEventsDropdown.dropdown;
+  const summary = activeDayEventsDropdown.summary;
+  dropdown.classList.remove('is-open');
+  dropdown.setAttribute('aria-hidden', 'true');
+  summary.setAttribute('aria-expanded', 'false');
+  activeDayEventsDropdown = null;
+}
+
+function positionDayEventsDropdown(summaryEl, dropdownEl) {
+  const rect = summaryEl.getBoundingClientRect();
+  const dropdownWidth = Math.max(rect.width, 220);
+  const margin = 8;
+  const viewportPadding = 8;
+
+  dropdownEl.style.width = dropdownWidth + 'px';
+  dropdownEl.style.left = '';
+  dropdownEl.style.right = '';
+  dropdownEl.style.top = '';
+  dropdownEl.style.bottom = '';
+
+  let left = rect.left;
+  if (left + dropdownWidth > window.innerWidth - viewportPadding) {
+    left = window.innerWidth - dropdownWidth - viewportPadding;
+  }
+  if (left < viewportPadding) {
+    left = viewportPadding;
+  }
+
+  dropdownEl.style.left = left + 'px';
+  dropdownEl.classList.remove('flip-above');
+
+  dropdownEl.style.visibility = 'hidden';
+  dropdownEl.style.display = 'block';
+  const dropdownHeight = dropdownEl.offsetHeight;
+  dropdownEl.style.visibility = '';
+
+  const spaceBelow = window.innerHeight - rect.bottom - margin;
+  const spaceAbove = rect.top - margin;
+  if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+    dropdownEl.style.bottom = (window.innerHeight - rect.top + margin) + 'px';
+    dropdownEl.classList.add('flip-above');
+  } else {
+    dropdownEl.style.top = (rect.bottom + margin) + 'px';
+  }
+}
+
+function openDayEventsDropdown(wrapperEl) {
+  if (activeDayEventsDropdown && activeDayEventsDropdown.wrapper === wrapperEl) {
+    return;
+  }
+
+  closeDayEventsDropdown();
+  clearDayEventsDropdownTimer();
+
+  const summary = wrapperEl.querySelector('.day-events-collapsed-summary');
+  const dropdown = wrapperEl._dayEventsDropdown;
+  if (!summary || !dropdown) return;
+
+  positionDayEventsDropdown(summary, dropdown);
+  dropdown.classList.add('is-open');
+  dropdown.setAttribute('aria-hidden', 'false');
+  summary.setAttribute('aria-expanded', 'true');
+  activeDayEventsDropdown = { wrapper: wrapperEl, summary: summary, dropdown: dropdown };
+
+  removeDayEventsDropdownDocListeners();
+  const onDocClick = function(e) {
+    if (!wrapperEl.contains(e.target) && !dropdown.contains(e.target)) {
+      closeDayEventsDropdown();
+    }
+  };
+  const onDocKeydown = function(e) {
+    if (e.key === 'Escape') {
+      closeDayEventsDropdown();
+      summary.focus();
+    }
+  };
+  const onScroll = function() {
+    closeDayEventsDropdown();
+  };
+  document.addEventListener('click', onDocClick);
+  document.addEventListener('keydown', onDocKeydown);
+  window.addEventListener('scroll', onScroll, true);
+  dayEventsDropdownDocListeners = { click: onDocClick, keydown: onDocKeydown, scroll: onScroll };
+}
+
+function scheduleCloseDayEventsDropdown() {
+  clearDayEventsDropdownTimer();
+  dayEventsDropdownCloseTimer = setTimeout(function() {
+    closeDayEventsDropdown();
+  }, 150);
+}
+
+function createDayEventsDropdownItem(event) {
+  const item = document.createElement('button');
+  item.type = 'button';
+  item.className = 'day-events-dropdown-item ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  item.setAttribute('role', 'menuitem');
+
+  const title = document.createElement('div');
+  title.className = 'day-events-dropdown-item-title';
+  title.textContent = truncateText(event.program, 42);
+  item.appendChild(title);
+
+  const venue = document.createElement('div');
+  venue.className = 'day-events-dropdown-item-venue';
+  const venueIcon = document.createElement('i');
+  venueIcon.className = 'fas fa-map-marker-alt mr-1';
+  venue.appendChild(venueIcon);
+  venue.appendChild(document.createTextNode(displayVenue(event.venue)));
+  item.appendChild(venue);
+
+  item.addEventListener('click', function(e) {
+    e.stopPropagation();
+    closeDayEventsDropdown();
+    openEventModal(event);
+  });
+
+  return item;
+}
+
+function createCollapsedDayEventsStack(dayEvents) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'day-events-collapsed';
+
+  const ghost2 = document.createElement('div');
+  ghost2.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-2';
+  wrapper.appendChild(ghost2);
+
+  const ghost1 = document.createElement('div');
+  ghost1.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-1';
+  wrapper.appendChild(ghost1);
+
+  const summary = document.createElement('div');
+  summary.className = 'day-events-collapsed-summary';
+  summary.setAttribute('role', 'button');
+  summary.setAttribute('tabindex', '0');
+  summary.setAttribute('aria-haspopup', 'menu');
+  summary.setAttribute('aria-expanded', 'false');
+
+  const countLabel = document.createElement('div');
+  countLabel.className = 'day-events-collapsed-count';
+  countLabel.textContent = dayEvents.length + ' EVENTS TODAY';
+  summary.appendChild(countLabel);
+  wrapper.appendChild(summary);
+
+  const dropdown = document.createElement('div');
+  dropdown.className = 'day-events-dropdown';
+  dropdown.setAttribute('role', 'menu');
+  dropdown.setAttribute('aria-hidden', 'true');
+
+  dayEvents.forEach(function(event) {
+    dropdown.appendChild(createDayEventsDropdownItem(event));
+  });
+  wrapper.appendChild(dropdown);
+
+  function handleOpen() {
+    openDayEventsDropdown(wrapper);
+  }
+
+  wrapper.addEventListener('mouseenter', function() {
+    clearDayEventsDropdownTimer();
+    handleOpen();
+  });
+  wrapper.addEventListener('mouseleave', function() {
+    scheduleCloseDayEventsDropdown();
+  });
+  dropdown.addEventListener('mouseenter', function() {
+    clearDayEventsDropdownTimer();
+  });
+  dropdown.addEventListener('mouseleave', function() {
+    scheduleCloseDayEventsDropdown();
+  });
+
+  summary.addEventListener('click', function(e) {
+    e.stopPropagation();
+    if (activeDayEventsDropdown && activeDayEventsDropdown.wrapper === wrapper) {
+      closeDayEventsDropdown();
+    } else {
+      handleOpen();
+    }
+  });
+  summary.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (activeDayEventsDropdown && activeDayEventsDropdown.wrapper === wrapper) {
+        closeDayEventsDropdown();
+      } else {
+        handleOpen();
+      }
+    }
+  });
+
+  wrapper._dayEventsDropdown = dropdown;
+  return wrapper;
+}
+
+function renderDayEvents(cell, dayEvents) {
+  if (dayEvents.length >= CALENDAR_DAY_COLLAPSE_THRESHOLD) {
+    cell.appendChild(createCollapsedDayEventsStack(dayEvents));
+    return;
+  }
+  dayEvents.forEach(function(event) {
+    cell.appendChild(createDesktopEventCard(event));
+  });
+}
+
 function renderTodaySidebar() {
   const dayNumberEl = document.getElementById('todaySidebarDayNumber');
   const dateLabelEl = document.getElementById('todaySidebarDateLabel');
@@ -292,9 +506,6 @@ function renderTodaySidebar() {
 }
 
 function renderCalendar() {
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:start',message:'renderCalendar started',data:{allEventsCount:allEvents.length},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   try {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -464,12 +675,8 @@ function renderCalendar() {
   
   // Render calendar grid
   const grid = document.getElementById('calendarGrid');
-  if (!grid) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'C',location:'app.js:renderCalendar:no-grid',message:'calendarGrid element missing',data:{},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
-    return;
-  }
+  if (!grid) return;
+  closeDayEventsDropdown();
   grid.innerHTML = '';
   
   // Add empty cells for days before month starts
@@ -510,22 +717,13 @@ function renderCalendar() {
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     
-    // Event cards
-    dayEvents.forEach(event => {
-      cell.appendChild(createDesktopEventCard(event));
-    });
+    renderDayEvents(cell, dayEvents);
     
     grid.appendChild(cell);
   }
 
   renderTodaySidebar();
-  // #region agent log
-  fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:done',message:'renderCalendar completed',data:{gridChildren:grid.children.length,monthYear:document.getElementById('currentMonthYear')?.textContent||''},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7399/ingest/7ebad12d-d523-4444-8048-c9e23929a2c0',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'f5b1d7'},body:JSON.stringify({sessionId:'f5b1d7',runId:'pre-fix',hypothesisId:'B',location:'app.js:renderCalendar:error',message:'renderCalendar threw',data:{error:String(err&&err.message||err)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     console.error('renderCalendar failed:', err);
   }
 }

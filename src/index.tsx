@@ -1981,6 +1981,150 @@ app.get('/', (c) => {
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
             -webkit-backdrop-filter: blur(6px);
+            overflow: visible;
+          }
+
+          #calendarGrid .day-events-collapsed {
+            position: relative;
+            margin-top: 2px;
+            margin-bottom: 4px;
+            min-height: 52px;
+            padding-bottom: 6px;
+          }
+
+          #calendarGrid .day-events-collapsed-ghost {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 44px;
+            border-radius: 0.375rem;
+            background: rgba(248,249,252,0.85);
+            border: 1px solid rgba(173,179,184,0.22);
+            box-shadow: 0 1px 4px rgba(45,51,56,0.06);
+            pointer-events: none;
+          }
+
+          #calendarGrid .day-events-collapsed-ghost-1 {
+            top: 5px;
+            left: 3px;
+            right: 3px;
+            opacity: 0.72;
+          }
+
+          #calendarGrid .day-events-collapsed-ghost-2 {
+            top: 10px;
+            left: 6px;
+            right: 6px;
+            opacity: 0.45;
+          }
+
+          #calendarGrid .day-events-collapsed-summary {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 6px 8px;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            text-align: center;
+            background: rgba(255,255,255,0.82);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(152,162,215,0.35);
+            box-shadow: 0 2px 10px rgba(70,80,128,0.12);
+            outline: none;
+            transition: box-shadow 0.15s ease, border-color 0.15s ease;
+          }
+
+          #calendarGrid .day-events-collapsed-summary:hover,
+          #calendarGrid .day-events-collapsed-summary:focus-visible {
+            border-color: rgba(152,162,215,0.65);
+            box-shadow: 0 4px 14px rgba(70,80,128,0.18);
+          }
+
+          #calendarGrid .day-events-collapsed-count {
+            font-size: 0.65rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            line-height: 1.25;
+            color: #465080;
+          }
+
+          .day-events-dropdown {
+            display: none;
+            position: fixed;
+            z-index: 60;
+            max-height: 280px;
+            overflow-y: auto;
+            padding: 6px;
+            border-radius: 0.75rem;
+            background: rgba(255,255,255,0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(173,179,184,0.28);
+            box-shadow: 0 10px 28px rgba(45,51,56,0.18);
+          }
+
+          .day-events-dropdown.is-open {
+            display: block;
+          }
+
+          .day-events-dropdown-item {
+            display: block;
+            width: 100%;
+            margin-bottom: 4px;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 0.5rem;
+            text-align: left;
+            cursor: pointer;
+            background: transparent;
+            transition: background 0.12s ease;
+          }
+
+          .day-events-dropdown-item:last-child {
+            margin-bottom: 0;
+          }
+
+          .day-events-dropdown-item:hover,
+          .day-events-dropdown-item:focus-visible {
+            background: rgba(152,162,215,0.10);
+            outline: none;
+          }
+
+          .day-events-dropdown-item-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #2d3338;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .day-events-dropdown-item-venue {
+            margin-top: 2px;
+            font-size: 0.65rem;
+            color: #5a6065;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .day-events-dropdown-item.event-card-green {
+            background: transparent;
+            box-shadow: none;
+            outline: none;
+            border-left: 4px solid rgba(74,172,100,0.60);
+          }
+
+          .day-events-dropdown-item.event-card-peach {
+            background: transparent;
+            box-shadow: none;
+            outline: none;
+            border-left: 4px solid rgba(220,88,88,0.55);
           }
 
           #todaySidebar {
@@ -3438,7 +3582,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.4"></script>
+        <script src="/static/app.js?v=4.2.5"></script>
         <script src="/static/v41-features.js?v=4.2.0"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

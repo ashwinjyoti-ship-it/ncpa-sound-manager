@@ -177,7 +177,7 @@ function setCalendarShellForViewport(mobile) {
 // CALENDAR VIEW
 // ============================================
 
-const CALENDAR_DAY_COLLAPSE_THRESHOLD = 2;
+const CALENDAR_DAY_COLLAPSE_THRESHOLD = 4;
 let activeDayEventsDropdown = null;
 let dayEventsDropdownCloseTimer = null;
 let dayEventsDropdownDocListeners = null;
@@ -219,11 +219,9 @@ function appendDesktopEventCrew(card, event) {
 }
 
 function createDesktopEventCard(event, options) {
-  const compact = options && options.compact;
-  const truncateProgram = (options && options.truncateProgram) || (compact ? 22 : 30);
+  const truncateProgram = (options && options.truncateProgram) || 30;
   const card = document.createElement('div');
-  card.className = (compact ? 'calendar-grid-event-card ' : 'text-xs p-2 mb-1 ') +
-    'rounded cursor-pointer ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  card.className = 'text-xs p-2 mb-1 rounded cursor-pointer ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
   card.onclick = function() { openEventModal(event); };
 
   const title = document.createElement('div');
@@ -232,44 +230,15 @@ function createDesktopEventCard(event, options) {
   card.appendChild(title);
 
   const venue = document.createElement('div');
-  venue.className = 'calendar-grid-event-venue text-gray-600 truncate';
+  venue.className = 'text-gray-600 truncate';
   const venueIcon = document.createElement('i');
   venueIcon.className = 'fas fa-map-marker-alt mr-1';
   venue.appendChild(venueIcon);
   venue.appendChild(document.createTextNode(displayVenue(event.venue)));
   card.appendChild(venue);
 
-  if (!compact) {
-    appendDesktopEventCrew(card, event);
-  }
+  appendDesktopEventCrew(card, event);
   return card;
-}
-
-function getDayEventsStatusClass(dayEvents) {
-  const anyIncomplete = dayEvents.some(function(event) {
-    return !isEventGreen(event);
-  });
-  return anyIncomplete ? 'event-card-peach' : 'event-card-green';
-}
-
-function getDayEventsGhostStatusClass(dayEvents) {
-  return getDayEventsStatusClass(dayEvents) === 'event-card-green' ? 'is-green' : 'is-peach';
-}
-
-function cleanupOrphanedDayEventsDropdowns() {
-  document.querySelectorAll('.day-events-dropdown').forEach(function(el) {
-    el.remove();
-  });
-}
-
-function resetDayEventsDropdownStyles(dropdown) {
-  dropdown.style.width = '';
-  dropdown.style.left = '';
-  dropdown.style.right = '';
-  dropdown.style.top = '';
-  dropdown.style.bottom = '';
-  dropdown.style.display = '';
-  dropdown.style.visibility = '';
 }
 
 function clearDayEventsDropdownTimer() {
@@ -283,11 +252,8 @@ function removeDayEventsDropdownDocListeners() {
   if (!dayEventsDropdownDocListeners) return;
   document.removeEventListener('click', dayEventsDropdownDocListeners.click);
   document.removeEventListener('keydown', dayEventsDropdownDocListeners.keydown);
-  if (dayEventsDropdownDocListeners.calendarView) {
-    dayEventsDropdownDocListeners.calendarView.removeEventListener('scroll', dayEventsDropdownDocListeners.scroll);
-  }
-  if (dayEventsDropdownDocListeners.gridWrap) {
-    dayEventsDropdownDocListeners.gridWrap.removeEventListener('scroll', dayEventsDropdownDocListeners.scroll);
+  if (dayEventsDropdownDocListeners.scroll) {
+    window.removeEventListener('scroll', dayEventsDropdownDocListeners.scroll, true);
   }
   dayEventsDropdownDocListeners = null;
 }
@@ -302,14 +268,13 @@ function closeDayEventsDropdown() {
   dropdown.classList.remove('is-open');
   dropdown.setAttribute('aria-hidden', 'true');
   summary.setAttribute('aria-expanded', 'false');
-  resetDayEventsDropdownStyles(dropdown);
   activeDayEventsDropdown = null;
 }
 
 function positionDayEventsDropdown(summaryEl, dropdownEl) {
   const rect = summaryEl.getBoundingClientRect();
   const dropdownWidth = Math.max(rect.width, 220);
-  const margin = 4;
+  const margin = 8;
   const viewportPadding = 8;
 
   dropdownEl.style.width = dropdownWidth + 'px';
@@ -375,30 +340,19 @@ function openDayEventsDropdown(wrapperEl) {
     }
   };
   const onScroll = function() {
-    if (activeDayEventsDropdown && activeDayEventsDropdown.wrapper === wrapperEl) {
-      positionDayEventsDropdown(summary, dropdown);
-    }
+    closeDayEventsDropdown();
   };
-  const calendarView = document.getElementById('calendarView');
-  const gridWrap = document.getElementById('desktopCalendarGridWrap');
   document.addEventListener('click', onDocClick);
   document.addEventListener('keydown', onDocKeydown);
-  if (calendarView) calendarView.addEventListener('scroll', onScroll);
-  if (gridWrap) gridWrap.addEventListener('scroll', onScroll);
-  dayEventsDropdownDocListeners = {
-    click: onDocClick,
-    keydown: onDocKeydown,
-    scroll: onScroll,
-    calendarView: calendarView,
-    gridWrap: gridWrap
-  };
+  window.addEventListener('scroll', onScroll, true);
+  dayEventsDropdownDocListeners = { click: onDocClick, keydown: onDocKeydown, scroll: onScroll };
 }
 
 function scheduleCloseDayEventsDropdown() {
   clearDayEventsDropdownTimer();
   dayEventsDropdownCloseTimer = setTimeout(function() {
     closeDayEventsDropdown();
-  }, 250);
+  }, 150);
 }
 
 function createDayEventsDropdownItem(event) {
@@ -433,34 +387,25 @@ function createCollapsedDayEventsStack(dayEvents) {
   const wrapper = document.createElement('div');
   wrapper.className = 'day-events-collapsed';
 
-  const statusClass = getDayEventsStatusClass(dayEvents);
-  const ghostStatusClass = getDayEventsGhostStatusClass(dayEvents);
-  const moreCount = dayEvents.length - 1;
-
   const ghost2 = document.createElement('div');
-  ghost2.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-2 ' + ghostStatusClass;
+  ghost2.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-2';
   wrapper.appendChild(ghost2);
 
   const ghost1 = document.createElement('div');
-  ghost1.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-1 ' + ghostStatusClass;
+  ghost1.className = 'day-events-collapsed-ghost day-events-collapsed-ghost-1';
   wrapper.appendChild(ghost1);
 
   const summary = document.createElement('div');
-  summary.className = 'day-events-collapsed-summary rounded cursor-pointer ' + statusClass;
+  summary.className = 'day-events-collapsed-summary';
   summary.setAttribute('role', 'button');
   summary.setAttribute('tabindex', '0');
   summary.setAttribute('aria-haspopup', 'menu');
   summary.setAttribute('aria-expanded', 'false');
 
-  const titleEl = document.createElement('div');
-  titleEl.className = 'day-events-collapsed-title font-semibold truncate';
-  titleEl.textContent = truncateText(dayEvents[0].program, 22);
-  summary.appendChild(titleEl);
-
-  const moreEl = document.createElement('div');
-  moreEl.className = 'day-events-collapsed-more';
-  moreEl.textContent = '+' + moreCount + ' more';
-  summary.appendChild(moreEl);
+  const countLabel = document.createElement('div');
+  countLabel.className = 'day-events-collapsed-count';
+  countLabel.textContent = dayEvents.length + ' EVENTS TODAY';
+  summary.appendChild(countLabel);
   wrapper.appendChild(summary);
 
   const dropdown = document.createElement('div');
@@ -471,7 +416,7 @@ function createCollapsedDayEventsStack(dayEvents) {
   dayEvents.forEach(function(event) {
     dropdown.appendChild(createDayEventsDropdownItem(event));
   });
-  document.body.appendChild(dropdown);
+  wrapper.appendChild(dropdown);
 
   function handleOpen() {
     openDayEventsDropdown(wrapper);
@@ -481,19 +426,13 @@ function createCollapsedDayEventsStack(dayEvents) {
     clearDayEventsDropdownTimer();
     handleOpen();
   });
-  wrapper.addEventListener('mouseleave', function(e) {
-    if (dropdown && (dropdown === e.relatedTarget || dropdown.contains(e.relatedTarget))) {
-      return;
-    }
+  wrapper.addEventListener('mouseleave', function() {
     scheduleCloseDayEventsDropdown();
   });
   dropdown.addEventListener('mouseenter', function() {
     clearDayEventsDropdownTimer();
   });
-  dropdown.addEventListener('mouseleave', function(e) {
-    if (wrapper.contains(e.relatedTarget) || wrapper === e.relatedTarget) {
-      return;
-    }
+  dropdown.addEventListener('mouseleave', function() {
     scheduleCloseDayEventsDropdown();
   });
 
@@ -526,7 +465,7 @@ function renderDayEvents(cell, dayEvents) {
     return;
   }
   dayEvents.forEach(function(event) {
-    cell.appendChild(createDesktopEventCard(event, { compact: true }));
+    cell.appendChild(createDesktopEventCard(event));
   });
 }
 
@@ -738,7 +677,6 @@ function renderCalendar() {
   const grid = document.getElementById('calendarGrid');
   if (!grid) return;
   closeDayEventsDropdown();
-  cleanupOrphanedDayEventsDropdowns();
   grid.innerHTML = '';
   
   // Add empty cells for days before month starts
@@ -757,7 +695,8 @@ function renderCalendar() {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const isToday = dateStr === todayStr;
     
-    cell.className = isToday ? 'calendar-day calendar-day-today' : 'calendar-day';
+    // Highlight today's date with a special background
+    cell.className = isToday ? 'calendar-day p-2 bg-blue-50 border-2 border-blue-500' : 'calendar-day bg-white p-2';
     
     const dayEvents = eventsByDate[dateStr] || [];
     
@@ -774,7 +713,7 @@ function renderCalendar() {
     
     // Day number
     const dayNumber = document.createElement('div');
-    dayNumber.className = isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number';
+    dayNumber.className = isToday ? 'font-bold text-blue-600 mb-2' : 'font-bold text-gray-700 mb-2';
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     

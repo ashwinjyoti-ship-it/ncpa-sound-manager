@@ -1983,6 +1983,11 @@ app.get('/', (c) => {
             -webkit-backdrop-filter: blur(6px);
           }
 
+          #desktopCalendarLayout {
+            align-items: stretch;
+            min-height: calc(100vh - 180px);
+          }
+
           #todaySidebar {
             flex-shrink: 0;
             width: 280px;
@@ -1990,6 +1995,8 @@ app.get('/', (c) => {
             min-width: 260px;
             display: flex;
             flex-direction: column;
+            align-self: stretch;
+            min-height: 0;
             padding: 0.75rem 0.75rem 0.5rem;
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
@@ -1998,9 +2005,12 @@ app.get('/', (c) => {
             border-right: 1px solid rgba(173,179,184,0.15);
           }
 
-          #todaySidebarHeader {
+          #todaySidebarClock {
             flex-shrink: 0;
-            padding: 1rem 1.25rem 1.1rem;
+            height: 100px;
+            min-height: 90px;
+            max-height: 110px;
+            padding: 0.65rem 1rem 0.7rem;
             margin-bottom: 0.5rem;
             border-radius: 1.25rem;
             background: linear-gradient(135deg, rgba(152,162,215,0.82) 0%, rgba(70,80,128,0.88) 100%);
@@ -2011,12 +2021,55 @@ app.get('/', (c) => {
               0 4px 18px rgba(70,80,128,0.28),
               0 2px 8px rgba(45,51,56,0.10),
               inset 0 1px 0 rgba(255,255,255,0.42);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+
+          #todaySidebarDayNumber {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+            color: #ffffff;
+          }
+
+          #todaySidebarDateLabel {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.90);
+            margin-top: 0.2rem;
+            line-height: 1.2;
+          }
+
+          #todaySidebarTime {
+            font-size: 1.05rem;
+            font-weight: 700;
+            font-family: ui-monospace, 'SF Mono', 'Cascadia Code', monospace;
+            color: #ffffff;
+            letter-spacing: 0.06em;
+            margin-top: 0.35rem;
+            font-variant-numeric: tabular-nums;
+          }
+
+          #todaySidebarEventsPanel {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            border-radius: 1.25rem;
+            background: rgba(255,255,255,0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.55);
+            box-shadow:
+              inset 0 1px 0 rgba(255,255,255,0.6),
+              0 2px 8px rgba(45,51,56,0.06);
+            overflow-y: auto;
+            padding: 0.5rem 0.6rem 0.75rem;
           }
 
           #todaySidebarEvents {
-            flex: 1;
-            overflow-y: auto;
-            padding: 0.25rem 0.35rem 0.75rem;
+            padding: 0;
           }
 
           #todaySidebarEvents .event-card-green,
@@ -2143,6 +2196,20 @@ app.get('/', (c) => {
             outline: 1px solid rgba(173,179,184,0.18);
           }
 
+          .event-detail-modal {
+            width: min(500px, 90%);
+            max-width: 500px;
+            max-height: min(500px, 80vh);
+            border-radius: 26px;
+            padding: 28px;
+            overflow-y: auto;
+            background: rgba(248, 249, 252, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 8px 32px rgba(45,51,56,0.06), 0 0 0 1px rgba(152, 162, 215, 0.18);
+            outline: 1px solid rgba(152, 162, 215, 0.22);
+          }
+
           table th {
             position: sticky;
             top: 0;
@@ -2216,6 +2283,13 @@ app.get('/', (c) => {
               width: 95% !important;
               margin: 1rem;
               max-height: 90vh !important;
+            }
+
+            .event-detail-modal {
+              width: 95% !important;
+              max-width: none !important;
+              max-height: 90vh !important;
+              border-radius: 24px;
             }
 
             .hidden-mobile {
@@ -2551,12 +2625,14 @@ app.get('/', (c) => {
                     <!-- Desktop two-column layout: today sidebar + month calendar -->
                     <div id="desktopCalendarLayout" class="hidden md:flex min-h-0">
                         <aside id="todaySidebar">
-                            <div id="todaySidebarHeader">
-                                <div class="text-xs font-bold uppercase tracking-wide mb-1" style="color: rgba(255,255,255,0.82);">Today</div>
-                                <div id="todaySidebarDayNumber" class="text-3xl font-bold leading-none mb-1" style="color: #ffffff;"></div>
-                                <div id="todaySidebarDateLabel" class="text-sm font-semibold" style="color: rgba(255,255,255,0.90);"></div>
+                            <div id="todaySidebarClock">
+                                <div id="todaySidebarDayNumber"></div>
+                                <div id="todaySidebarDateLabel"></div>
+                                <div id="todaySidebarTime">00:00:00</div>
                             </div>
-                            <div id="todaySidebarEvents"></div>
+                            <div id="todaySidebarEventsPanel">
+                                <div id="todaySidebarEvents"></div>
+                            </div>
                         </aside>
                         <div id="desktopCalendarMain" class="flex-1 min-w-0 flex flex-col">
                             <!-- Sticky header: month controls + days-of-week (desktop only) -->
@@ -2706,7 +2782,7 @@ app.get('/', (c) => {
 
         <!-- Event Detail Modal -->
         <div id="eventModal" class="modal">
-            <div class="modal-content">
+            <div class="modal-content event-detail-modal">
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-2xl font-bold" style="color: #2d3338;">Event Details</h2>
                     <button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>

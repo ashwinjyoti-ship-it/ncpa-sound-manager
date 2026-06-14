@@ -237,6 +237,31 @@ function createDesktopEventCard(event, options) {
   return card;
 }
 
+let todaySidebarClockIntervalId = null;
+
+function formatTodaySidebarTime(date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  return h + ':' + m + ':' + s;
+}
+
+function updateTodaySidebarTime() {
+  const timeEl = document.getElementById('todaySidebarTime');
+  if (timeEl) {
+    timeEl.textContent = formatTodaySidebarTime(new Date());
+  }
+}
+
+function startTodaySidebarClock() {
+  if (todaySidebarClockIntervalId !== null) {
+    clearInterval(todaySidebarClockIntervalId);
+    todaySidebarClockIntervalId = null;
+  }
+  updateTodaySidebarTime();
+  todaySidebarClockIntervalId = setInterval(updateTodaySidebarTime, 1000);
+}
+
 function renderTodaySidebar() {
   const dayNumberEl = document.getElementById('todaySidebarDayNumber');
   const dateLabelEl = document.getElementById('todaySidebarDateLabel');
@@ -251,6 +276,7 @@ function renderTodaySidebar() {
 
   dayNumberEl.textContent = today.getDate();
   dateLabelEl.textContent = weekdayNames[today.getDay()] + ' · ' + monthNames[today.getMonth()] + ' ' + today.getFullYear();
+  startTodaySidebarClock();
 
   const todayEvents = allEvents.filter(function(e) {
     return normalizeEventDateKey(e.event_date) === todayStr;
@@ -880,52 +906,68 @@ function openEventModal(event) {
     </div>
   `;
   
+  const crewHtml = (event.foh_crew || event.stage_crew) ? `
+    ${event.foh_crew ? `<p class="text-gray-900"><span class="font-medium" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
+    ${event.stage_crew ? `<p class="text-gray-900"><span class="font-medium text-green-700"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
+  ` : `<p class="text-gray-900">${event.crew || 'Not assigned'}</p>`;
+
+  const riderHtml = event.rider ? `
+    <div>
+      <label class="font-semibold text-gray-700">Rider:</label>
+      <p>${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" class="inline-flex items-center text-blue-600 hover:text-blue-800 mr-2"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join('')}</p>
+    </div>
+  ` : '';
+
   content.innerHTML = `
     <div class="space-y-4">
-      <div>
-        <label class="font-semibold text-gray-700">Date:</label>
-        <p class="text-gray-900">${formatDate(event.event_date)}</p>
+      <div class="space-y-4">
+        <div>
+          <label class="font-semibold text-gray-700">Date:</label>
+          <p class="text-gray-900">${formatDate(event.event_date)}</p>
+        </div>
+        <div>
+          <label class="font-semibold text-gray-700">Program/Event:</label>
+          <p class="text-gray-900">${event.program}</p>
+        </div>
       </div>
-      <div>
-        <label class="font-semibold text-gray-700">Program/Event:</label>
-        <p class="text-gray-900">${event.program}</p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-4">
+          <div>
+            <label class="font-semibold text-gray-700">Venue:</label>
+            <p class="text-gray-900">${displayVenue(event.venue)}</p>
+          </div>
+          <div>
+            <label class="font-semibold text-gray-700">Call Time:</label>
+            <p class="text-gray-900">${event.call_time || 'Not specified'}</p>
+          </div>
+          ${riderHtml}
+        </div>
+        <div class="space-y-4">
+          <div>
+            <label class="font-semibold text-gray-700">Team (curator):</label>
+            <p class="text-gray-900">${event.team || 'Not specified'}</p>
+          </div>
+          <div>
+            <label class="font-semibold text-gray-700">Crew (sound team):</label>
+            ${crewHtml}
+          </div>
+          <div>
+            <label class="font-semibold text-gray-700">Created:</label>
+            <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
+          </div>
+        </div>
       </div>
-      <div>
-        <label class="font-semibold text-gray-700">Venue:</label>
-        <p class="text-gray-900">${displayVenue(event.venue)}</p>
-      </div>
-      <div>
-        <label class="font-semibold text-gray-700">Team (curator):</label>
-        <p class="text-gray-900">${event.team || 'Not specified'}</p>
-      </div>
+
       <div>
         <label class="font-semibold text-gray-700">Sound Requirements:</label>
         <p class="text-gray-900 whitespace-pre-wrap">${soundReqsFormatted}</p>
       </div>
-      <div>
-        <label class="font-semibold text-gray-700">Call Time:</label>
-        <p class="text-gray-900">${event.call_time || 'Not specified'}</p>
-      </div>
-      <div>
-        <label class="font-semibold text-gray-700">Crew (sound team):</label>
-        ${(event.foh_crew || event.stage_crew) ? `
-          ${event.foh_crew ? `<p class="text-gray-900"><span class="font-medium" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
-          ${event.stage_crew ? `<p class="text-gray-900"><span class="font-medium text-green-700"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
-        ` : `<p class="text-gray-900">${event.crew || 'Not assigned'}</p>`}
-      </div>
-      ${event.rider ? `<div>
-        <label class="font-semibold text-gray-700">Rider:</label>
-        <p>${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" class="inline-flex items-center text-blue-600 hover:text-blue-800 mr-2"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join('')}</p>
-      </div>` : ''}
       ${event.notes ? `<div>
         <label class="font-semibold text-gray-700">Notes:</label>
         <p class="text-gray-900 whitespace-pre-wrap">${event.notes}</p>
       </div>` : ''}
-      <div>
-        <label class="font-semibold text-gray-700">Created:</label>
-        <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
-      </div>
-      
+
       ${actionButtons}
     </div>
   `;

@@ -1995,8 +1995,7 @@ app.get('/', (c) => {
             min-width: 260px;
             display: flex;
             flex-direction: column;
-            align-self: stretch;
-            min-height: 0;
+            align-self: flex-start;
             padding: 0.75rem 0.75rem 0.5rem;
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
@@ -2006,9 +2005,8 @@ app.get('/', (c) => {
           }
 
           #todaySidebarClock {
-            flex: 0 0 25%;
+            flex: 0 0 auto;
             min-height: 90px;
-            max-height: 120px;
             padding: 0.65rem 1rem 0.7rem;
             margin-bottom: 0.5rem;
             border-radius: 1.25rem;
@@ -2051,20 +2049,26 @@ app.get('/', (c) => {
           }
 
           #todaySidebarEventsPanel {
-            flex: 1;
-            min-height: 0;
+            flex: 0 0 auto;
+            width: 100%;
+            height: auto;
+            min-height: 2.75rem;
+            max-height: min(420px, 55vh);
             display: flex;
             flex-direction: column;
-            border-radius: 1.25rem;
-            background: rgba(255,255,255,0.45);
+            margin-top: 0.35rem;
+            border-radius: 1rem;
+            background: rgba(255,255,255,0.50);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255,255,255,0.55);
+            border: 1px solid rgba(152,162,215,0.38);
+            border-bottom: 2px solid rgba(70,80,128,0.52);
             box-shadow:
-              inset 0 1px 0 rgba(255,255,255,0.6),
+              inset 0 1px 0 rgba(255,255,255,0.65),
               0 2px 8px rgba(45,51,56,0.06);
             overflow-y: auto;
-            padding: 0.5rem 0.6rem 0.75rem;
+            overflow-x: hidden;
+            padding: 0.5rem 0.55rem 0.65rem;
           }
 
           #todaySidebarEvents {
@@ -2196,21 +2200,213 @@ app.get('/', (c) => {
           }
 
           .event-detail-modal {
-            width: min(500px, 90%);
-            max-width: 500px;
-            max-height: min(500px, 80vh);
-            border-radius: 26px;
-            padding: 28px;
-            overflow-y: auto;
-            background: rgba(248, 249, 252, 0.85);
+            display: flex;
+            flex-direction: column;
+            width: 520px;
+            height: 520px;
+            max-width: min(520px, 92vw);
+            max-height: min(520px, 92vh);
+            padding: 0;
+            overflow: hidden;
+            border-radius: 28px;
+            background: rgba(248, 249, 252, 0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             box-shadow: inset 1px 1px 0 rgba(255,255,255,0.55), 0 8px 32px rgba(45,51,56,0.06), 0 0 0 1px rgba(152, 162, 215, 0.18);
             outline: 1px solid rgba(152, 162, 215, 0.22);
           }
 
-          .event-detail-modal .event-detail-grid {
+          .event-detail-header {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px 10px;
+            border-bottom: 1px solid rgba(173,179,184,0.16);
+          }
+
+          .event-detail-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2d3338;
+            margin: 0;
+          }
+
+          .event-detail-close {
+            flex-shrink: 0;
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            border: 1px solid rgba(173,179,184,0.25);
+            background: rgba(255,255,255,0.55);
+            color: #5a6065;
+            font-size: 1.25rem;
+            line-height: 1;
+            cursor: pointer;
+          }
+
+          .event-detail-close:hover {
+            color: #2d3338;
+            background: rgba(255,255,255,0.85);
+          }
+
+          .event-detail-body {
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            padding: 12px 20px 8px;
+          }
+
+          .event-detail-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            height: 100%;
+          }
+
+          .event-detail-hero {
+            flex-shrink: 0;
+          }
+
+          .event-detail-program .event-detail-value {
+            font-size: 1rem;
+            line-height: 1.3;
+          }
+
+          .event-detail-field {
+            margin-bottom: 6px;
+          }
+
+          .event-detail-field:last-child {
+            margin-bottom: 0;
+          }
+
+          .event-detail-label {
+            display: block;
+            font-size: 0.62rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: #7280a8;
+            margin-bottom: 2px;
+          }
+
+          .event-detail-value {
+            font-size: 0.84rem;
+            font-weight: 600;
+            color: #2d3338;
+            line-height: 1.35;
+            margin: 0;
+          }
+
+          .event-detail-grid {
+            display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px 14px;
+            flex-shrink: 0;
+          }
+
+          .event-detail-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+          }
+
+          .event-detail-clamp {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            word-break: break-word;
+          }
+
+          .event-detail-crew {
+            flex-shrink: 0;
+            padding: 8px 10px;
+            border-radius: 0.75rem;
+            background: rgba(152,162,215,0.10);
+            border-left: 3px solid #98A2D7;
+          }
+
+          .event-detail-crew .event-detail-value {
+            font-size: 0.8rem;
+          }
+
+          .event-detail-notes {
+            flex-shrink: 0;
+          }
+
+          .event-detail-created {
+            flex-shrink: 0;
+            font-size: 0.68rem;
+            color: #8b9196;
+            margin-top: auto;
+            padding-top: 4px;
+          }
+
+          .event-detail-rider {
+            margin-top: 2px;
+          }
+
+          .event-detail-rider a {
+            font-size: 0.72rem;
+            color: #465080;
+            font-weight: 600;
+          }
+
+          .event-detail-footer {
+            flex-shrink: 0;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 10px 20px 16px;
+            border-top: 1px solid rgba(173,179,184,0.16);
+          }
+
+          .event-detail-footer .event-detail-login {
+            width: 100%;
+            text-align: center;
+            font-size: 0.8rem;
+            color: #5a6065;
+            margin: 0;
+          }
+
+          .event-detail-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: 0.65rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: background 0.15s ease;
+          }
+
+          .event-detail-btn-edit {
+            background: linear-gradient(135deg, #98A2D7 0%, #6B77C0 100%);
+            color: #fff;
+            border-color: rgba(255,255,255,0.25);
+          }
+
+          .event-detail-btn-edit:hover {
+            filter: brightness(1.05);
+          }
+
+          .event-detail-btn-delete {
+            background: rgba(254,242,242,0.9);
+            color: #b91c1c;
+            border-color: rgba(220,88,88,0.25);
+          }
+
+          .event-detail-btn-delete:hover {
+            background: rgba(254,226,226,1);
           }
 
           table th {
@@ -2290,13 +2486,19 @@ app.get('/', (c) => {
 
             .event-detail-modal {
               width: 95% !important;
+              height: auto !important;
+              min-height: 420px;
               max-width: none !important;
               max-height: 90vh !important;
               border-radius: 24px;
             }
 
-            .event-detail-modal .event-detail-grid {
-              grid-template-columns: 1fr;
+            .event-detail-body {
+              overflow-y: auto;
+            }
+
+            .event-detail-grid {
+              grid-template-columns: 1fr !important;
             }
 
             .hidden-mobile {
@@ -2790,11 +2992,12 @@ app.get('/', (c) => {
         <!-- Event Detail Modal -->
         <div id="eventModal" class="modal">
             <div class="modal-content event-detail-modal">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold" style="color: #2d3338;">Event Details</h2>
-                    <button onclick="closeEventModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                <div class="event-detail-header">
+                    <h2>Event Details</h2>
+                    <button type="button" onclick="closeEventModal()" class="event-detail-close" aria-label="Close">&times;</button>
                 </div>
-                <div id="eventModalContent"></div>
+                <div id="eventModalContent" class="event-detail-body"></div>
+                <div id="eventModalFooter" class="event-detail-footer"></div>
             </div>
         </div>
 

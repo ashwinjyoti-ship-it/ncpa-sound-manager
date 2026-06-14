@@ -2008,7 +2008,6 @@ app.get('/', (c) => {
             position: sticky;
             top: 0;
             z-index: 6;
-            max-height: calc(100vh - 180px);
             padding: 0.75rem 0.75rem 0.5rem;
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
@@ -2066,7 +2065,6 @@ app.get('/', (c) => {
             width: 100%;
             height: auto;
             min-height: 2.75rem;
-            max-height: min(360px, calc(100vh - 320px));
             display: flex;
             flex-direction: column;
             margin-top: 0.35rem;
@@ -2079,9 +2077,8 @@ app.get('/', (c) => {
             box-shadow:
               inset 0 1px 0 rgba(255,255,255,0.65),
               0 2px 8px rgba(45,51,56,0.06);
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 0.5rem 0.55rem 0.65rem;
+            overflow: visible;
+            padding: 0.5rem 0.55rem 0.85rem;
           }
 
           #todaySidebarEvents {
@@ -2094,6 +2091,11 @@ app.get('/', (c) => {
             padding: 6px 8px;
             margin-bottom: 6px;
             line-height: 1.35;
+          }
+
+          #todaySidebarEvents .event-card-green:last-child,
+          #todaySidebarEvents .event-card-peach:last-child {
+            margin-bottom: 0;
           }
 
           #todaySidebarEmpty {
@@ -2425,9 +2427,10 @@ app.get('/', (c) => {
           /* Desktop: scroll calendar grid only; keep Today sidebar fixed */
           @media (min-width: 768px) {
             #calendarView {
-              overflow: hidden;
+              overflow: visible;
               display: flex;
               flex-direction: column;
+              max-height: none !important;
             }
           }
 

@@ -2027,9 +2027,9 @@ app.get('/', (c) => {
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255,255,255,0.38);
             box-shadow:
-              0 4px 18px rgba(70,80,128,0.28),
-              0 2px 8px rgba(45,51,56,0.10),
-              inset 0 1px 0 rgba(255,255,255,0.42);
+              inset 0 1px 0 rgba(255,255,255,0.42),
+              0 8px 24px rgba(45,51,56,0.14),
+              0 3px 10px rgba(70,80,128,0.18);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -2076,7 +2076,8 @@ app.get('/', (c) => {
             border-bottom: 2px solid rgba(70,80,128,0.52);
             box-shadow:
               inset 0 1px 0 rgba(255,255,255,0.65),
-              0 2px 8px rgba(45,51,56,0.06);
+              0 8px 24px rgba(45,51,56,0.12),
+              0 3px 10px rgba(70,80,128,0.10);
             overflow: visible;
             padding: 0.5rem 0.55rem 0.85rem;
           }

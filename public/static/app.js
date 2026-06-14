@@ -134,10 +134,12 @@ function showTab(tab) {
     document.getElementById('calendarView').style.display = 'block';
     renderCurrentView();
   } else if (tab === 'table') {
+    stopTodaySidebarClock();
     document.getElementById('tableTab').classList.add('tab-active');
     document.getElementById('tableView').style.display = 'block';
     renderTable();
   } else if (tab === 'crew') {
+    stopTodaySidebarClock();
     if (crewTab) crewTab.classList.add('tab-active');
     if (crewView) {
       crewView.style.display = 'block';
@@ -165,6 +167,10 @@ function renderCurrentView() {
 function setCalendarShellForViewport(mobile) {
   const desktopLayout = document.getElementById('desktopCalendarLayout');
   const mobileView = document.getElementById('mobileCalendarView');
+
+  if (mobile) {
+    stopTodaySidebarClock();
+  }
 
   if (desktopLayout) {
     desktopLayout.style.display = mobile ? 'none' : 'flex';
@@ -238,6 +244,7 @@ function createDesktopEventCard(event, options) {
 }
 
 let todaySidebarClockIntervalId = null;
+let todaySidebarRenderedDateKey = null;
 
 function formatTodaySidebarTime(date) {
   const h = String(date.getHours()).padStart(2, '0');
@@ -246,18 +253,28 @@ function formatTodaySidebarTime(date) {
   return h + ':' + m + ':' + s;
 }
 
-function updateTodaySidebarTime() {
-  const timeEl = document.getElementById('todaySidebarTime');
-  if (timeEl) {
-    timeEl.textContent = formatTodaySidebarTime(new Date());
-  }
-}
-
-function startTodaySidebarClock() {
+function stopTodaySidebarClock() {
   if (todaySidebarClockIntervalId !== null) {
     clearInterval(todaySidebarClockIntervalId);
     todaySidebarClockIntervalId = null;
   }
+}
+
+function updateTodaySidebarTime() {
+  const timeEl = document.getElementById('todaySidebarTime');
+  if (!timeEl) return;
+
+  const now = new Date();
+  timeEl.textContent = formatTodaySidebarTime(now);
+
+  const dateKey = formatDateKeyLocal(now);
+  if (todaySidebarRenderedDateKey !== null && dateKey !== todaySidebarRenderedDateKey) {
+    renderTodaySidebar();
+  }
+}
+
+function startTodaySidebarClock() {
+  stopTodaySidebarClock();
   updateTodaySidebarTime();
   todaySidebarClockIntervalId = setInterval(updateTodaySidebarTime, 1000);
 }
@@ -276,6 +293,7 @@ function renderTodaySidebar() {
 
   dayNumberEl.textContent = today.getDate();
   dateLabelEl.textContent = weekdayNames[today.getDay()] + ' · ' + monthNames[today.getMonth()] + ' ' + today.getFullYear();
+  todaySidebarRenderedDateKey = todayStr;
   startTodaySidebarClock();
 
   const todayEvents = allEvents.filter(function(e) {
@@ -931,7 +949,7 @@ function openEventModal(event) {
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="event-detail-grid grid grid-cols-2 gap-4">
         <div class="space-y-4">
           <div>
             <label class="font-semibold text-gray-700">Venue:</label>

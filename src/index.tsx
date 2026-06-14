@@ -2006,10 +2006,9 @@ app.get('/', (c) => {
           }
 
           #todaySidebarClock {
-            flex-shrink: 0;
-            height: 100px;
+            flex: 0 0 25%;
             min-height: 90px;
-            max-height: 110px;
+            max-height: 120px;
             padding: 0.65rem 1rem 0.7rem;
             margin-bottom: 0.5rem;
             border-radius: 1.25rem;
@@ -2210,6 +2209,10 @@ app.get('/', (c) => {
             outline: 1px solid rgba(152, 162, 215, 0.22);
           }
 
+          .event-detail-modal .event-detail-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+
           table th {
             position: sticky;
             top: 0;
@@ -2290,6 +2293,10 @@ app.get('/', (c) => {
               max-width: none !important;
               max-height: 90vh !important;
               border-radius: 24px;
+            }
+
+            .event-detail-modal .event-detail-grid {
+              grid-template-columns: 1fr;
             }
 
             .hidden-mobile {

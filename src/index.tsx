@@ -1984,8 +1984,17 @@ app.get('/', (c) => {
           }
 
           #desktopCalendarLayout {
-            align-items: stretch;
-            min-height: calc(100vh - 180px);
+            align-items: flex-start;
+            flex: 1;
+            min-height: 0;
+          }
+
+          #desktopCalendarMain {
+            flex: 1;
+            min-width: 0;
+            min-height: 0;
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
           }
 
           #todaySidebar {
@@ -1996,6 +2005,10 @@ app.get('/', (c) => {
             display: flex;
             flex-direction: column;
             align-self: flex-start;
+            position: sticky;
+            top: 0;
+            z-index: 6;
+            max-height: calc(100vh - 180px);
             padding: 0.75rem 0.75rem 0.5rem;
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
@@ -2053,7 +2066,7 @@ app.get('/', (c) => {
             width: 100%;
             height: auto;
             min-height: 2.75rem;
-            max-height: min(420px, 55vh);
+            max-height: min(360px, calc(100vh - 320px));
             display: flex;
             flex-direction: column;
             margin-top: 0.35rem;
@@ -2407,6 +2420,15 @@ app.get('/', (c) => {
 
           .event-detail-btn-delete:hover {
             background: rgba(254,226,226,1);
+          }
+
+          /* Desktop: scroll calendar grid only; keep Today sidebar fixed */
+          @media (min-width: 768px) {
+            #calendarView {
+              overflow: hidden;
+              display: flex;
+              flex-direction: column;
+            }
           }
 
           table th {

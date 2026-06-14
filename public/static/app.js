@@ -894,107 +894,106 @@ async function saveCell(cell) {
 function openEventModal(event) {
   const modal = document.getElementById('eventModal');
   const content = document.getElementById('eventModalContent');
+  const footer = document.getElementById('eventModalFooter');
+  if (!modal || !content || !footer) return;
   
-  // Check if user is authenticated (currentUser is set by auth.js)
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
   
-  // Format sound requirements with clickable links
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 
     : 'Not specified';
-  
-  // Show action buttons only for authenticated users
-  const actionButtons = isAuthenticated ? `
-    <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200">
-      <button onclick="editEventFromModal(${event.id})" 
-              class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center">
-        <i class="fas fa-edit mr-2"></i>Edit
-      </button>
-      <button onclick="deleteEventFromModal(${event.id})" 
-              class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
-        <i class="fas fa-trash mr-2"></i>Delete
-      </button>
-    </div>
-  ` : `
-    <div class="mt-6 pt-4 border-t border-gray-200">
-      <p class="text-center text-gray-500 text-sm">
-        <i class="fas fa-lock mr-2"></i>
-        Please <a href="#" onclick="closeEventModal(); openLoginModal(); return false;" class="font-semibold" style="color:#98A2D7;">login</a> to edit events
-      </p>
-    </div>
-  `;
-  
+
   const crewHtml = (event.foh_crew || event.stage_crew) ? `
-    ${event.foh_crew ? `<p class="text-gray-900"><span class="font-medium" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
-    ${event.stage_crew ? `<p class="text-gray-900"><span class="font-medium text-green-700"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
-  ` : `<p class="text-gray-900">${event.crew || 'Not assigned'}</p>`;
+    ${event.foh_crew ? `<p class="event-detail-value"><span style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
+    ${event.stage_crew ? `<p class="event-detail-value" style="margin-top:2px"><span style="color:#15803d"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
+  ` : `<p class="event-detail-value">${event.crew || 'Not assigned'}</p>`;
 
   const riderHtml = event.rider ? `
-    <div>
-      <label class="font-semibold text-gray-700">Rider:</label>
-      <p>${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener" class="inline-flex items-center text-blue-600 hover:text-blue-800 mr-2"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join('')}</p>
+    <div class="event-detail-rider">
+      ${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join(' ')}
+    </div>
+  ` : '';
+
+  const notesHtml = event.notes ? `
+    <div class="event-detail-notes">
+      <span class="event-detail-label">Notes</span>
+      <p class="event-detail-value event-detail-clamp">${event.notes}</p>
     </div>
   ` : '';
 
   content.innerHTML = `
-    <div class="space-y-4">
-      <div class="space-y-4">
-        <div>
-          <label class="font-semibold text-gray-700">Date:</label>
-          <p class="text-gray-900">${formatDate(event.event_date)}</p>
+    <div class="event-detail-stack">
+      <div class="event-detail-hero">
+        <div class="event-detail-field">
+          <span class="event-detail-label">Date</span>
+          <p class="event-detail-value">${formatDate(event.event_date)}</p>
         </div>
-        <div>
-          <label class="font-semibold text-gray-700">Program/Event:</label>
-          <p class="text-gray-900">${event.program}</p>
+        <div class="event-detail-field event-detail-program">
+          <span class="event-detail-label">Program / Event</span>
+          <p class="event-detail-value event-detail-clamp">${event.program}</p>
         </div>
       </div>
 
-      <div class="event-detail-grid grid grid-cols-2 gap-4">
-        <div class="space-y-4">
-          <div>
-            <label class="font-semibold text-gray-700">Venue:</label>
-            <p class="text-gray-900">${displayVenue(event.venue)}</p>
+      <div class="event-detail-grid">
+        <div class="event-detail-col">
+          <div class="event-detail-field">
+            <span class="event-detail-label">Venue</span>
+            <p class="event-detail-value">${displayVenue(event.venue)}</p>
           </div>
-          <div>
-            <label class="font-semibold text-gray-700">Call Time:</label>
-            <p class="text-gray-900">${event.call_time || 'Not specified'}</p>
+          <div class="event-detail-field">
+            <span class="event-detail-label">Sound Requirements</span>
+            <p class="event-detail-value event-detail-clamp">${soundReqsFormatted}</p>
+            ${riderHtml}
           </div>
-          ${riderHtml}
         </div>
-        <div class="space-y-4">
-          <div>
-            <label class="font-semibold text-gray-700">Team (curator):</label>
-            <p class="text-gray-900">${event.team || 'Not specified'}</p>
+        <div class="event-detail-col">
+          <div class="event-detail-field">
+            <span class="event-detail-label">Team (curator)</span>
+            <p class="event-detail-value">${event.team || 'Not specified'}</p>
           </div>
-          <div>
-            <label class="font-semibold text-gray-700">Crew (sound team):</label>
-            ${crewHtml}
-          </div>
-          <div>
-            <label class="font-semibold text-gray-700">Created:</label>
-            <p class="text-gray-600 text-sm">${formatDateTime(event.created_at)}</p>
+          <div class="event-detail-field">
+            <span class="event-detail-label">Call Time</span>
+            <p class="event-detail-value">${event.call_time || 'Not specified'}</p>
           </div>
         </div>
       </div>
 
-      <div>
-        <label class="font-semibold text-gray-700">Sound Requirements:</label>
-        <p class="text-gray-900 whitespace-pre-wrap">${soundReqsFormatted}</p>
+      <div class="event-detail-crew">
+        <span class="event-detail-label">Crew — Sound Team</span>
+        ${crewHtml}
       </div>
-      ${event.notes ? `<div>
-        <label class="font-semibold text-gray-700">Notes:</label>
-        <p class="text-gray-900 whitespace-pre-wrap">${event.notes}</p>
-      </div>` : ''}
 
-      ${actionButtons}
+      ${notesHtml}
+
+      <div class="event-detail-created">Created ${formatDateTime(event.created_at)}</div>
     </div>
   `;
+
+  if (isAuthenticated) {
+    footer.innerHTML = `
+      <button type="button" onclick="deleteEventFromModal(${event.id})" class="event-detail-btn event-detail-btn-delete">
+        <i class="fas fa-trash"></i>Delete
+      </button>
+      <button type="button" onclick="editEventFromModal(${event.id})" class="event-detail-btn event-detail-btn-edit">
+        <i class="fas fa-edit"></i>Edit
+      </button>
+    `;
+  } else {
+    footer.innerHTML = `
+      <p class="event-detail-login">
+        <i class="fas fa-lock mr-1"></i>
+        Please <a href="#" onclick="closeEventModal(); openLoginModal(); return false;" style="color:#98A2D7;font-weight:600;">login</a> to edit events
+      </p>
+    `;
+  }
   
   modal.classList.add('active');
 }
 
 function closeEventModal() {
   document.getElementById('eventModal').classList.remove('active');
+  const footer = document.getElementById('eventModalFooter');
+  if (footer) footer.innerHTML = '';
 }
 
 // Delete event from modal with confirmation

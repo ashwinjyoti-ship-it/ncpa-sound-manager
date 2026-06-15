@@ -2770,35 +2770,106 @@ app.get('/', (c) => {
             overflow-x: hidden;
           }
 
-          body::before {
-            content: "";
-            position: fixed;
-            inset: -18%;
-            z-index: -1;
-            pointer-events: none;
-            background:
-              radial-gradient(520px 420px at 18% 22%, rgba(224,164,88,0.12), transparent 68%),
-              radial-gradient(620px 480px at 82% 18%, rgba(199,91,57,0.11), transparent 64%),
-              radial-gradient(560px 500px at 66% 82%, rgba(240,185,120,0.08), transparent 70%);
-            filter: blur(2px);
-            opacity: 0.9;
-            transform: translate3d(0,0,0) scale(1);
-            animation: ncpaAmbientDrift 34s ease-in-out infinite alternate;
+          body > .min-h-screen {
+            position: relative;
+            z-index: 1;
           }
 
-          @keyframes ncpaAmbientDrift {
-            0% {
-              transform: translate3d(-1.2%, -0.8%, 0) scale(1);
-              opacity: 0.72;
+          html::before,
+          body::before,
+          body::after {
+            content: "";
+            position: fixed;
+            z-index: 0;
+            pointer-events: none;
+            filter: blur(1px);
+            transform: translate3d(0,0,0) scale(1);
+            mix-blend-mode: screen;
+          }
+
+          body::before {
+            width: min(58vw, 760px);
+            height: min(52vw, 620px);
+            left: -8vw;
+            top: -7vh;
+            background: radial-gradient(circle at 45% 45%, rgba(224,164,88,0.34), rgba(224,164,88,0.14) 38%, transparent 70%);
+            opacity: 0.72;
+            animation: ncpaAmberDrift 18s ease-in-out infinite;
+          }
+
+          body::after {
+            width: min(62vw, 880px);
+            height: min(54vw, 660px);
+            right: -10vw;
+            top: -5vh;
+            background: radial-gradient(circle at 52% 46%, rgba(199,91,57,0.30), rgba(199,91,57,0.12) 40%, transparent 72%);
+            opacity: 0.66;
+            animation: ncpaTerracottaDrift 18s ease-in-out infinite;
+            animation-delay: -5.5s;
+          }
+
+          html::before {
+            width: min(64vw, 840px);
+            height: min(48vw, 620px);
+            left: 30vw;
+            bottom: -16vh;
+            background: radial-gradient(circle at 50% 52%, rgba(240,185,120,0.24), rgba(150,80,48,0.13) 42%, transparent 72%);
+            opacity: 0.62;
+            animation: ncpaRustDrift 18s ease-in-out infinite;
+            animation-delay: -9s;
+          }
+
+          @keyframes ncpaAmberDrift {
+            0%, 100% {
+              transform: translate3d(0, 0, 0) scale(1);
+              opacity: 0.6;
             }
             50% {
-              transform: translate3d(1.4%, 1%, 0) scale(1.025);
-              opacity: 0.92;
+              transform: translate3d(60px, 80px, 0) scale(1.06);
+              opacity: 1;
             }
-            100% {
-              transform: translate3d(-0.6%, 1.6%, 0) scale(1.015);
-              opacity: 0.82;
+          }
+
+          @keyframes ncpaTerracottaDrift {
+            0%, 100% {
+              transform: translate3d(0, 0, 0) scale(1.02);
+              opacity: 0.6;
             }
+            50% {
+              transform: translate3d(-58px, 74px, 0) scale(1.08);
+              opacity: 1;
+            }
+          }
+
+          @keyframes ncpaRustDrift {
+            0%, 100% {
+              transform: translate3d(0, 0, 0) scale(1);
+              opacity: 0.6;
+            }
+            50% {
+              transform: translate3d(-64px, -82px, 0) scale(1.07);
+              opacity: 1;
+            }
+          }
+
+          .glass-header,
+          #todaySidebar,
+          #calendarView {
+            position: relative;
+            overflow: hidden;
+            isolation: isolate;
+          }
+
+          #calendarView {
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+          }
+
+          .glass-header > *,
+          #todaySidebar > *,
+          #calendarView > * {
+            position: relative;
+            z-index: 1;
           }
 
           .glass-header {
@@ -4084,6 +4155,243 @@ app.get('/', (c) => {
             color: var(--ncpa-text-secondary) !important;
           }
 
+          @media (min-width: 768px) {
+            body {
+              background:
+                radial-gradient(960px 640px at 6% -8%, rgba(224,164,88,0.30), transparent 66%),
+                radial-gradient(980px 720px at 96% 4%, rgba(199,91,57,0.30), transparent 62%),
+                radial-gradient(840px 640px at 64% 106%, rgba(240,185,120,0.18), transparent 70%),
+                linear-gradient(135deg, #171412 0%, #211C19 48%, #2B211C 100%) !important;
+            }
+
+            body::before {
+              width: min(56vw, 760px);
+              height: min(46vw, 620px);
+            }
+
+            body::after {
+              width: min(58vw, 880px);
+              height: min(48vw, 660px);
+            }
+
+            html::before {
+              width: min(58vw, 840px);
+              height: min(42vw, 620px);
+            }
+
+            header.glass-header {
+              background: rgba(31,27,24,0.86) !important;
+              border-bottom-color: rgba(224,164,88,0.18) !important;
+              box-shadow: 0 20px 54px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+            }
+
+            #calendarView {
+              background: rgba(26,23,21,0.78) !important;
+              border-color: rgba(224,164,88,0.18) !important;
+              box-shadow: 0 26px 70px rgba(0,0,0,0.40), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+            }
+
+            #desktopCalendarChrome {
+              background: rgba(32,28,25,0.76) !important;
+              border-bottom-color: rgba(224,164,88,0.16) !important;
+              box-shadow: inset 0 1px 0 rgba(255,255,255,0.10);
+            }
+
+            #desktopCalendarMain {
+              background:
+                radial-gradient(620px 440px at 78% 10%, rgba(224,164,88,0.08), transparent 70%),
+                rgba(22,19,17,0.30) !important;
+            }
+
+            #todaySidebar {
+              background: rgba(24,21,19,0.72) !important;
+              border-right-color: rgba(224,164,88,0.16) !important;
+              box-shadow: 18px 0 42px rgba(0,0,0,0.18), inset 1px 0 0 rgba(255,255,255,0.08) !important;
+            }
+
+            #todaySidebarClock {
+              background: linear-gradient(135deg, rgba(224,164,88,0.30), rgba(42,35,31,0.72)) !important;
+              box-shadow: 0 18px 40px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.16) !important;
+            }
+
+            #todaySidebarEventsPanel {
+              background: rgba(41,37,36,0.34) !important;
+              box-shadow: 0 16px 38px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.10) !important;
+            }
+
+            .calendar-day-active,
+            .calendar-day-empty {
+              background: rgba(255,255,255,0.035) !important;
+              border-color: rgba(255,255,255,0.08) !important;
+            }
+
+            .event-card {
+              box-shadow: 0 12px 24px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.08) !important;
+            }
+          }
+
+          @media (max-width: 767px) {
+            body {
+              background:
+                radial-gradient(640px 420px at 8% -8%, rgba(224,164,88,0.30), transparent 66%),
+                radial-gradient(620px 480px at 96% 8%, rgba(199,91,57,0.28), transparent 60%),
+                linear-gradient(145deg, #171412 0%, #211C19 48%, #2B211C 100%) !important;
+              color: var(--ncpa-text-bright) !important;
+            }
+
+            body::before {
+              width: 340px;
+              height: 300px;
+              left: -92px;
+              top: -72px;
+            }
+
+            body::after {
+              width: 390px;
+              height: 330px;
+              right: -132px;
+              top: -62px;
+            }
+
+            html::before {
+              width: 380px;
+              height: 320px;
+              left: 78px;
+              bottom: -118px;
+            }
+
+            header.glass-header {
+              background: rgba(31,27,24,0.86) !important;
+              border-bottom-color: rgba(224,164,88,0.18) !important;
+              box-shadow: 0 18px 45px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+            }
+
+            #mainContent.container {
+              padding-left: 16px !important;
+              padding-right: 16px !important;
+            }
+
+            #mobileActionBar {
+              gap: 12px;
+            }
+
+            #mobileActionBar .btn-glass {
+              background: rgba(255,255,255,0.12) !important;
+              color: var(--ncpa-text-bright) !important;
+              border-color: rgba(255,255,255,0.16) !important;
+              box-shadow: 0 12px 28px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+            }
+
+            #calendarView {
+              background: rgba(26,23,21,0.82) !important;
+              border: 1px solid rgba(224,164,88,0.18) !important;
+              border-radius: 24px !important;
+              box-shadow: 0 24px 55px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.14) !important;
+              backdrop-filter: blur(30px) saturate(155%) !important;
+              -webkit-backdrop-filter: blur(30px) saturate(155%) !important;
+            }
+
+            #mobileWeekNav {
+              margin: 4px 4px 14px !important;
+              padding: 12px 10px !important;
+              border-radius: 20px !important;
+              background: rgba(32,28,25,0.92) !important;
+              border: 1px solid rgba(255,255,255,0.14) !important;
+              box-shadow: 0 14px 30px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+              color: var(--ncpa-text-bright) !important;
+            }
+
+            #mobileWeekLabel {
+              color: var(--ncpa-amber-light) !important;
+              font-size: 0.95rem !important;
+              letter-spacing: 0.01em;
+            }
+
+            #mobileTodayBtn {
+              background: rgba(224,164,88,0.18) !important;
+              color: var(--ncpa-amber-light) !important;
+              border: 1px solid rgba(224,164,88,0.32) !important;
+            }
+
+            #mobileWeekEvents {
+              padding-left: 6px !important;
+              padding-right: 6px !important;
+              padding-bottom: 28px !important;
+            }
+
+            .mobile-day-header {
+              position: sticky;
+              top: 78px;
+              margin: 18px 0 10px !important;
+              padding: 12px 12px 11px !important;
+              border-radius: 16px !important;
+              background: rgba(39,34,31,0.94) !important;
+              color: var(--ncpa-text-secondary) !important;
+              border: 1px solid rgba(255,255,255,0.10) !important;
+              border-left: 4px solid rgba(255,255,255,0.14) !important;
+              box-shadow: 0 12px 24px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.10) !important;
+              backdrop-filter: blur(22px) saturate(140%) !important;
+              -webkit-backdrop-filter: blur(22px) saturate(140%) !important;
+            }
+
+            .mobile-day-header.today {
+              background: linear-gradient(120deg, rgba(224,164,88,0.24), rgba(39,34,31,0.94)) !important;
+              color: var(--ncpa-amber-light) !important;
+              border-left-color: var(--ncpa-amber) !important;
+            }
+
+            .mobile-day-header.today::before {
+              background: var(--ncpa-amber) !important;
+              box-shadow: 0 0 16px rgba(224,164,88,0.55);
+            }
+
+            .mobile-event-card {
+              padding: 16px 16px !important;
+              border-radius: 18px !important;
+              margin-bottom: 14px !important;
+              background: linear-gradient(120deg, rgba(74,64,57,0.78), rgba(33,29,26,0.86)) !important;
+              color: var(--ncpa-text-bright) !important;
+              box-shadow: 0 18px 38px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.12) !important;
+            }
+
+            .mobile-event-card.event-card-green {
+              background: linear-gradient(120deg, rgba(224,164,88,0.30), rgba(47,41,36,0.88)) !important;
+              border-left-color: var(--ncpa-amber) !important;
+            }
+
+            .mobile-event-card.event-card-peach {
+              background: linear-gradient(120deg, rgba(199,91,57,0.30), rgba(47,41,36,0.88)) !important;
+              border-left-color: var(--ncpa-terracotta) !important;
+            }
+
+            .mobile-event-program,
+            .mobile-event-card .program {
+              color: #FFF9F0 !important;
+              font-size: 1rem !important;
+              font-weight: 800 !important;
+            }
+
+            .mobile-event-venue,
+            .mobile-event-crew,
+            .mobile-event-card .meta,
+            .mobile-event-card .crew-foh,
+            .mobile-event-card .crew-stage {
+              color: rgba(245,241,234,0.76) !important;
+              font-size: 0.88rem !important;
+            }
+
+            .mobile-event-foh {
+              color: var(--ncpa-amber-light) !important;
+            }
+
+            .mobile-no-shows {
+              color: rgba(201,192,180,0.68) !important;
+              background: rgba(255,255,255,0.04);
+              border: 1px dashed rgba(255,255,255,0.10);
+              border-radius: 16px;
+            }
+          }
+
           @supports not (backdrop-filter: blur(32px)) {
             .glass-header,
             .glass-card,
@@ -4105,7 +4413,9 @@ app.get('/', (c) => {
               transition-duration: 0.01ms !important;
             }
 
+            html::before,
             body::before,
+            body::after,
             #editEventModal.active h2,
             #editEventModal.active #editEventForm .space-y-4 > div,
             #editEventModal.active #editEventForm > div:last-child {

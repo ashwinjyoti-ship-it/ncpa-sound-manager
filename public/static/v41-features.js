@@ -40,14 +40,13 @@ function initializeFilters() {
   // Create filter panel HTML
   const filterPanel = document.createElement('div');
   filterPanel.id = 'filterPanel';
-  filterPanel.className = 'rounded-2xl p-4 mb-4 hidden';
-  filterPanel.style.cssText = 'background:rgba(255,255,255,0.80);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);outline:1px solid rgba(173,179,184,0.15);box-shadow:inset 1px 1px 0 rgba(255,255,255,0.55),0 8px 32px rgba(45,51,56,0.06);';
+  filterPanel.className = 'filter-panel rounded-2xl p-4 mb-4 hidden';
   filterPanel.innerHTML = `
     <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-gray-800">
+      <h3 class="filter-panel-title text-lg font-semibold">
         <i class="fas fa-filter mr-2"></i>Advanced Filters
       </h3>
-      <button onclick="closeFilterPanel()" class="text-gray-500 hover:text-gray-700">
+      <button onclick="closeFilterPanel()" class="filter-panel-close">
         <i class="fas fa-times"></i>
       </button>
     </div>
@@ -55,43 +54,43 @@ function initializeFilters() {
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <!-- Venue Filter -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Venue</label>
-        <select id="filterVenue" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">Venue</label>
+        <select id="filterVenue" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
           <option value="">All Venues</option>
         </select>
       </div>
       
       <!-- Crew Filter -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Crew</label>
-        <select id="filterCrew" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">Crew</label>
+        <select id="filterCrew" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
           <option value="">All Crew</option>
         </select>
       </div>
       
       <!-- Team Filter -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Team</label>
-        <select id="filterTeam" multiple class="w-full px-3 py-2 rounded-xl text-sm" style="height:80px;background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">Team</label>
+        <select id="filterTeam" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
           <option value="">All Teams</option>
         </select>
       </div>
       
       <!-- Date Range -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
-        <input type="date" id="filterDateFrom" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">From Date</label>
+        <input type="date" id="filterDateFrom" class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm">
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
-        <input type="date" id="filterDateTo" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">To Date</label>
+        <input type="date" id="filterDateTo" class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm">
       </div>
       
       <!-- Requirements Filter -->
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Sound Requirements</label>
-        <select id="filterRequirements" class="w-full px-3 py-2 rounded-xl text-sm" style="background:rgba(255,255,255,0.7);border:1px solid rgba(173,179,184,0.25);">
+        <label class="filter-panel-label block text-sm font-medium mb-1">Sound Requirements</label>
+        <select id="filterRequirements" class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm">
           <option value="">All</option>
           <option value="true">Has Requirements</option>
           <option value="false">Missing Requirements</option>
@@ -99,18 +98,18 @@ function initializeFilters() {
       </div>
     </div>
     
-    <div class="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
-      <button onclick="clearFilters()" class="px-4 py-2 text-sm bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300">
+    <div class="filter-panel-actions flex justify-between items-center mt-4 pt-4">
+      <button onclick="clearFilters()" class="filter-panel-btn filter-panel-btn-secondary px-4 py-2 text-sm rounded-lg">
         <i class="fas fa-undo mr-1"></i>Clear Filters
       </button>
       <div class="space-x-2">
-        <button onclick="applyFilters()" class="px-4 py-2 text-sm text-white rounded-xl" style="background:linear-gradient(135deg,#98A2D7 0%,#465080 100%);"
+        <button onclick="applyFilters()" class="filter-panel-btn filter-panel-btn-primary px-4 py-2 text-sm rounded-xl">
           <i class="fas fa-check mr-1"></i>Apply Filters
         </button>
       </div>
     </div>
     
-    <div id="filterResults" class="mt-3 text-sm text-gray-600"></div>
+    <div id="filterResults" class="filter-panel-results mt-3 text-sm"></div>
   `;
   
   // Insert after tab navigation - with better error handling

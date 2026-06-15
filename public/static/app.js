@@ -192,8 +192,7 @@ function appendDesktopEventCrew(card, event) {
   if (event.foh_crew || event.stage_crew) {
     if (event.foh_crew) {
       const row = document.createElement('div');
-      row.className = 'truncate';
-      row.style.color = '#1d4ed8';
+      row.className = 'event-card-meta event-card-crew event-card-foh truncate';
       const icon = document.createElement('i');
       icon.className = 'fas fa-headphones mr-1 text-xs';
       row.appendChild(icon);
@@ -202,7 +201,7 @@ function appendDesktopEventCrew(card, event) {
     }
     if (event.stage_crew) {
       const row = document.createElement('div');
-      row.className = 'text-gray-600 truncate';
+      row.className = 'event-card-meta event-card-crew event-card-stage truncate';
       const icon = document.createElement('i');
       icon.className = 'fas fa-volume-up mr-1 text-xs';
       row.appendChild(icon);
@@ -211,7 +210,7 @@ function appendDesktopEventCrew(card, event) {
     }
   } else if (event.crew) {
     const row = document.createElement('div');
-    row.className = 'text-gray-600 truncate';
+    row.className = 'event-card-meta event-card-crew truncate';
     const icon = document.createElement('i');
     icon.className = 'fas fa-users mr-1';
     row.appendChild(icon);
@@ -222,17 +221,35 @@ function appendDesktopEventCrew(card, event) {
 
 function createDesktopEventCard(event, options) {
   const truncateProgram = (options && options.truncateProgram) || 30;
+  const statusComplete = isEventGreen(event);
   const card = document.createElement('div');
-  card.className = 'text-xs p-2 mb-1 rounded cursor-pointer ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  card.className = 'event-card cursor-pointer ' + (statusComplete ? 'event-card-green' : 'event-card-peach');
   card.onclick = function() { openEventModal(event); };
 
+  if (options && options.showStatus) {
+    const header = document.createElement('div');
+    header.className = 'event-card-header';
+
+    const time = document.createElement('span');
+    time.className = 'event-card-time';
+    time.textContent = event.call_time && event.call_time.trim() ? event.call_time : 'Not set';
+    header.appendChild(time);
+
+    const status = document.createElement('span');
+    status.className = 'event-card-status';
+    status.textContent = statusComplete ? 'Complete' : 'Attention';
+    header.appendChild(status);
+
+    card.appendChild(header);
+  }
+
   const title = document.createElement('div');
-  title.className = 'font-semibold truncate';
+  title.className = 'event-card-title truncate';
   title.textContent = truncateText(event.program, truncateProgram);
   card.appendChild(title);
 
   const venue = document.createElement('div');
-  venue.className = 'text-gray-600 truncate';
+  venue.className = 'event-card-meta truncate';
   const venueIcon = document.createElement('i');
   venueIcon.className = 'fas fa-map-marker-alt mr-1';
   venue.appendChild(venueIcon);
@@ -312,7 +329,7 @@ function renderTodaySidebar() {
     eventsEl.appendChild(empty);
   } else {
     todayEvents.forEach(function(event) {
-      eventsEl.appendChild(createDesktopEventCard(event, { truncateProgram: 40 }));
+      eventsEl.appendChild(createDesktopEventCard(event, { truncateProgram: 40, showStatus: true }));
     });
   }
 }
@@ -495,7 +512,7 @@ function renderCalendar() {
   // Add empty cells for days before month starts
   for (let i = 0; i < firstDay; i++) {
     const emptyCell = document.createElement('div');
-    emptyCell.className = 'calendar-day bg-gray-50';
+    emptyCell.className = 'calendar-day calendar-day-empty';
     grid.appendChild(emptyCell);
   }
   
@@ -509,7 +526,7 @@ function renderCalendar() {
     const isToday = dateStr === todayStr;
     
     // Highlight today's date with a special background
-    cell.className = isToday ? 'calendar-day p-2 bg-blue-50 border-2 border-blue-500' : 'calendar-day bg-white p-2';
+    cell.className = 'calendar-day calendar-day-active' + (isToday ? ' calendar-day-today' : '');
     
     const dayEvents = eventsByDate[dateStr] || [];
     
@@ -526,7 +543,7 @@ function renderCalendar() {
     
     // Day number
     const dayNumber = document.createElement('div');
-    dayNumber.className = isToday ? 'font-bold text-blue-600 mb-2' : 'font-bold text-gray-700 mb-2';
+    dayNumber.className = isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number';
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     
@@ -719,18 +736,18 @@ function renderMobileEventCard(event) {
   let crewHtml = '';
   if (event.foh_crew || event.stage_crew) {
     if (event.foh_crew) {
-      crewHtml += '<div class="mt-1" style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>' + escHtml(event.foh_crew) + '</div>';
+      crewHtml += '<div class="mobile-event-crew mobile-event-foh mt-1"><i class="fas fa-headphones mr-1 text-xs"></i>' + escHtml(event.foh_crew) + '</div>';
     }
     if (event.stage_crew) {
-      crewHtml += '<div class="text-gray-600 mt-1"><i class="fas fa-volume-up mr-1 text-xs"></i>' + escHtml(event.stage_crew) + '</div>';
+      crewHtml += '<div class="mobile-event-crew mobile-event-stage mt-1"><i class="fas fa-volume-up mr-1 text-xs"></i>' + escHtml(event.stage_crew) + '</div>';
     }
   } else if (event.crew) {
-    crewHtml = '<div class="text-gray-600 mt-1"><i class="fas fa-users mr-1"></i>' + escHtml(event.crew) + '</div>';
+    crewHtml = '<div class="mobile-event-crew mt-1"><i class="fas fa-users mr-1"></i>' + escHtml(event.crew) + '</div>';
   }
 
   card.innerHTML =
-    '<div class="font-semibold text-sm">' + escHtml(event.program) + '</div>' +
-    '<div class="text-xs text-gray-600 mt-1"><i class="fas fa-map-marker-alt mr-1"></i>' + escHtml(displayVenue(event.venue)) + '</div>' +
+    '<div class="mobile-event-program font-semibold text-sm">' + escHtml(event.program) + '</div>' +
+    '<div class="mobile-event-venue text-xs mt-1"><i class="fas fa-map-marker-alt mr-1"></i>' + escHtml(displayVenue(event.venue)) + '</div>' +
     crewHtml;
 
   return card;
@@ -898,14 +915,16 @@ function openEventModal(event) {
   if (!modal || !content || !footer) return;
   
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
+  const statusComplete = isEventGreen(event);
+  const statusLabel = statusComplete ? 'Confirmed / Complete' : 'Needs Attention';
   
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 
     : 'Not specified';
 
   const crewHtml = (event.foh_crew || event.stage_crew) ? `
-    ${event.foh_crew ? `<p class="event-detail-value"><span style="color:#1d4ed8"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
-    ${event.stage_crew ? `<p class="event-detail-value" style="margin-top:2px"><span style="color:#15803d"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
+    ${event.stage_crew ? `<p class="event-detail-value"><span class="event-detail-crew-role"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
+    ${event.foh_crew ? `<p class="event-detail-value" style="margin-top:2px"><span class="event-detail-crew-role"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
   ` : `<p class="event-detail-value">${event.crew || 'Not assigned'}</p>`;
 
   const riderHtml = event.rider ? `
@@ -922,6 +941,9 @@ function openEventModal(event) {
   ` : '';
 
   content.innerHTML = `
+    <div class="event-detail-status ${statusComplete ? 'is-complete' : 'is-attention'}">
+      <span></span>${statusLabel}
+    </div>
     <div class="event-detail-stack">
       <div class="event-detail-hero">
         <div class="event-detail-field">
@@ -935,26 +957,22 @@ function openEventModal(event) {
       </div>
 
       <div class="event-detail-grid">
-        <div class="event-detail-col">
-          <div class="event-detail-field">
-            <span class="event-detail-label">Venue</span>
-            <p class="event-detail-value">${displayVenue(event.venue)}</p>
-          </div>
-          <div class="event-detail-field">
-            <span class="event-detail-label">Sound Requirements</span>
-            <p class="event-detail-value event-detail-clamp">${soundReqsFormatted}</p>
-            ${riderHtml}
-          </div>
+        <div class="event-detail-field">
+          <span class="event-detail-label">Venue</span>
+          <p class="event-detail-value">${displayVenue(event.venue)}</p>
         </div>
-        <div class="event-detail-col">
-          <div class="event-detail-field">
-            <span class="event-detail-label">Team (curator)</span>
-            <p class="event-detail-value">${event.team || 'Not specified'}</p>
-          </div>
-          <div class="event-detail-field">
-            <span class="event-detail-label">Call Time</span>
-            <p class="event-detail-value">${event.call_time || 'Not specified'}</p>
-          </div>
+        <div class="event-detail-field">
+          <span class="event-detail-label">Team (curator)</span>
+          <p class="event-detail-value">${event.team || 'Not specified'}</p>
+        </div>
+        <div class="event-detail-field">
+          <span class="event-detail-label">Sound Requirements</span>
+          <p class="event-detail-value event-detail-clamp">${soundReqsFormatted}</p>
+          ${riderHtml}
+        </div>
+        <div class="event-detail-field">
+          <span class="event-detail-label">Call Time</span>
+          <p class="event-detail-value">${event.call_time || 'Not specified'}</p>
         </div>
       </div>
 

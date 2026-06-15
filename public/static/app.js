@@ -921,6 +921,9 @@ function openEventModal(event) {
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 
     : 'Not specified';
+  const soundReqsTitle = event.sound_requirements
+    ? escHtml(event.sound_requirements.replace(/\s+/g, ' ').trim())
+    : 'Not specified';
 
   const crewHtml = (event.foh_crew || event.stage_crew) ? `
     ${event.stage_crew ? `<p class="event-detail-value"><span class="event-detail-crew-role"><i class="fas fa-volume-up mr-1 text-xs"></i>Stage:</span> ${event.stage_crew}</p>` : ''}
@@ -965,9 +968,9 @@ function openEventModal(event) {
           <span class="event-detail-label">Team (curator)</span>
           <p class="event-detail-value">${event.team || 'Not specified'}</p>
         </div>
-        <div class="event-detail-field">
+        <div class="event-detail-field event-detail-sound">
           <span class="event-detail-label">Sound Requirements</span>
-          <p class="event-detail-value event-detail-clamp">${soundReqsFormatted}</p>
+          <p class="event-detail-value event-detail-sound-value" title="${soundReqsTitle}">${soundReqsFormatted}</p>
           ${riderHtml}
         </div>
         <div class="event-detail-field">

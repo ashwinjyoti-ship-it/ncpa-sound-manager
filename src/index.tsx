@@ -2359,6 +2359,14 @@ app.get('/', (c) => {
             flex-shrink: 0;
           }
 
+          .event-detail-sound {
+            grid-column: 1 / -1;
+            padding: 12px 14px;
+            border-radius: 0.9rem;
+            background: rgba(152,162,215,0.08);
+            border-left: 3px solid #98A2D7;
+          }
+
           .event-detail-col {
             display: flex;
             flex-direction: column;
@@ -2371,6 +2379,16 @@ app.get('/', (c) => {
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
+            word-break: break-word;
+          }
+
+          .event-detail-sound-value {
+            display: block;
+            max-height: 168px;
+            overflow-y: auto;
+            padding-right: 6px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
             word-break: break-word;
           }
 
@@ -3364,6 +3382,15 @@ app.get('/', (c) => {
             gap: 22px 32px;
           }
 
+          .event-detail-sound {
+            grid-column: 1 / -1;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(255,255,255,0.055);
+            border: 1px solid rgba(224,164,88,0.18);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+          }
+
           .event-detail-col {
             gap: 22px;
           }
@@ -3390,6 +3417,25 @@ app.get('/', (c) => {
 
           .event-detail-clamp {
             -webkit-line-clamp: 3;
+          }
+
+          .event-detail-sound-value {
+            display: block;
+            max-height: 168px;
+            overflow-y: auto;
+            padding-right: 6px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+          }
+
+          .event-detail-sound-value::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .event-detail-sound-value::-webkit-scrollbar-thumb {
+            background: rgba(224,164,88,0.42);
+            border-radius: 999px;
           }
 
           .event-detail-rider {
@@ -5493,7 +5539,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.5"></script>
+        <script src="/static/app.js?v=4.2.6"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

@@ -2384,7 +2384,7 @@ app.get('/', (c) => {
 
           .event-detail-sound-value {
             display: block;
-            max-height: 168px;
+            max-height: 260px;
             overflow-y: auto;
             padding-right: 6px;
             white-space: pre-wrap;
@@ -3421,7 +3421,7 @@ app.get('/', (c) => {
 
           .event-detail-sound-value {
             display: block;
-            max-height: 168px;
+            max-height: 260px;
             overflow-y: auto;
             padding-right: 6px;
             white-space: pre-wrap;

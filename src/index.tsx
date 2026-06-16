@@ -2793,6 +2793,8 @@ app.get('/', (c) => {
             --ncpa-amber-light: #F0B978;
             --ncpa-terracotta: #C75B39;
             --ncpa-terracotta-light: #E8825F;
+            --ncpa-green: #5C9D6F;
+            --ncpa-green-light: #7DC491;
             --ncpa-text: #F5F1EA;
             --ncpa-text-bright: #F8F4EE;
             --ncpa-text-secondary: #C9C0B4;
@@ -3456,30 +3458,35 @@ app.get('/', (c) => {
             top: 30px;
             left: 30px;
             margin: 0;
-            padding: 5px 12px;
+            padding: 7px 14px;
             border-radius: 999px;
             font-size: 11px;
             font-weight: 800;
-            color: var(--ncpa-amber-light);
-            background: rgba(224,164,88,0.16);
-            border: 1px solid rgba(224,164,88,0.22);
+            letter-spacing: 0.04em;
+            color: var(--ncpa-green-light);
+            background: linear-gradient(135deg, #2d4a32 0%, #1f3324 100%);
+            border: 1px solid #1a120e;
+            box-shadow:
+              0 4px 10px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,225,190,0.08);
           }
 
           .event-detail-status span {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             border-radius: 999px;
-            background: var(--ncpa-amber);
+            background: var(--ncpa-green-light);
+            box-shadow: 0 0 8px var(--ncpa-green-light);
           }
 
           .event-detail-status.is-attention {
-            color: var(--ncpa-terracotta-light);
-            background: rgba(199,91,57,0.20);
-            border-color: rgba(199,91,57,0.28);
+            color: #e8896a;
+            background: linear-gradient(135deg, #4a261c 0%, #2e160f 100%);
           }
 
           .event-detail-status.is-attention span {
-            background: var(--ncpa-terracotta);
+            background: #e8896a;
+            box-shadow: 0 0 8px #e8896a;
           }
 
           .event-detail-stack {
@@ -3858,15 +3865,84 @@ app.get('/', (c) => {
             font-weight: 800;
           }
 
+          /* Crew propagation row (PR #30) — amber clay tray with glowing left stripe */
           #editCrewPropagateRow {
-            background: rgba(199,91,57,0.14) !important;
-            border: 1px solid rgba(199,91,57,0.32) !important;
-            color: var(--ncpa-text-secondary) !important;
+            position: relative !important;
+            background:
+              radial-gradient(120% 80% at 100% 0%, rgba(224,164,88,0.10), transparent 60%),
+              linear-gradient(135deg, rgba(224,164,88,0.10), rgba(224,164,88,0.04)),
+              #2a1d17 !important;
+            border: 1px solid rgba(224,164,88,0.30) !important;
+            border-radius: 18px !important;
+            padding: 16px 18px 16px 20px !important;
+            margin: 6px 0 18px !important;
+            color: var(--ncpa-amber-light) !important;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.40),
+              inset 0 -1px 0 rgba(255,225,190,0.06),
+              0 4px 12px rgba(224,164,88,0.10) !important;
+            overflow: hidden;
           }
 
-          #editCrewPropagateRow span,
+          #editCrewPropagateRow::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 10px; bottom: 10px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: linear-gradient(180deg, var(--ncpa-amber-light), var(--ncpa-amber), #c98a3f);
+            box-shadow: 0 0 10px rgba(224,164,88,0.50);
+          }
+
+          #editCrewPropagateRow label {
+            display: flex !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            cursor: pointer;
+            color: var(--ncpa-amber-light) !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            margin: 0 !important;
+          }
+
+          #editCrewPropagateRow label .rounded {
+            width: 20px !important;
+            height: 20px !important;
+            flex-shrink: 0;
+            margin-top: 1px;
+            background: #2a1d17 !important;
+            border: 1.5px solid rgba(224,164,88,0.40) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+            accent-color: var(--ncpa-amber) !important;
+            border-radius: 6px !important;
+            transition: background .15s, border-color .15s, box-shadow .15s;
+          }
+
+          #editCrewPropagateRow label .rounded:checked {
+            background: var(--ncpa-amber) !important;
+            border-color: var(--ncpa-amber) !important;
+            box-shadow:
+              0 2px 4px rgba(224,164,88,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.4) !important;
+          }
+
           #editCrewPropagateRow p {
-            color: var(--ncpa-text-secondary) !important;
+            margin-top: 8px !important;
+            padding-left: 32px;
+            color: var(--ncpa-text-muted) !important;
+            font-size: 12px !important;
+            font-weight: 400 !important;
+            line-height: 1.5;
+          }
+
+          #editCrewPropagateRow p::before {
+            content: "\f05a";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: var(--ncpa-amber);
+            margin-right: 6px;
           }
 
           #editEventForm > .flex.justify-end {

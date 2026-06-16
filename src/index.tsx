@@ -2999,15 +2999,23 @@ app.get('/', (c) => {
           }
 
           .btn-glass {
-            background: rgba(255,255,255,0.08) !important;
+            background:
+              linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%),
+              #2a1d17 !important;
             color: var(--ncpa-text-secondary) !important;
-            border: 1px solid var(--ncpa-border-strong) !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.12) !important;
+            border: 1px solid #160e0a !important;
+            border-radius: 999px !important;
+            box-shadow:
+              inset 0 2px 4px rgba(0,0,0,0.35),
+              inset 0 -1px 0 rgba(255,225,190,0.04),
+              0 2px 6px rgba(0,0,0,0.20) !important;
             transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease, border-color 0.2s ease !important;
           }
 
           .btn-glass:hover {
-            background: rgba(255,255,255,0.12) !important;
+            background:
+              linear-gradient(135deg, rgba(255,225,190,0.08), transparent 40%),
+              #34241e !important;
             color: var(--ncpa-text-bright) !important;
             transform: translateY(-1px);
           }
@@ -3031,8 +3039,9 @@ app.get('/', (c) => {
               inset 0 -1px 0 rgba(255,225,190,0.04);
           }
 
-          .nav-tab,
-          .nav-action {
+          /* Individual nav tab inside the clay segmented control
+             — transparent inside the container, amber when active */
+          .nav-tab {
             appearance: none;
             background: transparent !important;
             border: 0 !important;
@@ -3053,15 +3062,84 @@ app.get('/', (c) => {
             min-height: unset !important;
             transition: color .18s, background .18s, box-shadow .18s, transform .15s;
           }
-          .nav-tab i,
-          .nav-action i {
-            font-size: 13px;
-            color: inherit;
+          .nav-tab i { font-size: 13px; color: inherit; }
+          .nav-tab span { font-weight: inherit; }
+
+          .nav-tab:hover {
+            color: var(--ncpa-text-bright);
+            background: rgba(255,225,190,0.04);
           }
-          .nav-tab span,
-          .nav-action span {
-            font-weight: inherit;
-  }
+          .nav-tab.tab-active {
+            color: var(--ncpa-text-dark);
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
+            box-shadow:
+              0 4px 10px rgba(224,164,88,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.35) !important;
+          }
+          .nav-tab.tab-active i,
+          .nav-tab.tab-active span {
+            color: var(--ncpa-text-dark);
+          }
+
+          /* Standalone nav actions (Ask AI, Filters, More Actions, Add Show)
+             — chunky clay pills with their own background so they read as
+             buttons even outside the .nav-tabs-group container */
+          .nav-action {
+            appearance: none;
+            background:
+              linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%),
+              #2a1d17 !important;
+            border: 1px solid #160e0a !important;
+            box-shadow:
+              inset 0 2px 4px rgba(0,0,0,0.35),
+              inset 0 -1px 0 rgba(255,225,190,0.04),
+              0 2px 6px rgba(0,0,0,0.20) !important;
+            outline: none !important;
+            margin: 0;
+            cursor: pointer;
+            color: var(--ncpa-text-secondary);
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 9px 16px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            line-height: 1;
+            min-height: unset !important;
+            transition: color .18s, background .18s, box-shadow .18s, transform .15s;
+          }
+          .nav-action i { font-size: 13px; color: inherit; }
+          .nav-action span { font-weight: inherit; }
+
+          .nav-action:hover {
+            color: var(--ncpa-text-bright);
+            background:
+              linear-gradient(135deg, rgba(255,225,190,0.08), transparent 40%),
+              #34241e !important;
+            transform: translateY(-1px);
+          }
+
+          /* Primary action: Add Show — amber clay pill */
+          .nav-action[aria-label="Add Show"] {
+            color: var(--ncpa-text-dark);
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
+            border: 1px solid rgba(255,255,255,0.10) !important;
+            box-shadow:
+              0 6px 14px rgba(224,164,88,0.30),
+              0 2px 4px rgba(0,0,0,0.25),
+              inset 0 1px 0 rgba(255,255,255,0.45),
+              inset 0 -1px 0 rgba(0,0,0,0.15) !important;
+            padding: 9px 18px;
+            font-weight: 700;
+          }
+          .nav-action[aria-label="Add Show"]:hover {
+            filter: brightness(1.05);
+            color: var(--ncpa-text-dark);
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
+          }
+          .nav-action[aria-label="Add Show"] i { color: var(--ncpa-text-dark); }
 
           .nav-tab:hover,
           .nav-action:hover {

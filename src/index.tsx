@@ -3459,6 +3459,8 @@ app.get('/', (c) => {
             display: flex;
             flex-direction: column;
             width: 720px;
+            height: auto !important;
+            min-height: 0;
             max-width: min(720px, 92vw);
             max-height: min(820px, 92vh);
             padding: 0;

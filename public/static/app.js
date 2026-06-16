@@ -992,11 +992,11 @@ function openEventModal(event) {
 
   if (isAuthenticated) {
     footer.innerHTML = `
-      <button type="button" onclick="deleteEventFromModal(${event.id})" class="event-detail-btn event-detail-btn-delete">
-        <i class="fas fa-trash"></i>Delete
+      <button type="button" onclick="deleteEventFromModal(${event.id})" class="event-detail-btn modal-img-btn" aria-label="Delete">
+        <img src="/static/images/buttons/delete.png" alt="Delete" class="modal-img">
       </button>
-      <button type="button" onclick="editEventFromModal(${event.id})" class="event-detail-btn event-detail-btn-edit">
-        <i class="fas fa-edit"></i>Edit
+      <button type="button" onclick="editEventFromModal(${event.id})" class="event-detail-btn modal-img-btn" aria-label="Edit">
+        <img src="/static/images/buttons/edit.png" alt="Edit" class="modal-img">
       </button>
     `;
   } else {

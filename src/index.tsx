@@ -2466,36 +2466,10 @@ app.get('/', (c) => {
             user-select: none;
           }
 
-          .event-detail-btn-edit {
-            width: 92px;
+          .event-detail-btn .modal-img {
             height: 44px;
-            background-image: url('/static/images/buttons/edit.png') !important;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            color: transparent;
-          }
-
-          .event-detail-btn-edit:hover {
-            filter: brightness(1.03);
-          }
-
-          .event-detail-btn-delete {
-            width: 111px;
-            height: 44px;
-            background-image: url('/static/images/buttons/delete.png') !important;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            color: transparent;
-          }
-
-          .event-detail-btn-delete:hover {
-            filter: brightness(1.03);
-          }
-
-          .event-detail-btn i {
-            display: none;
+            width: auto;
+            display: block;
           }
 
           /* Modal action buttons (Edit modal + delete confirm) */
@@ -3390,7 +3364,8 @@ app.get('/', (c) => {
             padding: 0;
             border-radius: 28px;
             background: rgba(36,31,27,0.68) !important;
-            overflow: hidden;
+            overflow: hidden !important;
+            overflow-y: hidden !important;
           }
 
           .event-detail-header {
@@ -3587,48 +3562,35 @@ app.get('/', (c) => {
 
           .event-detail-footer {
             flex: 0 0 auto;
-            padding: 0 30px 28px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 16px 30px 32px;
             border-top: 0;
-            gap: 10px;
+            gap: 12px;
+            min-height: 72px;
+            overflow: visible;
           }
 
           .event-detail-btn {
+            flex: 0 0 auto;
             padding: 0 !important;
-            border-radius: 999px !important;
             border: 0 !important;
             background: transparent !important;
             box-shadow: none !important;
-            font-size: 14px;
             line-height: 0;
-            transition: transform 0.2s ease, filter 0.2s ease;
+            overflow: visible;
+            transition: filter 0.2s ease;
           }
 
           .event-detail-btn:hover {
-            transform: translateY(-1px);
-          }
-
-          .event-detail-btn-edit {
-            width: 92px;
-            height: 44px;
-            background-image: url('/static/images/buttons/edit.png') !important;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            color: transparent;
-          }
-
-          .event-detail-btn-delete {
-            width: 111px;
-            height: 44px;
-            background-image: url('/static/images/buttons/delete.png') !important;
-            background-repeat: no-repeat;
-            background-position: center;
-            background-size: contain;
-            color: transparent;
-          }
-
-          .event-detail-btn-delete:hover {
             filter: brightness(1.03);
+          }
+
+          .event-detail-btn .modal-img {
+            height: 44px;
+            width: auto;
+            display: block;
           }
 
           #editEventModal .modal-content {
@@ -3820,15 +3782,15 @@ app.get('/', (c) => {
 
           #editEventForm > .flex.justify-end {
             position: sticky;
-            bottom: -28px;
+            bottom: 0;
             z-index: 3;
             display: flex !important;
             justify-content: flex-end !important;
             align-items: center !important;
             gap: 12px !important;
             width: calc(100% + 52px);
-            margin: 18px -26px -28px !important;
-            padding: 14px 26px 16px;
+            margin: 18px -26px 0 !important;
+            padding: 14px 26px 22px;
             border-top: 1px solid rgba(255,255,255,0.10);
             background: linear-gradient(90deg, rgba(36,31,27,0.88), rgba(60,52,46,0.78));
             backdrop-filter: blur(24px) saturate(140%);
@@ -3836,7 +3798,7 @@ app.get('/', (c) => {
             box-shadow: 0 -14px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
           }
 
-          #editEventForm > .flex.justify-end button {
+          #editEventForm > .flex.justify-end button:not(.modal-img-btn) {
             flex: 0 0 auto;
             min-width: 104px;
             min-height: 40px;
@@ -3847,17 +3809,24 @@ app.get('/', (c) => {
             transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
           }
 
-          #editEventForm > .flex.justify-end button:hover {
+          #editEventForm > .flex.justify-end button:not(.modal-img-btn):hover {
             transform: translateY(-1px);
           }
 
-          #editEventForm > .flex.justify-end button[type="button"] {
+          #editEventForm > .flex.justify-end .modal-img-btn {
+            min-width: 0 !important;
+            min-height: 0 !important;
+            border-radius: 0 !important;
+            overflow: visible;
+          }
+
+          #editEventForm > .flex.justify-end button[type="button"]:not(.modal-img-btn) {
             background: rgba(255,255,255,0.08) !important;
             color: var(--ncpa-text-secondary) !important;
             border: 1px solid var(--ncpa-border-strong);
           }
 
-          #editEventForm > .flex.justify-end button[type="button"]:hover {
+          #editEventForm > .flex.justify-end button[type="button"]:not(.modal-img-btn):hover {
             background: rgba(255,255,255,0.13) !important;
             color: var(--ncpa-text-bright) !important;
           }

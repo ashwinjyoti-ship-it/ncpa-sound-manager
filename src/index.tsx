@@ -2467,9 +2467,9 @@ app.get('/', (c) => {
           }
 
           .event-detail-btn-edit {
-            width: 216px;
+            width: 92px;
             height: 44px;
-            background-image: url('/static/images/buttons/edit.png');
+            background-image: url('/static/images/buttons/edit.png') !important;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -2481,9 +2481,9 @@ app.get('/', (c) => {
           }
 
           .event-detail-btn-delete {
-            width: 259px;
+            width: 111px;
             height: 44px;
-            background-image: url('/static/images/buttons/delete.png');
+            background-image: url('/static/images/buttons/delete.png') !important;
             background-repeat: no-repeat;
             background-position: center;
             background-size: contain;
@@ -3587,10 +3587,14 @@ app.get('/', (c) => {
           }
 
           .event-detail-btn {
-            padding: 10px 18px;
-            border-radius: 12px;
+            padding: 0 !important;
+            border-radius: 999px !important;
+            border: 0 !important;
+            background: transparent !important;
+            box-shadow: none !important;
             font-size: 14px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            line-height: 0;
+            transition: transform 0.2s ease, filter 0.2s ease;
           }
 
           .event-detail-btn:hover {
@@ -3598,19 +3602,27 @@ app.get('/', (c) => {
           }
 
           .event-detail-btn-edit {
-            background: var(--ncpa-amber);
-            color: var(--ncpa-text-dark);
-            box-shadow: 0 10px 25px rgba(224,164,88,0.20);
+            width: 92px;
+            height: 44px;
+            background-image: url('/static/images/buttons/edit.png') !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            color: transparent;
           }
 
           .event-detail-btn-delete {
-            background: rgba(199,91,57,0.14);
-            color: #F3C9B8;
-            border-color: rgba(199,91,57,0.45);
+            width: 111px;
+            height: 44px;
+            background-image: url('/static/images/buttons/delete.png') !important;
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            color: transparent;
           }
 
           .event-detail-btn-delete:hover {
-            background: rgba(199,91,57,0.22);
+            filter: brightness(1.03);
           }
 
           #editEventModal .modal-content {

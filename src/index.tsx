@@ -2453,33 +2453,70 @@ app.get('/', (c) => {
             display: inline-flex;
             align-items: center;
             gap: 0.35rem;
-            padding: 0.45rem 0.85rem;
-            border-radius: 0.65rem;
+            padding: 0;
+            border-radius: 999px;
             font-size: 0.8rem;
             font-weight: 600;
-            border: 1px solid transparent;
+            border: 0;
             cursor: pointer;
             transition: background 0.15s ease;
+            background: transparent !important;
+            box-shadow: none !important;
+            line-height: 0;
+            user-select: none;
           }
 
           .event-detail-btn-edit {
-            background: linear-gradient(135deg, #98A2D7 0%, #6B77C0 100%);
-            color: #fff;
-            border-color: rgba(255,255,255,0.25);
+            width: 216px;
+            height: 44px;
+            background-image: url('/static/images/buttons/edit.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            color: transparent;
           }
 
           .event-detail-btn-edit:hover {
-            filter: brightness(1.05);
+            filter: brightness(1.03);
           }
 
           .event-detail-btn-delete {
-            background: rgba(254,242,242,0.9);
-            color: #b91c1c;
-            border-color: rgba(220,88,88,0.25);
+            width: 259px;
+            height: 44px;
+            background-image: url('/static/images/buttons/delete.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            color: transparent;
           }
 
           .event-detail-btn-delete:hover {
-            background: rgba(254,226,226,1);
+            filter: brightness(1.03);
+          }
+
+          .event-detail-btn i {
+            display: none;
+          }
+
+          /* Modal action buttons (Edit modal + delete confirm) */
+          .modal-img-btn {
+            background: transparent !important;
+            border: 0 !important;
+            padding: 0 !important;
+            line-height: 0;
+            box-shadow: none !important;
+            cursor: pointer;
+            user-select: none;
+          }
+
+          .modal-img-btn:hover {
+            filter: brightness(1.03);
+          }
+
+          .modal-img {
+            height: 44px;
+            width: auto;
+            display: block;
           }
 
           /* Desktop: scroll calendar grid only; keep Today sidebar fixed */
@@ -5206,12 +5243,11 @@ app.get('/', (c) => {
                         <p class="text-xs mt-1 ml-5" style="color:#b45309">Only crew fields are updated — call times, notes, and other details stay independent per date.</p>
                     </div>
                     <div class="flex justify-end space-x-3 mt-6">
-                        <button type="button" onclick="closeEditEventModal()"
-                                class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
-                            Cancel
+                        <button type="button" onclick="closeEditEventModal()" class="modal-img-btn" aria-label="Cancel">
+                            <img src="/static/images/buttons/cancel.png" alt="Cancel" class="modal-img">
                         </button>
-                        <button type="submit" class="btn-primary px-6 py-2">
-                            Save Changes
+                        <button type="submit" class="modal-img-btn" aria-label="Save Changes">
+                            <img src="/static/images/buttons/save-changes.png" alt="Save Changes" class="modal-img">
                         </button>
                     </div>
                 </form>
@@ -5224,13 +5260,11 @@ app.get('/', (c) => {
                 <h2 class="text-xl font-bold mb-4" style="color: #2d3338;">Delete Event</h2>
                 <p class="text-gray-700 mb-6" id="deleteConfirmMessage">Are you sure you want to delete this event?</p>
                 <div class="flex justify-end space-x-3">
-                    <button onclick="closeDeleteConfirm()" 
-                            class="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400">
-                        Cancel
+                    <button type="button" onclick="closeDeleteConfirm()" class="modal-img-btn" aria-label="Cancel">
+                        <img src="/static/images/buttons/cancel.png" alt="Cancel" class="modal-img">
                     </button>
-                    <button id="deleteConfirmBtn" 
-                            class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                        Delete
+                    <button type="button" id="deleteConfirmBtn" class="modal-img-btn" aria-label="Delete">
+                        <img src="/static/images/buttons/delete.png" alt="Delete" class="modal-img">
                     </button>
                 </div>
             </div>

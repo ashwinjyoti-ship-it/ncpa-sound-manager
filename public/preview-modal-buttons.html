@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NCPA — Modal Button Preview</title>
+  <style>
+    :root {
+      --bg0: #171412;
+      --bg1: #211C19;
+      --bg2: #2B211C;
+      --amber: #E0A458;
+      --text: #F5F1EA;
+      --text2: rgba(245,241,234,0.76);
+      --border: rgba(255,255,255,0.10);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(960px 640px at 6% -8%, rgba(224,164,88,0.30), transparent 66%),
+        radial-gradient(980px 720px at 96% 4%, rgba(199,91,57,0.30), transparent 62%),
+        linear-gradient(145deg, var(--bg0) 0%, var(--bg1) 48%, var(--bg2) 100%);
+      padding: 28px;
+    }
+    h1 {
+      margin: 0 0 18px;
+      color: var(--amber);
+      letter-spacing: -0.02em;
+      font-size: 22px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .card {
+      background: rgba(26,23,21,0.78);
+      border: 1px solid rgba(224,164,88,0.18);
+      border-radius: 22px;
+      padding: 18px;
+      box-shadow: 0 26px 70px rgba(0,0,0,0.40);
+    }
+    .title {
+      font-weight: 800;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    .sub {
+      color: var(--text2);
+      font-size: 13px;
+      margin-bottom: 14px;
+      line-height: 1.45;
+    }
+
+    /* Event detail footer buttons (real app uses these classes) */
+    .event-detail-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .event-detail-btn {
+      padding: 0;
+      border-radius: 999px;
+      border: 0;
+      background: transparent;
+      cursor: pointer;
+      line-height: 0;
+    }
+    .event-detail-btn i { display: none; }
+    .event-detail-btn-edit {
+      width: 216px;
+      height: 44px;
+      background-image: url('static/images/buttons/edit.png');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      color: transparent;
+    }
+    .event-detail-btn-delete {
+      width: 259px;
+      height: 44px;
+      background-image: url('static/images/buttons/delete.png');
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      color: transparent;
+    }
+
+    /* Edit modal + delete confirm image buttons */
+    .modal-img-btn {
+      background: transparent;
+      border: 0;
+      padding: 0;
+      line-height: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .modal-img {
+      height: 44px;
+      width: auto;
+      display: block;
+    }
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+    .hint {
+      margin-top: 18px;
+      color: var(--text2);
+      font-size: 13px;
+    }
+    code { color: var(--amber); }
+    @media (max-width: 980px) {
+      .row { grid-template-columns: 1fr; }
+    }
+  </style>
+  </head>
+<body>
+  <h1>Modal clay button preview</h1>
+  <div class="row">
+    <div class="card">
+      <div class="title">Event Detail modal footer</div>
+      <div class="sub">These are injected by the runtime, but styled via CSS to show your new clay buttons.</div>
+      <div class="event-detail-footer">
+        <button type="button" class="event-detail-btn event-detail-btn-delete" aria-label="Delete">Delete</button>
+        <button type="button" class="event-detail-btn event-detail-btn-edit" aria-label="Edit">Edit</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="title">Edit Event modal actions</div>
+      <div class="sub">Cancel + Save Changes use your new transparent PNGs.</div>
+      <div class="actions">
+        <button type="button" class="modal-img-btn" aria-label="Cancel">
+          <img src="static/images/buttons/cancel.png" alt="Cancel" class="modal-img">
+        </button>
+        <button type="button" class="modal-img-btn" aria-label="Save Changes">
+          <img src="static/images/buttons/save-changes.png" alt="Save Changes" class="modal-img">
+        </button>
+      </div>
+      <div class="hint">Also applied to the Delete confirmation modal (Cancel/Delete).</div>
+    </div>
+  </div>
+  <p class="hint">Open: <code>public/preview-modal-buttons.html</code></p>
+</body>
+</html>
+

@@ -3694,10 +3694,31 @@ app.get('/', (c) => {
           }
 
           .event-detail-crew .event-detail-value {
-            display: inline-block;
-            margin-right: 20px;
+            display: block;
             font-size: 14px;
             font-weight: 600;
+            color: var(--ncpa-text-bright);
+            margin: 0;
+            line-height: 1.5;
+          }
+
+          .event-detail-crew .event-detail-value + .event-detail-value {
+            margin-top: 4px;
+          }
+
+          .event-detail-crew .event-detail-crew-role {
+            color: var(--ncpa-amber-light);
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-right: 8px;
+          }
+
+          .event-detail-crew .event-detail-crew-role i {
+            color: var(--ncpa-amber);
+            font-size: 11px;
+            margin-right: 4px;
           }
 
           /* Notes block — recessed clay tray */
@@ -3718,9 +3739,12 @@ app.get('/', (c) => {
           }
 
           .event-detail-created {
-            margin-top: 10px;
+            margin-top: 8px;
+            padding-top: 14px;
             color: var(--ncpa-text-muted);
             font-size: 12px;
+            border-top: 1px solid rgba(255,225,190,0.06);
+            flex-shrink: 0;
           }
 
           .event-detail-footer {

@@ -2585,15 +2585,39 @@ app.get('/', (c) => {
               min-height: 420px;
               max-width: none !important;
               max-height: 90vh !important;
-              border-radius: 24px;
+              border-radius: 24px !important;
             }
 
             .event-detail-body {
               overflow-y: auto;
+              padding: 0 20px 22px !important;
+            }
+
+            .event-detail-header {
+              padding: 24px 20px 6px !important;
+            }
+
+            .event-detail-header h2 {
+              font-size: 24px !important;
+              margin-top: 36px !important;
+            }
+
+            .event-detail-status {
+              left: 20px !important;
+              top: 24px !important;
             }
 
             .event-detail-grid {
               grid-template-columns: 1fr !important;
+              gap: 14px 0 !important;
+            }
+
+            .event-detail-footer {
+              padding: 18px 20px 22px !important;
+            }
+
+            .event-detail-program .event-detail-value {
+              font-size: 20px !important;
             }
 
             .hidden-mobile {
@@ -2767,6 +2791,8 @@ app.get('/', (c) => {
             --ncpa-amber-light: #F0B978;
             --ncpa-terracotta: #C75B39;
             --ncpa-terracotta-light: #E8825F;
+            --ncpa-green: #5C9D6F;
+            --ncpa-green-light: #7DC491;
             --ncpa-text: #F5F1EA;
             --ncpa-text-bright: #F8F4EE;
             --ncpa-text-secondary: #C9C0B4;
@@ -3287,47 +3313,64 @@ app.get('/', (c) => {
             transform: scale(1) translateY(0);
           }
 
+          /* ════════════════════════════════════════════════════════════════
+             EVENT DETAILS MODAL — Claymorphism reskin
+             ════════════════════════════════════════════════════════════════ */
           .event-detail-modal {
             position: relative;
-            width: 700px;
-            height: auto;
-            max-width: min(700px, 92vw);
-            max-height: min(720px, 92vh);
+            width: 720px;
+            max-width: min(720px, 92vw);
+            max-height: min(820px, 92vh);
             padding: 0;
-            border-radius: 28px;
-            background: rgba(36,31,27,0.68) !important;
+            border-radius: 28px !important;
+            background:
+              radial-gradient(120% 80% at 0% 0%, rgba(255,225,190,0.06), transparent 55%),
+              #3a2a22 !important;
+            border: 1px solid #1f1410 !important;
+            box-shadow:
+              0 40px 90px rgba(0,0,0,0.65),
+              0 16px 36px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,225,190,0.10),
+              inset 0 -1px 0 rgba(0,0,0,0.40) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            outline: none !important;
+            overflow: hidden;
           }
 
           .event-detail-header {
-            padding: 28px 30px 6px;
+            padding: 30px 36px 6px;
             border-bottom: none;
           }
 
           .event-detail-header h2 {
             color: var(--ncpa-text-bright);
-            font-size: 28px;
+            font-size: 30px;
             line-height: 1.15;
             letter-spacing: -0.025em;
-            margin-top: 38px;
+            margin-top: 42px;
+            font-weight: 800;
           }
 
           .event-detail-close {
             width: 36px;
             height: 36px;
-            background: var(--ncpa-chip);
+            background: #2a1d17 !important;
             color: var(--ncpa-text-secondary);
-            border: 1px solid var(--ncpa-border);
-            transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
+            border: 1px solid #1a120e !important;
+            box-shadow:
+              0 4px 10px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,225,190,0.06) !important;
+            transition: color .18s, transform .18s;
           }
 
           .event-detail-close:hover {
-            transform: translateY(-1px);
-            background: rgba(255,255,255,0.12);
             color: var(--ncpa-text-bright);
+            transform: scale(1.05);
           }
 
           .event-detail-body {
-            padding: 0 30px 22px;
+            padding: 0 36px 24px;
             overflow-y: auto;
           }
 
@@ -3337,32 +3380,37 @@ app.get('/', (c) => {
             gap: 8px;
             position: absolute;
             top: 30px;
-            left: 30px;
+            left: 36px;
             margin: 0;
-            padding: 5px 12px;
+            padding: 7px 14px;
             border-radius: 999px;
             font-size: 11px;
             font-weight: 800;
-            color: var(--ncpa-amber-light);
-            background: rgba(224,164,88,0.16);
-            border: 1px solid rgba(224,164,88,0.22);
+            letter-spacing: 0.04em;
+            color: #6ec07a;
+            background: linear-gradient(135deg, #2d4a32 0%, #1f3324 100%);
+            border: 1px solid #1a120e;
+            box-shadow:
+              0 4px 10px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,225,190,0.08);
           }
 
           .event-detail-status span {
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             border-radius: 999px;
-            background: var(--ncpa-amber);
+            background: #6ec07a;
+            box-shadow: 0 0 8px #6ec07a;
           }
 
           .event-detail-status.is-attention {
-            color: var(--ncpa-terracotta-light);
-            background: rgba(199,91,57,0.20);
-            border-color: rgba(199,91,57,0.28);
+            color: #e8896a;
+            background: linear-gradient(135deg, #4a261c 0%, #2e160f 100%);
           }
 
           .event-detail-status.is-attention span {
-            background: var(--ncpa-terracotta);
+            background: #e8896a;
+            box-shadow: 0 0 8px #e8896a;
           }
 
           .event-detail-stack {
@@ -3379,16 +3427,21 @@ app.get('/', (c) => {
           .event-detail-grid {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 22px 32px;
+            gap: 16px 24px;
           }
 
+          /* sound requirements, call time, notes — all become recessed clay trays */
           .event-detail-sound {
             grid-column: 1 / -1;
             padding: 16px 18px;
             border-radius: 18px;
-            background: rgba(255,255,255,0.055);
-            border: 1px solid rgba(224,164,88,0.18);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            background:
+              linear-gradient(135deg, rgba(0,0,0,0.18), transparent 50%),
+              #2a1d17;
+            border: 1px solid #160e0a;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.50),
+              inset 0 -1px 0 rgba(255,225,190,0.04);
           }
 
           .event-detail-col {
@@ -3396,23 +3449,26 @@ app.get('/', (c) => {
           }
 
           .event-detail-label {
-            color: #B5ADA2;
+            color: var(--ncpa-text-muted);
             font-size: 11px;
-            letter-spacing: 0.12em;
-            margin-bottom: 6px;
+            font-weight: 700;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
           }
 
           .event-detail-value {
             color: var(--ncpa-text-bright);
             font-size: 15px;
             line-height: 1.45;
-            font-weight: 600;
+            font-weight: 500;
           }
 
           .event-detail-program .event-detail-value {
-            font-size: 23px;
+            font-size: 24px;
             line-height: 1.25;
-            font-weight: 800;
+            font-weight: 700;
+            letter-spacing: -0.01em;
           }
 
           .event-detail-clamp {
@@ -3442,99 +3498,178 @@ app.get('/', (c) => {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            margin-top: 10px;
+            margin-top: 12px;
           }
 
           .event-detail-rider a {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            padding: 5px 9px;
+            gap: 6px;
+            padding: 5px 11px;
             border-radius: 999px;
-            background: rgba(224,164,88,0.12);
-            border: 1px solid rgba(224,164,88,0.24);
+            background: rgba(224,164,88,0.08);
+            border: 1px solid rgba(224,164,88,0.18);
             color: var(--ncpa-amber-light);
             font-size: 12px;
+            text-decoration: none;
+            transition: background .18s;
           }
 
+          .event-detail-rider a:hover {
+            background: rgba(224,164,88,0.16);
+          }
+
+          /* crew block — clay with amber left stripe */
           .event-detail-crew {
-            padding: 16px 18px;
-            border-radius: 16px;
-            background: rgba(224,164,88,0.12);
-            border: 1px solid rgba(224,164,88,0.24);
-            border-left: 4px solid var(--ncpa-amber);
+            position: relative;
+            padding: 16px 18px 16px 22px;
+            border-radius: 18px;
+            background:
+              linear-gradient(135deg, rgba(0,0,0,0.15), transparent 50%),
+              #2a1d17;
+            border: 1px solid #160e0a;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.50),
+              inset 0 -1px 0 rgba(255,225,190,0.04);
+          }
+
+          .event-detail-crew::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 12px; bottom: 12px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: linear-gradient(180deg, var(--ncpa-amber-light), var(--ncpa-amber));
+            box-shadow: 0 0 8px rgba(224,164,88,0.40);
           }
 
           .event-detail-crew .event-detail-label,
           .event-detail-crew-role {
-            color: var(--ncpa-amber);
+            color: var(--ncpa-amber-light);
           }
 
           .event-detail-crew .event-detail-value {
             display: inline-block;
             margin-right: 20px;
-            font-size: 16px;
+            font-size: 14px;
+            font-weight: 600;
           }
 
           .event-detail-notes {
-            padding-top: 2px;
+            padding: 14px 18px;
+            border-radius: 18px;
+            background:
+              linear-gradient(135deg, rgba(0,0,0,0.15), transparent 50%),
+              #2a1d17;
+            border: 1px solid #160e0a;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.50),
+              inset 0 -1px 0 rgba(255,225,190,0.04);
+          }
+
+          .event-detail-notes .event-detail-label {
+            margin-bottom: 6px;
           }
 
           .event-detail-created {
-            margin-top: 8px;
-            padding-top: 18px;
-            color: var(--ncpa-text-dim);
-            border-top: 1px solid var(--ncpa-border);
+            margin-top: 10px;
+            color: var(--ncpa-text-muted);
             font-size: 12px;
           }
 
           .event-detail-footer {
-            padding: 0 30px 28px;
+            padding: 0 36px 28px;
             border-top: 0;
-            gap: 10px;
+            gap: 14px;
+            margin-top: 8px;
+            padding-top: 18px;
+            border-top: 1px solid rgba(255,225,190,0.06);
           }
 
+          /* buttons — chunky clay pills */
           .event-detail-btn {
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-size: 14px;
-            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            padding: 13px 26px !important;
+            border-radius: 999px !important;
+            font-size: 14px !important;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            transition: transform .15s, filter .15s, box-shadow .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
           }
 
           .event-detail-btn:hover {
             transform: translateY(-1px);
           }
 
+          .event-detail-btn i {
+            font-size: 13px;
+          }
+
           .event-detail-btn-edit {
-            background: var(--ncpa-amber);
-            color: var(--ncpa-text-dark);
-            box-shadow: 0 10px 25px rgba(224,164,88,0.20);
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
+            color: var(--ncpa-text-dark) !important;
+            border: 0 !important;
+            box-shadow:
+              0 8px 18px rgba(224,164,88,0.32),
+              0 2px 4px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.45),
+              inset 0 -1px 0 rgba(0,0,0,0.15) !important;
+          }
+
+          .event-detail-btn-edit:hover {
+            filter: brightness(1.05);
           }
 
           .event-detail-btn-delete {
-            background: rgba(199,91,57,0.14);
-            color: #F3C9B8;
-            border-color: rgba(199,91,57,0.45);
+            background: linear-gradient(135deg, #d97a5a 0%, var(--ncpa-terracotta) 50%, #9a3e22 100%) !important;
+            color: #fff !important;
+            border: 0 !important;
+            box-shadow:
+              0 8px 18px rgba(199,91,57,0.32),
+              0 2px 4px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.30),
+              inset 0 -1px 0 rgba(0,0,0,0.20) !important;
           }
 
           .event-detail-btn-delete:hover {
-            background: rgba(199,91,57,0.22);
+            filter: brightness(1.05);
           }
 
+          /* ════════════════════════════════════════════════════════════════
+             EDIT EVENT MODAL — Claymorphism reskin
+             ════════════════════════════════════════════════════════════════ */
           #editEventModal .modal-content {
-            width: 834px;
-            max-width: min(834px, 94vw);
-            max-height: min(840px, 92vh);
-            border-radius: 28px;
-            padding: 26px 26px 28px;
-            background: rgba(36,31,27,0.70) !important;
+            width: 880px;
+            max-width: min(880px, 94vw);
+            max-height: min(900px, 92vh);
+            border-radius: 28px !important;
+            padding: 36px 40px 0 !important;
+            background:
+              radial-gradient(120% 80% at 0% 0%, rgba(255,225,190,0.06), transparent 55%),
+              #3a2a22 !important;
+            border: 1px solid #1f1410 !important;
+            box-shadow:
+              0 40px 90px rgba(0,0,0,0.65),
+              0 16px 36px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,225,190,0.10),
+              inset 0 -1px 0 rgba(0,0,0,0.40) !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            outline: none !important;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
           }
 
           #editEventModal h2 {
             color: var(--ncpa-text-bright) !important;
-            font-size: 30px !important;
+            font-size: 32px !important;
             line-height: 1.15;
-            letter-spacing: -0.025em;
+            letter-spacing: -0.01em;
+            font-weight: 800 !important;
           }
 
           #editEventModal.active h2 {
@@ -3575,17 +3710,27 @@ app.get('/', (c) => {
           #editEventModal button[onclick="closeEditEventModal()"] {
             width: 36px;
             height: 36px;
-            border-radius: 999px;
-            background: var(--ncpa-chip);
-            border: 1px solid var(--ncpa-border);
+            border-radius: 50%;
+            background: #2a1d17 !important;
+            border: 1px solid #1a120e !important;
             color: var(--ncpa-text-secondary) !important;
             line-height: 1;
+            box-shadow:
+              0 4px 10px rgba(0,0,0,0.35),
+              inset 0 1px 0 rgba(255,225,190,0.06) !important;
+            transition: color .18s, transform .18s;
+            font-size: 14px !important;
+          }
+          #editEventModal button[onclick="closeEditEventModal()"]:hover {
+            color: var(--ncpa-text-bright) !important;
+            transform: scale(1.05);
           }
 
+          /* form grid — keep 2-col layout for input rows */
           #editEventForm .space-y-4 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px 12px;
+            gap: 18px 16px;
           }
 
           #editEventForm .space-y-4 > div {
@@ -3609,41 +3754,50 @@ app.get('/', (c) => {
             min-width: 0;
           }
 
+          /* labels */
           #editEventForm label,
           #editEventForm .block.text-sm,
           #editEventForm .text-sm.font-medium {
-            color: var(--ncpa-text-secondary) !important;
-          }
-
-          #editEventForm label.block,
-          #editEventForm .text-sm.font-medium {
+            color: var(--ncpa-text-muted) !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.14em !important;
+            text-transform: uppercase !important;
             font-size: 11px !important;
-            font-weight: 800 !important;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
+            margin-bottom: 8px !important;
           }
 
+          /* inputs — recessed clay trays */
           #editEventForm input[type="text"],
           #editEventForm input[type="date"],
           #editEventForm textarea,
           #editEventForm select {
-            background: rgba(255,255,255,0.08) !important;
-            border: 1px solid var(--ncpa-border-strong) !important;
+            background: linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%), #2a1d17 !important;
+            border: 1px solid #160e0a !important;
             color: var(--ncpa-text-bright) !important;
-            border-radius: 12px !important;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+            border-radius: 16px !important;
+            padding: 14px 18px !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            box-shadow:
+              inset 0 2px 6px rgba(0,0,0,0.45),
+              inset 0 -1px 0 rgba(255,225,190,0.04) !important;
+            transition: border-color .18s, box-shadow .18s;
           }
 
           #editEventForm input::placeholder,
           #editEventForm textarea::placeholder {
-            color: rgba(201,192,180,0.55);
+            color: var(--ncpa-text-dim) !important;
+            font-weight: 400 !important;
           }
 
           #editEventForm input:focus,
           #editEventForm textarea:focus,
           #editEventForm select:focus {
-            border-color: rgba(224,164,88,0.60) !important;
-            box-shadow: 0 0 0 3px rgba(224,164,88,0.14) !important;
+            border-color: rgba(224,164,88,0.45) !important;
+            box-shadow:
+              inset 0 2px 6px rgba(0,0,0,0.45),
+              0 0 0 3px rgba(224,164,88,0.15) !important;
+            outline: none !important;
           }
 
           #editEventForm input[type="radio"],
@@ -3651,36 +3805,97 @@ app.get('/', (c) => {
             accent-color: var(--ncpa-amber);
           }
 
+          /* Event Duration segmented control (Single Date / Extend) — clay pill */
           #editEventForm .flex.space-x-4 {
-            display: inline-flex;
+            display: inline-flex !important;
             gap: 4px !important;
             padding: 5px;
             border-radius: 999px;
-            border: 1px solid var(--ncpa-border-strong);
-            background: rgba(255,255,255,0.06);
+            border: 1px solid #160e0a;
+            background: #2a1d17 !important;
+            box-shadow:
+              inset 0 2px 5px rgba(0,0,0,0.40),
+              inset 0 -1px 0 rgba(255,225,190,0.04) !important;
           }
 
           #editEventForm .flex.space-x-4 label {
-            padding: 8px 12px;
+            padding: 8px 16px !important;
             border-radius: 999px;
             color: var(--ncpa-text-secondary) !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            margin: 0 !important;
+            cursor: pointer;
+            transition: color .18s, background .18s, box-shadow .18s;
           }
 
           #editEventForm .flex.space-x-4 input {
             position: absolute;
             opacity: 0;
+            pointer-events: none;
           }
 
           #editEventForm .flex.space-x-4 label:has(input:checked) {
-            background: var(--ncpa-amber);
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
             color: var(--ncpa-text-dark) !important;
+            box-shadow:
+              0 4px 10px rgba(224,164,88,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.35) !important;
           }
 
+          /* FOH / Stage assignment cards — clay trays */
           #editEventForm .border-blue-200,
           #editEventForm .border-green-200 {
-            background: rgba(255,255,255,0.06) !important;
-            border: 1px solid var(--ncpa-border-strong) !important;
-            border-radius: 16px !important;
+            position: relative;
+            background:
+              linear-gradient(135deg, rgba(0,0,0,0.12), transparent 50%),
+              #2a1d17 !important;
+            border: 1px solid #160e0a !important;
+            border-radius: 18px !important;
+            padding: 14px 18px !important;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.45),
+              inset 0 -1px 0 rgba(255,225,190,0.04) !important;
+            margin-bottom: 14px !important;
+          }
+
+          #editEventForm .border-blue-200 i,
+          #editEventForm .border-green-200 i {
+            color: var(--ncpa-amber-light) !important;
+          }
+
+          #editEventForm .border-blue-200 > div,
+          #editEventForm .border-green-200 > div {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+          }
+
+          #editEventForm .border-blue-200 .text-blue-600,
+          #editEventForm .border-green-200 .text-green-600 {
+            color: var(--ncpa-amber-light) !important;
+          }
+
+          #editEventForm .border-blue-200 .text-sm.font-semibold,
+          #editEventForm .border-green-200 .text-sm.font-semibold {
+            color: var(--ncpa-text-bright) !important;
+            font-size: 13px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.04em !important;
+            text-transform: none !important;
+            margin: 0 0 0 10px !important;
+          }
+
+          #editEventForm .border-blue-200 .text-xs,
+          #editEventForm .border-green-200 .text-xs {
+            color: var(--ncpa-text-dim) !important;
+            font-size: 11px !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.04em !important;
+            text-transform: none !important;
+            margin: 0 !important;
           }
 
           #editEventForm .border-blue-200 span,
@@ -3688,80 +3903,179 @@ app.get('/', (c) => {
             color: var(--ncpa-text-secondary) !important;
           }
 
+          /* FOH select gets a chevron */
+          #editEventForm .border-blue-200 select,
+          #editEventForm .border-green-200 select {
+            padding-right: 44px !important;
+            background-image:
+              linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%),
+              url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23A8A29E' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>") !important;
+            background-repeat: no-repeat !important;
+            background-position: right 16px center !important;
+            background-size: 10px 6px !important;
+            appearance: none;
+            -webkit-appearance: none;
+          }
+
+          /* Stage crew checkboxes — clay chip style */
           #editEventForm .stage-checkbox + span {
             color: var(--ncpa-text-secondary) !important;
           }
 
           #editEventForm .stage-checkbox:checked + span {
             color: var(--ncpa-amber-light) !important;
-            font-weight: 800;
+            font-weight: 700;
           }
 
+          /* ★ CREW PROPAGATION ROW — clay amber tray with glowing left stripe ★ */
           #editCrewPropagateRow {
-            background: rgba(199,91,57,0.14) !important;
-            border: 1px solid rgba(199,91,57,0.32) !important;
-            color: var(--ncpa-text-secondary) !important;
+            position: relative !important;
+            background:
+              radial-gradient(120% 80% at 100% 0%, rgba(224,164,88,0.10), transparent 60%),
+              linear-gradient(135deg, rgba(224,164,88,0.10), rgba(224,164,88,0.04)),
+              #2a1d17 !important;
+            border: 1px solid rgba(224,164,88,0.30) !important;
+            border-radius: 18px !important;
+            padding: 16px 18px 16px 20px !important;
+            margin: 6px 0 18px !important;
+            color: var(--ncpa-amber-light) !important;
+            box-shadow:
+              inset 0 3px 8px rgba(0,0,0,0.40),
+              inset 0 -1px 0 rgba(255,225,190,0.06),
+              0 4px 12px rgba(224,164,88,0.10) !important;
+            overflow: hidden;
           }
 
-          #editCrewPropagateRow span,
+          #editCrewPropagateRow::before {
+            content: "";
+            position: absolute;
+            left: 0; top: 10px; bottom: 10px;
+            width: 4px;
+            border-radius: 0 4px 4px 0;
+            background: linear-gradient(180deg, var(--ncpa-amber-light), var(--ncpa-amber), #c98a3f);
+            box-shadow: 0 0 10px rgba(224,164,88,0.50);
+          }
+
+          #editCrewPropagateRow label {
+            display: flex !important;
+            align-items: flex-start !important;
+            gap: 12px !important;
+            cursor: pointer;
+            color: var(--ncpa-amber-light) !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            margin: 0 !important;
+          }
+
+          #editCrewPropagateRow label .rounded {
+            width: 20px !important;
+            height: 20px !important;
+            flex-shrink: 0;
+            margin-top: 1px;
+            background: #2a1d17 !important;
+            border: 1.5px solid rgba(224,164,88,0.40) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5) !important;
+            accent-color: var(--ncpa-amber) !important;
+            border-radius: 6px !important;
+            transition: background .15s, border-color .15s, box-shadow .15s;
+          }
+
+          #editCrewPropagateRow label .rounded:checked {
+            background: var(--ncpa-amber) !important;
+            border-color: var(--ncpa-amber) !important;
+            box-shadow:
+              0 2px 4px rgba(224,164,88,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.4) !important;
+          }
+
+          #editCrewPropagateRow #editPropagateLabel {
+            line-height: 1.4;
+          }
+
           #editCrewPropagateRow p {
-            color: var(--ncpa-text-secondary) !important;
+            margin-top: 8px !important;
+            padding-left: 32px;
+            color: var(--ncpa-text-muted) !important;
+            font-size: 12px !important;
+            font-weight: 400 !important;
+            line-height: 1.5;
           }
 
+          #editCrewPropagateRow p::before {
+            content: "\f05a";
+            font-family: "Font Awesome 6 Free";
+            font-weight: 900;
+            color: var(--ncpa-amber);
+            margin-right: 6px;
+          }
+
+          /* footer — sticky, clay style (no glass blur) */
           #editEventForm > .flex.justify-end {
             position: sticky;
-            bottom: -28px;
+            bottom: 0;
             z-index: 3;
             display: flex !important;
             justify-content: flex-end !important;
             align-items: center !important;
-            gap: 12px !important;
-            width: calc(100% + 52px);
-            margin: 18px -26px -28px !important;
-            padding: 14px 26px 16px;
-            border-top: 1px solid rgba(255,255,255,0.10);
-            background: linear-gradient(90deg, rgba(36,31,27,0.88), rgba(60,52,46,0.78));
-            backdrop-filter: blur(24px) saturate(140%);
-            -webkit-backdrop-filter: blur(24px) saturate(140%);
-            box-shadow: 0 -14px 30px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+            gap: 14px !important;
+            width: calc(100% + 80px);
+            margin: 26px -40px 0 !important;
+            padding: 18px 40px 28px;
+            border-top: 1px solid rgba(255,225,190,0.06);
+            background: linear-gradient(180deg, rgba(58,42,34,0.0) 0%, #3a2a22 35%, #3a2a22 100%);
+            box-shadow: 0 -14px 30px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,225,190,0.06);
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
           }
 
           #editEventForm > .flex.justify-end button {
             flex: 0 0 auto;
-            min-width: 104px;
-            min-height: 40px;
+            min-width: 120px;
+            min-height: 44px;
             margin: 0 !important;
-            border-radius: 13px !important;
-            font-size: 14px;
-            font-weight: 800;
-            transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+            border-radius: 999px !important;
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            transition: transform .15s, filter .15s, box-shadow .15s;
+            border: 0 !important;
           }
 
           #editEventForm > .flex.justify-end button:hover {
             transform: translateY(-1px);
           }
 
+          /* Cancel — neutral clay */
           #editEventForm > .flex.justify-end button[type="button"] {
-            background: rgba(255,255,255,0.08) !important;
+            background: linear-gradient(135deg, #4a3a32 0%, #2e221c 100%) !important;
             color: var(--ncpa-text-secondary) !important;
-            border: 1px solid var(--ncpa-border-strong);
+            box-shadow:
+              0 4px 10px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,225,190,0.08),
+              inset 0 -1px 0 rgba(0,0,0,0.30) !important;
           }
-
           #editEventForm > .flex.justify-end button[type="button"]:hover {
-            background: rgba(255,255,255,0.13) !important;
             color: var(--ncpa-text-bright) !important;
           }
 
+          /* Save Changes — primary amber clay pill */
           #editEventForm > .flex.justify-end button[type="submit"] {
-            background: var(--ncpa-amber) !important;
+            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
             color: var(--ncpa-text-dark) !important;
-            border: 1px solid rgba(255,255,255,0.14) !important;
-            box-shadow: 0 10px 25px rgba(224,164,88,0.20) !important;
+            box-shadow:
+              0 8px 18px rgba(224,164,88,0.32),
+              0 2px 4px rgba(0,0,0,0.30),
+              inset 0 1px 0 rgba(255,255,255,0.45),
+              inset 0 -1px 0 rgba(0,0,0,0.15) !important;
           }
-
           #editEventForm > .flex.justify-end button[type="submit"]:hover {
-            background: #E8B269 !important;
-            box-shadow: 0 14px 30px rgba(224,164,88,0.25) !important;
+            filter: brightness(1.05);
           }
 
           #filterPanel,

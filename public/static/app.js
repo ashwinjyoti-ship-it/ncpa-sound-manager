@@ -916,7 +916,7 @@ function openEventModal(event) {
   
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
   const statusComplete = isEventGreen(event);
-  const statusLabel = statusComplete ? 'Confirmed / Complete' : 'Needs Attention';
+  const statusLabel = statusComplete ? 'Ready' : 'Needs Attention';
   
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 

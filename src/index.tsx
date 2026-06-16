@@ -3034,26 +3034,6 @@ app.get('/', (c) => {
             height: 34px;
           }
 
-          #aiAssistantBtn {
-            width: auto;
-            height: auto;
-            border-radius: 0;
-            background: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            padding: 0;
-            min-height: unset !important;
-          }
-
-          #aiAssistantBtn .nav-action-img {
-            height: 48px;
-          }
-
-          #aiAssistantBtn:hover {
-            background: transparent !important;
-            box-shadow: none !important;
-          }
-
           #desktopCalendarLayout {
             gap: 0;
             border-radius: 24px;
@@ -5426,10 +5406,7 @@ app.get('/', (c) => {
         </div>
 
         <!-- AI Assistant Floating Button -->
-        <button type="button" id="aiAssistantBtn" onclick="toggleAIAssistant()"
-                class="nav-action fixed bottom-6 right-6 z-40" aria-label="Ask AI">
-            <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img">
-        </button>
+        <!-- (Removed) Floating Ask AI button — Ask AI is in top toolbar -->
 
         <!-- AI Assistant Modal -->
 <div id="aiAssistantModal" class="modal">

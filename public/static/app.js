@@ -914,6 +914,8 @@ function openEventModal(event) {
   const footer = document.getElementById('eventModalFooter');
   if (!modal || !content || !footer) return;
   
+  modal.classList.remove('active');
+
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
   const statusComplete = isEventGreen(event);
   const statusLabel = statusComplete ? 'Confirmed / Complete' : 'Needs Attention';
@@ -1008,7 +1010,11 @@ function openEventModal(event) {
     `;
   }
   
-  modal.classList.add('active');
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      modal.classList.add('active');
+    });
+  });
 }
 
 function closeEventModal() {

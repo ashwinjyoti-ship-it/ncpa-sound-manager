@@ -3363,6 +3363,41 @@ app.get('/', (c) => {
             transform: scale(1) translateY(0);
           }
 
+          #eventModal .event-detail-modal {
+            transform: perspective(1000px) rotateX(10deg) translate3d(0, 36px, 0) scale(0.95);
+            opacity: 0;
+            transform-origin: 50% 100%;
+            transition: none !important;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+          }
+
+          #eventModal.active .event-detail-modal {
+            animation: ncpaEventDetailRollUp 0.4s cubic-bezier(0.25, 0.9, 0.35, 1) both;
+          }
+
+          @keyframes ncpaEventDetailRollUp {
+            0% {
+              opacity: 0;
+              transform: perspective(1000px) rotateX(10deg) translate3d(0, 36px, 0) scale(0.95);
+            }
+            100% {
+              opacity: 1;
+              transform: perspective(1000px) rotateX(0deg) translate3d(0, 0, 0) scale(1);
+            }
+          }
+
+          @keyframes ncpaEventDetailReveal {
+            from {
+              opacity: 0;
+              transform: translate3d(0, 8px, 0);
+            }
+            to {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+            }
+          }
+
           .event-detail-modal {
             position: relative;
             display: flex;
@@ -3580,6 +3615,49 @@ app.get('/', (c) => {
             gap: 12px;
             min-height: 72px;
             overflow: visible;
+          }
+
+          #eventModal:not(.active) .event-detail-header,
+          #eventModal:not(.active) .event-detail-status,
+          #eventModal:not(.active) .event-detail-hero,
+          #eventModal:not(.active) .event-detail-grid,
+          #eventModal:not(.active) .event-detail-crew,
+          #eventModal:not(.active) .event-detail-notes,
+          #eventModal:not(.active) .event-detail-created,
+          #eventModal:not(.active) .event-detail-footer {
+            opacity: 0;
+          }
+
+          #eventModal.active .event-detail-header {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.1s both;
+          }
+
+          #eventModal.active .event-detail-status {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.14s both;
+          }
+
+          #eventModal.active .event-detail-hero {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.18s both;
+          }
+
+          #eventModal.active .event-detail-grid {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.22s both;
+          }
+
+          #eventModal.active .event-detail-crew {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.26s both;
+          }
+
+          #eventModal.active .event-detail-notes {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.3s both;
+          }
+
+          #eventModal.active .event-detail-created {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.32s both;
+          }
+
+          #eventModal.active .event-detail-footer {
+            animation: ncpaEventDetailReveal 0.34s ease-out 0.36s both;
           }
 
           .event-detail-btn {
@@ -4569,7 +4647,16 @@ app.get('/', (c) => {
             body::after,
             #editEventModal.active h2,
             #editEventModal.active #editEventForm .space-y-4 > div,
-            #editEventModal.active #editEventForm > div:last-child {
+            #editEventModal.active #editEventForm > div:last-child,
+            #eventModal.active .event-detail-modal,
+            #eventModal.active .event-detail-header,
+            #eventModal.active .event-detail-status,
+            #eventModal.active .event-detail-hero,
+            #eventModal.active .event-detail-grid,
+            #eventModal.active .event-detail-crew,
+            #eventModal.active .event-detail-notes,
+            #eventModal.active .event-detail-created,
+            #eventModal.active .event-detail-footer {
               animation: none !important;
               transform: none !important;
               filter: none !important;

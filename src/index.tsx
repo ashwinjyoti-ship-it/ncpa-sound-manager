@@ -3381,6 +3381,8 @@ app.get('/', (c) => {
 
           .event-detail-modal {
             position: relative;
+            display: flex;
+            flex-direction: column;
             width: 700px;
             height: auto;
             max-width: min(700px, 92vw);
@@ -3388,6 +3390,7 @@ app.get('/', (c) => {
             padding: 0;
             border-radius: 28px;
             background: rgba(36,31,27,0.68) !important;
+            overflow: hidden;
           }
 
           .event-detail-header {
@@ -3419,6 +3422,8 @@ app.get('/', (c) => {
           }
 
           .event-detail-body {
+            flex: 1;
+            min-height: 0;
             padding: 0 30px 22px;
             overflow-y: auto;
           }
@@ -3581,6 +3586,7 @@ app.get('/', (c) => {
           }
 
           .event-detail-footer {
+            flex: 0 0 auto;
             padding: 0 30px 28px;
             border-top: 0;
             gap: 10px;
@@ -3856,14 +3862,14 @@ app.get('/', (c) => {
             color: var(--ncpa-text-bright) !important;
           }
 
-          #editEventForm > .flex.justify-end button[type="submit"] {
+          #editEventForm > .flex.justify-end button[type="submit"]:not(.modal-img-btn) {
             background: var(--ncpa-amber) !important;
             color: var(--ncpa-text-dark) !important;
             border: 1px solid rgba(255,255,255,0.14) !important;
             box-shadow: 0 10px 25px rgba(224,164,88,0.20) !important;
           }
 
-          #editEventForm > .flex.justify-end button[type="submit"]:hover {
+          #editEventForm > .flex.justify-end button[type="submit"]:not(.modal-img-btn):hover {
             background: #E8B269 !important;
             box-shadow: 0 14px 30px rgba(224,164,88,0.25) !important;
           }

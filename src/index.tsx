@@ -2474,6 +2474,12 @@ app.get('/', (c) => {
 
           /* Modal action buttons (Edit modal + delete confirm) */
           .modal-img-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            width: auto;
+            min-width: auto;
             background: transparent !important;
             border: 0 !important;
             padding: 0 !important;
@@ -2481,6 +2487,7 @@ app.get('/', (c) => {
             box-shadow: none !important;
             cursor: pointer;
             user-select: none;
+            overflow: visible;
           }
 
           .modal-img-btn:hover {
@@ -2490,6 +2497,9 @@ app.get('/', (c) => {
           .modal-img {
             height: 44px;
             width: auto;
+            max-width: none;
+            flex-shrink: 0;
+            object-fit: contain;
             display: block;
           }
 
@@ -3814,10 +3824,24 @@ app.get('/', (c) => {
           }
 
           #editEventForm > .flex.justify-end .modal-img-btn {
-            min-width: 0 !important;
+            flex: 0 0 auto !important;
+            width: auto !important;
+            min-width: auto !important;
             min-height: 0 !important;
             border-radius: 0 !important;
             overflow: visible;
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+          }
+
+          #editEventForm > .flex.justify-end .modal-img {
+            height: 44px;
+            width: auto;
+            max-width: none;
+            flex-shrink: 0;
+            object-fit: contain;
           }
 
           #editEventForm > .flex.justify-end button[type="button"]:not(.modal-img-btn) {

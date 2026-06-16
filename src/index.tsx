@@ -2193,8 +2193,13 @@ app.get('/', (c) => {
             }
 
             /* Larger touch targets for buttons only, not event cards */
-            button {
+            button:not(.nav-tab):not(.nav-action) {
               min-height: 44px;
+            }
+
+            .nav-tab,
+            .nav-action {
+              min-height: unset !important;
             }
 
             /* Hide Dashboard tab on mobile */
@@ -2961,22 +2966,92 @@ app.get('/', (c) => {
           }
 
           .tab-active {
-            background: var(--ncpa-amber) !important;
-            color: var(--ncpa-text-dark) !important;
-            box-shadow: 0 8px 20px rgba(224,164,88,0.18) !important;
+            background: transparent !important;
+            color: inherit !important;
+            box-shadow: none !important;
             outline: none !important;
           }
 
-          #calendarTab:not(.tab-active),
-          #tableTab:not(.tab-active),
-          #crewTab:not(.tab-active) {
-            color: var(--ncpa-text-secondary) !important;
+          .nav-tabs-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: transparent !important;
+            padding: 0;
           }
 
-          #calendarTab:not(.tab-active):hover,
-          #tableTab:not(.tab-active):hover,
-          #crewTab:not(.tab-active):hover {
-            color: var(--ncpa-text-bright) !important;
+          .nav-tab,
+          .nav-action {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            line-height: 0;
+            min-height: unset !important;
+            transition: transform 0.18s ease;
+          }
+
+          .nav-tab:hover,
+          .nav-action:hover {
+            transform: translateY(-1px);
+            background: transparent !important;
+          }
+
+          .nav-tab-img {
+            height: 40px;
+            width: auto;
+            display: block;
+            transition: filter 0.22s ease, opacity 0.22s ease, transform 0.18s ease;
+          }
+
+          .nav-tab.tab-active .nav-tab-img {
+            filter: none;
+            opacity: 1;
+            transform: scale(1);
+          }
+
+          .nav-tab:not(.tab-active) .nav-tab-img {
+            filter: grayscale(1) brightness(0.78);
+            opacity: 0.5;
+            transform: scale(0.97);
+          }
+
+          .nav-tab:not(.tab-active):hover .nav-tab-img {
+            filter: grayscale(0.55) brightness(0.88);
+            opacity: 0.72;
+          }
+
+          .nav-action-img {
+            height: 40px;
+            width: auto;
+            display: block;
+          }
+
+          .nav-action-img--sm {
+            height: 34px;
+          }
+
+          #aiAssistantBtn {
+            width: auto;
+            height: auto;
+            border-radius: 0;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0;
+            min-height: unset !important;
+          }
+
+          #aiAssistantBtn .nav-action-img {
+            height: 48px;
+          }
+
+          #aiAssistantBtn:hover {
+            background: transparent !important;
+            box-shadow: none !important;
           }
 
           #desktopCalendarLayout {
@@ -4529,13 +4604,13 @@ app.get('/', (c) => {
                 <div id="mobileActionBar" class="md:hidden grid grid-cols-3 items-center mb-2">
                     <div></div>
                     <div class="flex justify-center">
-                        <button onclick="toggleAIAssistant()" class="btn-glass px-3 py-1.5 text-xs">
-                            <i class="fas fa-robot mr-1"></i>Ask AI
+                        <button type="button" onclick="toggleAIAssistant()" class="nav-action" aria-label="Ask AI">
+                            <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img nav-action-img--sm">
                         </button>
                     </div>
                     <div class="flex justify-end">
-                        <button onclick="openAddShowModal()" class="btn-primary px-3 py-1.5 text-xs font-semibold">
-                            <i class="fas fa-plus mr-1"></i>Add Show
+                        <button type="button" onclick="openAddShowModal()" class="nav-action" aria-label="Add Show">
+                            <img src="/static/images/nav/add-show.png" alt="Add Show" class="nav-action-img nav-action-img--sm">
                         </button>
                     </div>
                 </div>
@@ -4546,23 +4621,22 @@ app.get('/', (c) => {
                 <div class="hidden md:block">
                     <div class="flex flex-wrap justify-between items-center gap-y-2 mb-4 md:mb-6">
                         <!-- Left: Tab navigation -->
-                        <div class="flex shrink-0 p-1 rounded-xl" style="background:rgba(120,120,128,0.10);gap:2px;">
-                            <button id="calendarTab" class="px-3 py-1.5 text-sm font-semibold tab-active rounded-lg transition-all" onclick="showTab('calendar')">
-                                <i class="fas fa-calendar-alt mr-1.5"></i>Calendar
+                        <div class="nav-tabs-group shrink-0">
+                            <button type="button" id="calendarTab" class="nav-tab tab-active" onclick="showTab('calendar')" aria-label="Calendar">
+                                <img src="/static/images/nav/calendar-tab.png" alt="Calendar" class="nav-tab-img">
                             </button>
-                            <button id="tableTab" class="px-3 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('table')">
-                                <i class="fas fa-table mr-1.5"></i>Table
+                            <button type="button" id="tableTab" class="nav-tab" onclick="showTab('table')" aria-label="Table">
+                                <img src="/static/images/nav/table-tab.png" alt="Table" class="nav-tab-img">
                             </button>
-                            <button id="crewTab" class="px-3 py-1.5 text-sm font-semibold text-gray-500 hover:text-gray-700 rounded-lg transition-all" onclick="showTab('crew')">
-                                <i class="fas fa-users mr-1.5"></i>Crew
+                            <button type="button" id="crewTab" class="nav-tab" onclick="showTab('crew')" aria-label="Crew">
+                                <img src="/static/images/nav/crew-tab.png" alt="Crew" class="nav-tab-img">
                             </button>
                         </div>
 
                         <!-- Center: Ask AI button -->
                         <div class="flex items-center shrink-0">
-                            <button onclick="toggleAIAssistant()"
-                                    class="btn-primary px-4 py-2 text-sm transition-all shadow-md hover:shadow-lg">
-                                <i class="fas fa-robot mr-1.5"></i>Ask AI
+                            <button type="button" onclick="toggleAIAssistant()" class="nav-action" aria-label="Ask AI">
+                                <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img">
                             </button>
                         </div>
 
@@ -4636,9 +4710,8 @@ app.get('/', (c) => {
                             <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="handleCSVUpload(event)">
 
                             <!-- Add Show Button -->
-                            <button onclick="openAddShowModal()"
-                                    class="btn-primary px-3 py-2 text-sm transition-all">
-                                <i class="fas fa-plus mr-1.5"></i>Add Show
+                            <button type="button" onclick="openAddShowModal()" class="nav-action" aria-label="Add Show">
+                                <img src="/static/images/nav/add-show.png" alt="Add Show" class="nav-action-img">
                             </button>
                         </div>
                     </div>
@@ -5353,9 +5426,9 @@ app.get('/', (c) => {
         </div>
 
         <!-- AI Assistant Floating Button -->
-        <button id="aiAssistantBtn" onclick="toggleAIAssistant()"
-                class="btn-primary fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center z-40">
-            <i class="fas fa-robot text-xl"></i>
+        <button type="button" id="aiAssistantBtn" onclick="toggleAIAssistant()"
+                class="nav-action fixed bottom-6 right-6 z-40" aria-label="Ask AI">
+            <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img">
         </button>
 
         <!-- AI Assistant Modal -->

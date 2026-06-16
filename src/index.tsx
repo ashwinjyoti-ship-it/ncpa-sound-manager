@@ -3608,8 +3608,9 @@ app.get('/', (c) => {
             max-width: min(834px, 94vw);
             max-height: min(840px, 92vh);
             border-radius: 28px;
-            padding: 26px 26px 28px;
+            padding: 26px 26px 0;
             background: rgba(36,31,27,0.70) !important;
+            overflow-x: hidden;
           }
 
           #editEventModal h2 {
@@ -3800,7 +3801,8 @@ app.get('/', (c) => {
             gap: 12px !important;
             width: calc(100% + 52px);
             margin: 18px -26px 0 !important;
-            padding: 14px 26px 22px;
+            padding: 14px 26px 28px;
+            border-radius: 0 0 28px 28px;
             border-top: 1px solid rgba(255,255,255,0.10);
             background: linear-gradient(90deg, rgba(36,31,27,0.88), rgba(60,52,46,0.78));
             backdrop-filter: blur(24px) saturate(140%);

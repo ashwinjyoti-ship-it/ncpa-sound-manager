@@ -54,8 +54,8 @@ function showUserMenu() {
     document.getElementById('adminBadge').style.display = 'inline';
     document.getElementById('adminPanelBtn').style.display = 'block';
   }
-  
-  // Show Crew tab for authenticated users
+
+  // Crew tab is always visible (no login required)
   const crewTab = document.getElementById('crewTab');
   if (crewTab) crewTab.style.display = 'block';
 }
@@ -65,10 +65,10 @@ function showLoginButton() {
   document.getElementById('loginBtn').style.display = 'block';
   document.getElementById('userMenu').style.display = 'none';
   currentUser = null;
-  
-  // Hide Crew tab for non-authenticated users
+
+  // Crew tab stays visible after logout
   const crewTab = document.getElementById('crewTab');
-  if (crewTab) crewTab.style.display = 'none';
+  if (crewTab) crewTab.style.display = 'block';
 }
 
 // Toggle user dropdown

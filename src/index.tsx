@@ -4994,7 +4994,7 @@ app.get('/', (c) => {
             }
           }
 
-          /* System toasts & inline status messages */
+          /* System toast notifications (Phase 1) */
           .ncpa-toast {
             position: fixed;
             top: 16px;
@@ -5070,35 +5070,6 @@ app.get('/', (c) => {
             margin-top: 6px;
             opacity: 0.85;
             color: var(--ncpa-text-secondary);
-          }
-
-          .ncpa-status {
-            font-size: 0.875rem;
-            line-height: 1.25rem;
-            color: var(--ncpa-text-muted);
-          }
-
-          .ncpa-status--info {
-            color: var(--ncpa-amber-light);
-          }
-
-          .ncpa-status--success {
-            color: var(--ncpa-green-light);
-          }
-
-          .ncpa-status--error {
-            color: var(--ncpa-terracotta-light);
-          }
-
-          #loginError,
-          #signupError,
-          #changePasswordError {
-            color: var(--ncpa-terracotta-light) !important;
-          }
-
-          #signupSuccess,
-          #changePasswordSuccess {
-            color: var(--ncpa-green-light) !important;
           }
 
           @media (prefers-reduced-motion: reduce) {
@@ -5402,7 +5373,7 @@ app.get('/', (c) => {
                                 <i class="fas fa-trash mr-1.5"></i>Delete Month
                             </button>
                         </div>
-                        <div id="bulkDeleteStatus" class="ncpa-status"></div>
+                        <div id="bulkDeleteStatus" class="text-sm text-gray-600"></div>
                     </div>
                     
                     <div class="overflow-auto" style="max-height: 70vh;">

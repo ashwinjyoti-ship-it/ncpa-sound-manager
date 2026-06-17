@@ -1245,7 +1245,7 @@ async function doAddShowAvailCheck() {
     _addShowAvail = d;
     renderAddShowAvail(d);
   } catch(e) {
-    if (body) body.innerHTML = '<div class="ncpa-status ncpa-status--error" style="font-size:13px;padding:4px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
+    if (body) body.innerHTML = '<div style="color:#c04040;font-size:13px;padding:4px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
   }
 }
 
@@ -1960,7 +1960,7 @@ async function bulkDeleteEvents() {
   
   const statusDiv = document.getElementById('bulkDeleteStatus');
   statusDiv.textContent = 'Deleting...';
-  statusDiv.className = 'ncpa-status ncpa-status--info';
+  statusDiv.className = 'text-sm text-blue-600';
   
   try {
     const response = await axios.post(`${API_BASE}/events/bulk-delete`, {
@@ -1972,7 +1972,7 @@ async function bulkDeleteEvents() {
       const deleted = response.data.deleted;
       showNotification(`✅ Deleted ${deleted} events from ${monthName} ${year}`, 'success');
       statusDiv.textContent = `Last action: Deleted ${deleted} events`;
-      statusDiv.className = 'ncpa-status ncpa-status--success';
+      statusDiv.className = 'text-sm text-green-600';
       
       // Reload events
       await loadEvents();
@@ -1985,7 +1985,7 @@ async function bulkDeleteEvents() {
     console.error('Error bulk deleting events:', error);
     showNotification('Failed to delete events', 'error');
     statusDiv.textContent = 'Error deleting events';
-    statusDiv.className = 'ncpa-status ncpa-status--error';
+    statusDiv.className = 'text-sm text-red-600';
   }
 }
 

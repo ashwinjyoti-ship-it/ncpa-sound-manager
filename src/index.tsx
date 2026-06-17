@@ -3103,14 +3103,6 @@ app.get('/', (c) => {
             background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%);
           }
 
-          /* Stale PNG image classes — left in case older markup references them.
-             Make them inert so they don't render broken icons. */
-          .nav-tab-img,
-          .nav-action-img,
-          .nav-action-img--sm {
-            display: none !important;
-          }
-
           #desktopCalendarLayout {
             gap: 0;
             border-radius: 24px;

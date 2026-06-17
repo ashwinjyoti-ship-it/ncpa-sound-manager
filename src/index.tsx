@@ -617,11 +617,44 @@ app.put('/api/events/:id', async (c) => {
   }
 })
 
+// Remove dependent rows before deleting events (FK tables lack ON DELETE CASCADE)
+async function deleteEventDependencies(db: D1Database, eventId: number) {
+  await db.prepare(`
+    DELETE FROM event_conflicts WHERE event_id_1 = ? OR event_id_2 = ?
+  `).bind(eventId, eventId).run()
+  await db.prepare(`
+    DELETE FROM calendar_sync WHERE event_id = ?
+  `).bind(eventId).run()
+  await db.prepare(`
+    DELETE FROM assignment_recommendations WHERE event_id = ?
+  `).bind(eventId).run()
+}
+
+async function deleteMonthEventDependencies(db: D1Database, monthKey: string) {
+  await db.prepare(`
+    DELETE FROM event_conflicts
+    WHERE event_id_1 IN (SELECT id FROM events WHERE strftime('%Y-%m', event_date) = ?)
+       OR event_id_2 IN (SELECT id FROM events WHERE strftime('%Y-%m', event_date) = ?)
+  `).bind(monthKey, monthKey).run()
+  await db.prepare(`
+    DELETE FROM calendar_sync
+    WHERE event_id IN (SELECT id FROM events WHERE strftime('%Y-%m', event_date) = ?)
+  `).bind(monthKey).run()
+  await db.prepare(`
+    DELETE FROM assignment_recommendations
+    WHERE event_id IN (SELECT id FROM events WHERE strftime('%Y-%m', event_date) = ?)
+  `).bind(monthKey).run()
+}
+
 // Delete event
 app.delete('/api/events/:id', async (c) => {
   try {
-    const id = c.req.param('id')
-    
+    const id = Number(c.req.param('id'))
+    if (!id) {
+      return c.json({ success: false, error: 'Invalid event id' }, 400)
+    }
+
+    await deleteEventDependencies(c.env.DB, id)
     await c.env.DB.prepare(`
       DELETE FROM events WHERE id = ?
     `).bind(id).run()
@@ -636,22 +669,20 @@ app.delete('/api/events/:id', async (c) => {
 app.post('/api/events/bulk-delete', async (c) => {
   try {
     const body = await c.req.json()
-    const { month, year } = body
+    const month = Number(body.month)
+    const year = Number(body.year)
     
-    if (!month || !year) {
+    if (!month || !year || month < 1 || month > 12) {
       return c.json({ success: false, error: 'Month and year are required' }, 400)
     }
     
-    // Calculate date range for the month
-    const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-    const lastDay = new Date(year, month, 0).getDate() // Last day of month
-    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
+    const monthKey = `${year}-${String(month).padStart(2, '0')}`
     
     // Count events first
     const countResult = await c.env.DB.prepare(`
       SELECT COUNT(*) as count FROM events 
-      WHERE event_date >= ? AND event_date <= ?
-    `).bind(startDate, endDate).first()
+      WHERE strftime('%Y-%m', event_date) = ?
+    `).bind(monthKey).first()
     
     const count = countResult?.count || 0
     
@@ -659,16 +690,16 @@ app.post('/api/events/bulk-delete', async (c) => {
       return c.json({ success: true, deleted: 0, message: 'No events found for this month' })
     }
     
-    // Delete events
+    await deleteMonthEventDependencies(c.env.DB, monthKey)
     await c.env.DB.prepare(`
       DELETE FROM events 
-      WHERE event_date >= ? AND event_date <= ?
-    `).bind(startDate, endDate).run()
+      WHERE strftime('%Y-%m', event_date) = ?
+    `).bind(monthKey).run()
     
     return c.json({ 
       success: true, 
       deleted: count,
-      message: `Deleted ${count} events from ${startDate} to ${endDate}` 
+      message: `Deleted ${count} events from ${monthKey}` 
     })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -5072,6 +5103,33 @@ app.get('/', (c) => {
             color: var(--ncpa-text-secondary);
           }
 
+          /* Centered upload overlay — freezes app while Word doc uploads */
+          .ncpa-upload-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background: rgba(28, 25, 23, 0.78);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+          }
+
+          .ncpa-upload-overlay .ncpa-toast--progress {
+            position: static;
+            top: auto;
+            right: auto;
+            width: min(420px, 100%);
+            min-width: 0;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+          }
+
+          body.ncpa-upload-frozen {
+            overflow: hidden;
+          }
+
           /* Inline status messages (Phase 2) */
           .ncpa-status {
             font-size: 0.875rem;
@@ -5398,6 +5456,8 @@ app.get('/', (c) => {
                                 <option value="2024">2024</option>
                                 <option value="2025">2025</option>
                                 <option value="2026">2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
                             </select>
                             <button onclick="bulkDeleteEvents()" class="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all flex items-center">
                                 <i class="fas fa-trash mr-1.5"></i>Delete Month
@@ -6193,7 +6253,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.6"></script>
+        <script src="/static/app.js?v=4.2.7"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.0"></script>
     </body>

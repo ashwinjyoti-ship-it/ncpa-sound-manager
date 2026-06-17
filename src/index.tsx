@@ -5072,6 +5072,36 @@ app.get('/', (c) => {
             color: var(--ncpa-text-secondary);
           }
 
+          /* Inline status messages (Phase 2) */
+          .ncpa-status {
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            color: var(--ncpa-text-muted);
+          }
+
+          .ncpa-status--info {
+            color: var(--ncpa-amber-light);
+          }
+
+          .ncpa-status--success {
+            color: var(--ncpa-green-light);
+          }
+
+          .ncpa-status--error {
+            color: var(--ncpa-terracotta-light);
+          }
+
+          #loginError,
+          #signupError,
+          #changePasswordError {
+            color: var(--ncpa-terracotta-light) !important;
+          }
+
+          #signupSuccess,
+          #changePasswordSuccess {
+            color: var(--ncpa-green-light) !important;
+          }
+
           @media (prefers-reduced-motion: reduce) {
             *,
             *::before,
@@ -5373,7 +5403,7 @@ app.get('/', (c) => {
                                 <i class="fas fa-trash mr-1.5"></i>Delete Month
                             </button>
                         </div>
-                        <div id="bulkDeleteStatus" class="text-sm text-gray-600"></div>
+                        <div id="bulkDeleteStatus" class="ncpa-status"></div>
                     </div>
                     
                     <div class="overflow-auto" style="max-height: 70vh;">
@@ -6053,7 +6083,7 @@ app.get('/', (c) => {
                         <input type="password" id="loginPassword" required 
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
-                    <div id="loginError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
+                    <div id="loginError" class="mb-4 ncpa-status ncpa-status--error" style="display: none;"></div>
                     <div class="flex gap-3">
                         <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Login
@@ -6091,8 +6121,8 @@ app.get('/', (c) => {
                         <input type="password" id="signupPasswordConfirm" required 
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
-                    <div id="signupError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
-                    <div id="signupSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
+                    <div id="signupError" class="mb-4 ncpa-status ncpa-status--error" style="display: none;"></div>
+                    <div id="signupSuccess" class="mb-4 ncpa-status ncpa-status--success" style="display: none;"></div>
                     <div class="flex gap-3">
                         <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Sign Up
@@ -6128,8 +6158,8 @@ app.get('/', (c) => {
                         <input type="password" id="newPasswordConfirm" required 
                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]">
                     </div>
-                    <div id="changePasswordError" class="mb-4 text-red-600 text-sm" style="display: none;"></div>
-                    <div id="changePasswordSuccess" class="mb-4 text-green-600 text-sm" style="display: none;"></div>
+                    <div id="changePasswordError" class="mb-4 ncpa-status ncpa-status--error" style="display: none;"></div>
+                    <div id="changePasswordSuccess" class="mb-4 ncpa-status ncpa-status--success" style="display: none;"></div>
                     <div class="flex gap-3">
                         <button type="submit" class="btn-primary flex-1 px-4 py-2 transition-all">
                             Change Password

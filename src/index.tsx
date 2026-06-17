@@ -4045,8 +4045,8 @@ app.get('/', (c) => {
             color: var(--ncpa-amber-light) !important;
           }
 
-          #editEventForm .border-blue-200 > div,
-          #editEventForm .border-green-200 > div {
+          #editEventForm .border-blue-200 > div.flex,
+          #editEventForm .border-green-200 > div.flex {
             display: flex;
             align-items: center;
             margin-bottom: 10px;
@@ -4103,6 +4103,52 @@ app.get('/', (c) => {
           #editEventForm .stage-checkbox:checked + span {
             color: var(--ncpa-amber-light) !important;
             font-weight: 700;
+          }
+
+          /* Stage crew — 5-col grid, all names visible, no horizontal scroll */
+          #editEventForm .stage-crew-grid {
+            display: grid !important;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 6px 10px;
+            margin-bottom: 0 !important;
+            overflow: visible !important;
+          }
+
+          #editEventForm .stage-crew-grid label {
+            display: flex !important;
+            align-items: center;
+            gap: 8px;
+            margin: 0 !important;
+            padding: 6px 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            letter-spacing: 0 !important;
+            text-transform: none !important;
+            font-weight: 500 !important;
+            font-size: 13px !important;
+            min-width: 0;
+          }
+
+          #editEventForm .stage-crew-grid label:hover {
+            background: rgba(255,255,255,0.06);
+          }
+
+          #editEventForm .stage-crew-grid label span {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          @media (max-width: 720px) {
+            #editEventForm .stage-crew-grid {
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+          }
+
+          @media (max-width: 420px) {
+            #editEventForm .stage-crew-grid {
+              grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
           }
 
           /* Crew propagation row (PR #30) — amber clay tray with glowing left stripe */
@@ -5583,7 +5629,7 @@ app.get('/', (c) => {
                                     <span class="text-sm font-semibold text-green-800">Stage</span>
                                     <span class="text-xs text-green-400 ml-2">multi assign</span>
                                 </div>
-                                <div class="grid grid-cols-3 gap-1 max-h-40 overflow-y-auto">
+                                <div class="stage-crew-grid">
                                     <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
                                         <input type="checkbox" value="Ashwin" class="crew-checkbox stage-checkbox">
                                         <span class="text-sm">Ashwin</span>

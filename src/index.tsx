@@ -2999,153 +2999,80 @@ app.get('/', (c) => {
           }
 
           .btn-glass {
-            background:
-              linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%),
-              #2a1d17 !important;
+            background: rgba(255,255,255,0.08) !important;
             color: var(--ncpa-text-secondary) !important;
-            border: 1px solid #160e0a !important;
-            border-radius: 999px !important;
-            box-shadow:
-              inset 0 2px 4px rgba(0,0,0,0.35),
-              inset 0 -1px 0 rgba(255,225,190,0.04),
-              0 2px 6px rgba(0,0,0,0.20) !important;
+            border: 1px solid var(--ncpa-border-strong) !important;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 20px rgba(0,0,0,0.12) !important;
             transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease, border-color 0.2s ease !important;
           }
 
           .btn-glass:hover {
-            background:
-              linear-gradient(135deg, rgba(255,225,190,0.08), transparent 40%),
-              #34241e !important;
+            background: rgba(255,255,255,0.12) !important;
             color: var(--ncpa-text-bright) !important;
             transform: translateY(-1px);
           }
 
-          /* ════════════════════════════════════════════════════════════════
-             NAV TABS + ACTIONS — Claymorphism
-             Replaces the previous PNG-button approach for nav
-             (Calendar/Table/Crew tabs, Ask AI, Add Show buttons).
-             The Edit modal footer Cancel/Save buttons stay as PNGs.
-             ════════════════════════════════════════════════════════════════ */
           .nav-tabs-group {
-            display: inline-flex;
+            display: flex;
             align-items: center;
-            gap: 6px;
-            background: #2a1d17;
-            border: 1px solid #160e0a;
-            border-radius: 999px;
-            padding: 5px;
-            box-shadow:
-              inset 0 2px 5px rgba(0,0,0,0.40),
-              inset 0 -1px 0 rgba(255,225,190,0.04);
+            gap: 10px;
+            background: transparent !important;
+            padding: 0;
           }
 
-          /* Individual nav tab inside the clay segmented control
-             — transparent inside the container, amber when active */
-          .nav-tab {
-            appearance: none;
+          .nav-tab,
+          .nav-action {
             background: transparent !important;
-            border: 0 !important;
+            border: none !important;
             box-shadow: none !important;
             outline: none !important;
+            padding: 0;
             margin: 0;
             cursor: pointer;
-            color: var(--ncpa-text-secondary);
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 8px 16px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            line-height: 1;
+            line-height: 0;
             min-height: unset !important;
-            transition: color .18s, background .18s, box-shadow .18s, transform .15s;
+            transition: transform 0.18s ease;
           }
-          .nav-tab i { font-size: 13px; color: inherit; }
-          .nav-tab span { font-weight: inherit; }
-
-          .nav-tab:hover {
-            color: var(--ncpa-text-bright);
-            background: rgba(255,225,190,0.04);
-          }
-          .nav-tab.tab-active {
-            color: var(--ncpa-text-dark);
-            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
-            box-shadow:
-              0 4px 10px rgba(224,164,88,0.30),
-              inset 0 1px 0 rgba(255,255,255,0.35) !important;
-          }
-          .nav-tab.tab-active i,
-          .nav-tab.tab-active span {
-            color: var(--ncpa-text-dark);
-          }
-
-          /* Standalone nav actions (Ask AI, Filters, More Actions, Add Show)
-             — chunky clay pills with their own background so they read as
-             buttons even outside the .nav-tabs-group container */
-          .nav-action {
-            appearance: none;
-            background:
-              linear-gradient(135deg, rgba(255,225,190,0.04), transparent 40%),
-              #2a1d17 !important;
-            border: 1px solid #160e0a !important;
-            box-shadow:
-              inset 0 2px 4px rgba(0,0,0,0.35),
-              inset 0 -1px 0 rgba(255,225,190,0.04),
-              0 2px 6px rgba(0,0,0,0.20) !important;
-            outline: none !important;
-            margin: 0;
-            cursor: pointer;
-            color: var(--ncpa-text-secondary);
-            font-family: inherit;
-            font-size: 13px;
-            font-weight: 600;
-            padding: 9px 16px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            line-height: 1;
-            min-height: unset !important;
-            transition: color .18s, background .18s, box-shadow .18s, transform .15s;
-          }
-          .nav-action i { font-size: 13px; color: inherit; }
-          .nav-action span { font-weight: inherit; }
-
-          .nav-action:hover {
-            color: var(--ncpa-text-bright);
-            background:
-              linear-gradient(135deg, rgba(255,225,190,0.08), transparent 40%),
-              #34241e !important;
-            transform: translateY(-1px);
-          }
-
-          /* Primary action: Add Show — amber clay pill */
-          .nav-action[aria-label="Add Show"] {
-            color: var(--ncpa-text-dark);
-            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
-            border: 1px solid rgba(255,255,255,0.10) !important;
-            box-shadow:
-              0 6px 14px rgba(224,164,88,0.30),
-              0 2px 4px rgba(0,0,0,0.25),
-              inset 0 1px 0 rgba(255,255,255,0.45),
-              inset 0 -1px 0 rgba(0,0,0,0.15) !important;
-            padding: 9px 18px;
-            font-weight: 700;
-          }
-          .nav-action[aria-label="Add Show"]:hover {
-            filter: brightness(1.05);
-            color: var(--ncpa-text-dark);
-            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
-          }
-          .nav-action[aria-label="Add Show"] i { color: var(--ncpa-text-dark); }
 
           .nav-tab:hover,
           .nav-action:hover {
-            color: var(--ncpa-text-bright);
-    background: rgba(255,225,190,0.04);
-  }
+            transform: translateY(-1px);
+            background: transparent !important;
+          }
+
+          .nav-tab-img {
+            height: 40px;
+            width: auto;
+            display: block;
+            transition: filter 0.22s ease, opacity 0.22s ease, transform 0.18s ease;
+          }
+
+          .nav-tab.tab-active .nav-tab-img {
+            filter: none;
+            opacity: 1;
+            transform: scale(1);
+          }
+
+          .nav-tab:not(.tab-active) .nav-tab-img {
+            filter: grayscale(1) brightness(0.78);
+            opacity: 0.5;
+            transform: scale(0.97);
+          }
+
+          .nav-tab:not(.tab-active):hover .nav-tab-img {
+            filter: grayscale(0.55) brightness(0.88);
+            opacity: 0.72;
+          }
+
+          .nav-action-img {
+            height: 40px;
+            width: auto;
+            display: block;
+          }
+
+          .nav-action-img--sm {
+            height: 34px;
+          }
 
           .nav-tab.tab-active {
             color: var(--ncpa-text-dark);
@@ -5123,12 +5050,12 @@ app.get('/', (c) => {
                     <div></div>
                     <div class="flex justify-center">
                         <button type="button" onclick="toggleAIAssistant()" class="nav-action" aria-label="Ask AI">
-                            <i class="fas fa-wand-magic-sparkles"></i><span>Ask AI</span>
+                            <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img nav-action-img--sm">
                         </button>
                     </div>
                     <div class="flex justify-end">
                         <button type="button" onclick="openAddShowModal()" class="nav-action" aria-label="Add Show">
-                            <i class="fas fa-plus"></i><span>Add Show</span>
+                            <img src="/static/images/nav/add-show.png" alt="Add Show" class="nav-action-img nav-action-img--sm">
                         </button>
                     </div>
                 </div>
@@ -5141,20 +5068,20 @@ app.get('/', (c) => {
                         <!-- Left: Tab navigation -->
                         <div class="nav-tabs-group shrink-0">
                             <button type="button" id="calendarTab" class="nav-tab tab-active" onclick="showTab('calendar')" aria-label="Calendar">
-                                <i class="fas fa-calendar"></i><span>Calendar</span>
+                                <img src="/static/images/nav/calendar-tab.png" alt="Calendar" class="nav-tab-img">
                             </button>
                             <button type="button" id="tableTab" class="nav-tab" onclick="showTab('table')" aria-label="Table">
-                                <i class="fas fa-table"></i><span>Table</span>
+                                <img src="/static/images/nav/table-tab.png" alt="Table" class="nav-tab-img">
                             </button>
                             <button type="button" id="crewTab" class="nav-tab" onclick="showTab('crew')" aria-label="Crew">
-                                <i class="fas fa-users"></i><span>Crew</span>
+                                <img src="/static/images/nav/crew-tab.png" alt="Crew" class="nav-tab-img">
                             </button>
                         </div>
 
                         <!-- Center: Ask AI button -->
                         <div class="flex items-center shrink-0">
                             <button type="button" onclick="toggleAIAssistant()" class="nav-action" aria-label="Ask AI">
-                                <i class="fas fa-wand-magic-sparkles"></i><span>Ask AI</span>
+                                <img src="/static/images/nav/ask-ai.png" alt="Ask AI" class="nav-action-img">
                             </button>
                         </div>
 
@@ -5229,7 +5156,7 @@ app.get('/', (c) => {
 
                             <!-- Add Show Button -->
                             <button type="button" onclick="openAddShowModal()" class="nav-action" aria-label="Add Show">
-                                <i class="fas fa-plus"></i><span>Add Show</span>
+                                <img src="/static/images/nav/add-show.png" alt="Add Show" class="nav-action-img">
                             </button>
                         </div>
                     </div>

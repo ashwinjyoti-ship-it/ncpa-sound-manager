@@ -2099,23 +2099,26 @@ function formatLinksInText(text) {
   });
 }
 
+function getNotificationToastClass(type = 'info') {
+  const typeClass = {
+    success: 'ncpa-toast--success',
+    error: 'ncpa-toast--error',
+    warning: 'ncpa-toast--warning',
+    info: 'ncpa-toast--info'
+  }[type] || 'ncpa-toast--info';
+  return `ncpa-toast ${typeClass}`;
+}
+
 function showNotification(message, type = 'info') {
-  // Simple notification using alert for now
-  // Can be enhanced with a toast library later
-  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ';
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✗' : type === 'warning' ? '⚠' : 'ℹ';
   console.log(`${icon} ${message}`);
-  
-  // Create a simple toast
+
   const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
-    type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
-  }`;
+  toast.className = getNotificationToastClass(type);
   toast.textContent = message;
   document.body.appendChild(toast);
-  
-  // Error messages stay longer (8 seconds) so users can read them
+
   const duration = type === 'error' ? 8000 : 3000;
-  
   setTimeout(() => {
     toast.remove();
   }, duration);
@@ -2124,9 +2127,7 @@ function showNotification(message, type = 'info') {
 // Persistent notification for long-running operations
 function showPersistentNotification(message, type = 'info') {
   const toast = document.createElement('div');
-  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
-    type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
-  }`;
+  toast.className = getNotificationToastClass(type);
   toast.textContent = message;
   toast.setAttribute('data-persistent', 'true');
   document.body.appendChild(toast);
@@ -2135,9 +2136,7 @@ function showPersistentNotification(message, type = 'info') {
 
 function updatePersistentNotification(toast, message, type = 'info') {
   if (!toast) return;
-  toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg text-white z-50 max-w-md ${
-    type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
-  }`;
+  toast.className = getNotificationToastClass(type);
   toast.textContent = message;
 }
 
@@ -2151,13 +2150,13 @@ function removePersistentNotification(toast) {
 function createUploadProgressToast() {
   const toast = document.createElement('div');
   toast.setAttribute('data-persistent', 'true');
-  toast.style.cssText = 'position:fixed;top:16px;right:16px;min-width:320px;max-width:420px;background:#2563eb;color:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 8px 32px rgba(0,0,0,0.18);z-index:9999;';
+  toast.className = 'ncpa-toast ncpa-toast--info ncpa-toast--progress';
   toast.innerHTML = `
-    <div id="uploadStepLabel" style="font-size:14px;font-weight:600;margin-bottom:10px;">📄 Preparing...</div>
-    <div style="background:rgba(255,255,255,0.25);border-radius:6px;height:10px;overflow:hidden;">
-      <div id="uploadProgressBar" style="background:#fff;height:100%;width:0%;transition:width 0.5s ease;border-radius:6px;"></div>
+    <div id="uploadStepLabel" class="ncpa-toast-step">📄 Preparing...</div>
+    <div class="ncpa-toast-progress-track">
+      <div id="uploadProgressBar" class="ncpa-toast-progress-bar"></div>
     </div>
-    <div id="uploadProgressPct" style="font-size:11px;margin-top:6px;opacity:0.85;">0%</div>
+    <div id="uploadProgressPct" class="ncpa-toast-progress-pct">0%</div>
   `;
   document.body.appendChild(toast);
   return toast;
@@ -2165,8 +2164,8 @@ function createUploadProgressToast() {
 
 function updateUploadProgress(toast, percent, message, type = 'info') {
   if (!toast) return;
-  const bg = type === 'success' ? '#16a34a' : type === 'error' ? '#dc2626' : '#2563eb';
-  toast.style.background = bg;
+  const progressType = type === 'success' ? 'success' : type === 'error' ? 'error' : 'info';
+  toast.className = `ncpa-toast ncpa-toast--${progressType} ncpa-toast--progress`;
   const label = toast.querySelector('#uploadStepLabel');
   const bar = toast.querySelector('#uploadProgressBar');
   const pct = toast.querySelector('#uploadProgressPct');

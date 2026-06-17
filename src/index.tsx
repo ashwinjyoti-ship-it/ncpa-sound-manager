@@ -4994,6 +4994,84 @@ app.get('/', (c) => {
             }
           }
 
+          /* System toast notifications (Phase 1) */
+          .ncpa-toast {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            min-width: 280px;
+            max-width: 420px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            z-index: 9999;
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+            color: var(--ncpa-text-bright);
+            background: linear-gradient(120deg, rgba(224,164,88,0.18), rgba(41,37,36,0.42));
+            border: 1px solid var(--ncpa-border);
+            border-left: 4px solid var(--ncpa-amber);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+          }
+
+          .ncpa-toast--success {
+            border-left-color: var(--ncpa-green);
+            background: linear-gradient(120deg, rgba(92,157,111,0.22), rgba(41,37,36,0.42));
+          }
+
+          .ncpa-toast--error {
+            border-left-color: var(--ncpa-terracotta);
+            background: linear-gradient(120deg, rgba(199,91,57,0.22), rgba(41,37,36,0.42));
+          }
+
+          .ncpa-toast--info {
+            border-left-color: var(--ncpa-amber);
+            background: linear-gradient(120deg, rgba(224,164,88,0.18), rgba(41,37,36,0.42));
+          }
+
+          .ncpa-toast--warning {
+            border-left-color: var(--ncpa-amber-light);
+            background: linear-gradient(120deg, rgba(240,185,120,0.20), rgba(41,37,36,0.42));
+          }
+
+          .ncpa-toast--progress .ncpa-toast-step {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+          }
+
+          .ncpa-toast--progress .ncpa-toast-progress-track {
+            background: rgba(255,255,255,0.15);
+            border-radius: 6px;
+            height: 10px;
+            overflow: hidden;
+          }
+
+          .ncpa-toast--progress .ncpa-toast-progress-bar {
+            background: var(--ncpa-amber-light);
+            height: 100%;
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 6px;
+          }
+
+          .ncpa-toast--progress.ncpa-toast--success .ncpa-toast-progress-bar {
+            background: var(--ncpa-green-light);
+          }
+
+          .ncpa-toast--progress.ncpa-toast--error .ncpa-toast-progress-bar {
+            background: var(--ncpa-terracotta-light);
+          }
+
+          .ncpa-toast--progress .ncpa-toast-progress-pct {
+            font-size: 11px;
+            margin-top: 6px;
+            opacity: 0.85;
+            color: var(--ncpa-text-secondary);
+          }
+
           @media (prefers-reduced-motion: reduce) {
             *,
             *::before,

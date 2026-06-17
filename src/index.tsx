@@ -3075,16 +3075,12 @@ app.get('/', (c) => {
           }
 
           .nav-tab.tab-active {
-            color: var(--ncpa-text-dark);
-            background: linear-gradient(135deg, #f0b978 0%, var(--ncpa-amber) 50%, #c98a3f 100%) !important;
-            box-shadow:
-              0 4px 10px rgba(224,164,88,0.30),
-              inset 0 1px 0 rgba(255,255,255,0.35) !important;
-  }
-          .nav-tab.tab-active i,
-          .nav-tab.tab-active span {
-            color: var(--ncpa-text-dark);
-  }
+            background: transparent !important;
+            box-shadow: none !important;
+            outline: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
 
           /* Special: nav-action stays neutral (not active), but the
              primary action (Add Show) is highlighted with amber */

@@ -1731,7 +1731,7 @@ async function handleWordUpload(e) {
 
     if (events.length === 0) {
       updateUploadProgress(progressToast, 100, '❌ No events found in document', 'error');
-      setTimeout(() => removePersistentNotification(progressToast), 8000);
+      setTimeout(() => removeUploadProgress(progressToast), 8000);
       return;
     }
 
@@ -1760,10 +1760,10 @@ async function handleWordUpload(e) {
 
       const notificationType = uploaded > 0 ? 'success' : 'info';
       updateUploadProgress(progressToast, 100, message, notificationType);
-      setTimeout(() => removePersistentNotification(progressToast), 6000);
+      setTimeout(() => removeUploadProgress(progressToast), 6000);
     } else {
       updateUploadProgress(progressToast, 100, `❌ Upload failed: ${uploadResponse.data.error || 'Unknown error'}`, 'error');
-      setTimeout(() => removePersistentNotification(progressToast), 8000);
+      setTimeout(() => removeUploadProgress(progressToast), 8000);
     }
 
   } catch (error) {
@@ -1777,7 +1777,7 @@ async function handleWordUpload(e) {
       errorMessage = error.message;
     }
     updateUploadProgress(progressToast, 100, `❌ ${errorMessage}`, 'error');
-    setTimeout(() => removePersistentNotification(progressToast), 8000);
+    setTimeout(() => removeUploadProgress(progressToast), 8000);
   } finally {
     e.target.value = '';
   }
@@ -1970,9 +1970,11 @@ async function bulkDeleteEvents() {
     
     if (response.data.success) {
       const deleted = response.data.deleted;
-      showNotification(`✅ Deleted ${deleted} events from ${monthName} ${year}`, 'success');
-      statusDiv.textContent = `Last action: Deleted ${deleted} events`;
-      statusDiv.className = 'ncpa-status ncpa-status--success';
+      showNotification(`✅ Deleted ${deleted} events from ${monthName} ${year}`, deleted > 0 ? 'success' : 'info');
+      statusDiv.textContent = deleted > 0
+        ? `Last action: Deleted ${deleted} events`
+        : 'No events found for that month';
+      statusDiv.className = deleted > 0 ? 'ncpa-status ncpa-status--success' : 'ncpa-status ncpa-status--info';
       
       // Reload events
       await loadEvents();
@@ -1980,10 +1982,16 @@ async function bulkDeleteEvents() {
       // Reset dropdowns
       document.getElementById('bulkDeleteMonth').value = '';
       document.getElementById('bulkDeleteYear').value = '';
+    } else {
+      const errorMessage = response.data.error || 'Delete failed';
+      showNotification(`Failed to delete events: ${errorMessage}`, 'error');
+      statusDiv.textContent = errorMessage;
+      statusDiv.className = 'ncpa-status ncpa-status--error';
     }
   } catch (error) {
     console.error('Error bulk deleting events:', error);
-    showNotification('Failed to delete events', 'error');
+    const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+    showNotification(`Failed to delete events: ${errorMessage}`, 'error');
     statusDiv.textContent = 'Error deleting events';
     statusDiv.className = 'ncpa-status ncpa-status--error';
   }
@@ -2146,8 +2154,12 @@ function removePersistentNotification(toast) {
   }
 }
 
-// Progress bar toast for Word upload
+// Progress bar overlay for Word upload (centered, freezes the app)
 function createUploadProgressToast() {
+  const overlay = document.createElement('div');
+  overlay.className = 'ncpa-upload-overlay';
+  overlay.setAttribute('data-upload-overlay', 'true');
+
   const toast = document.createElement('div');
   toast.setAttribute('data-persistent', 'true');
   toast.className = 'ncpa-toast ncpa-toast--info ncpa-toast--progress';
@@ -2158,8 +2170,23 @@ function createUploadProgressToast() {
     </div>
     <div id="uploadProgressPct" class="ncpa-toast-progress-pct">0%</div>
   `;
-  document.body.appendChild(toast);
+
+  overlay.appendChild(toast);
+  document.body.appendChild(overlay);
+  document.body.classList.add('ncpa-upload-frozen');
   return toast;
+}
+
+function removeUploadProgress(toast) {
+  if (toast && toast.parentNode) {
+    const overlay = toast.closest('[data-upload-overlay]');
+    if (overlay) {
+      overlay.remove();
+    } else {
+      toast.remove();
+    }
+  }
+  document.body.classList.remove('ncpa-upload-frozen');
 }
 
 function updateUploadProgress(toast, percent, message, type = 'info') {

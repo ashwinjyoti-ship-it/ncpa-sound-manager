@@ -135,6 +135,36 @@ app.get('/api/events/range', async (c) => {
 
 
 
+// Flatten multiline DB fields so IMPORTDATA gets exactly one sheet row per event.
+const normalizeCSVField = (val: unknown): string => {
+  if (val === null || val === undefined) return ''
+  return String(val)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+const escapeCSV = (val: unknown): string => {
+  const str = normalizeCSVField(val)
+  if (str.includes(',') || str.includes('"')) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
+
+const splitRiderColumns = (val: unknown): [string, string, string] => {
+  const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
+  return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
+}
+
+const csvResponseHeaders = (filename: string): Record<string, string> => ({
+  'Content-Type': 'text/csv; charset=utf-8',
+  'Content-Disposition': `inline; filename="${filename}"`,
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Access-Control-Allow-Origin': '*'
+})
+
 // ============================================
 // GOOGLE SHEETS AUTO-SYNC: CSV EXPORT ENDPOINT
 // ============================================
@@ -160,29 +190,8 @@ app.get('/api/export/latest-csv', async (c) => {
 
     if (!results || results.length === 0) {
       return new Response('Date,Program,Venue,Team,Crew,Sound Requirements,Call Time,Status,Rider 1,Rider 2,Rider 3\n', {
-        headers: {
-          'Content-Type': 'text/csv; charset=utf-8',
-          'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
-          'Cache-Control': 'no-cache, no-store, must-revalidate'
-        }
+        headers: csvResponseHeaders('ncpa-events-latest.csv')
       })
-    }
-    
-    // Helper to escape CSV values
-    const escapeCSV = (val: any): string => {
-      if (val === null || val === undefined) return ''
-      const str = String(val)
-      // Escape quotes and wrap in quotes if contains comma, quote, or newline
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-    
-    // Split rider into up to 3 individual URL columns for Sheets auto-linking
-    const splitRider = (val: any): [string, string, string] => {
-      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
-      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
     }
 
     // Build CSV header
@@ -191,7 +200,7 @@ app.get('/api/export/latest-csv', async (c) => {
 
     // Add data rows
     results.forEach((row: any) => {
-      const [rider1, rider2, rider3] = splitRider(row.Rider)
+      const [rider1, rider2, rider3] = splitRiderColumns(row.Rider)
       const values = [
         escapeCSV(row.Date),
         escapeCSV(row.Program),
@@ -209,12 +218,7 @@ app.get('/api/export/latest-csv', async (c) => {
     const csv = csvRows.join('\n')
     
     return new Response(csv, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': 'inline; filename="ncpa-events-latest.csv"',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Access-Control-Allow-Origin': '*'
-      }
+      headers: csvResponseHeaders('ncpa-events-latest.csv')
     })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -263,21 +267,6 @@ app.get('/api/export/csv', async (c) => {
       ORDER BY event_date ASC
     `).bind(month).all()
 
-    // Helper to escape CSV values
-    const escapeCSV = (val: any): string => {
-      if (val === null || val === undefined) return ''
-      const str = String(val)
-      if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-        return `"${str.replace(/"/g, '""')}"`
-      }
-      return str
-    }
-    // Split rider into up to 3 individual URL columns for Sheets auto-linking
-    const splitRider = (val: any): [string, string, string] => {
-      const urls = val ? String(val).split(',').map((u: string) => u.trim()).filter(Boolean) : []
-      return [escapeCSV(urls[0] || ''), escapeCSV(urls[1] || ''), escapeCSV(urls[2] || '')]
-    }
-
     // Column order: Date, FOH, Stage, Program, Venue, Team, Sound Requirements, Call Time, Rider 1-3
     // For events without foh_crew/stage_crew (pre-May data), fall back to crew in Stage column.
     const headers = ['Date', 'FOH', 'Stage', 'Program', 'Venue', 'Team', 'Sound Requirements', 'Call Time', 'Rider 1', 'Rider 2', 'Rider 3']
@@ -296,7 +285,7 @@ app.get('/api/export/csv', async (c) => {
       // For old events without foh/stage split, show legacy crew in Stage column
       const foh = row.FOH || ''
       const stage = row.Stage || (!row.FOH && !row.Stage ? row.Crew : '') || ''
-      const [rider1, rider2, rider3] = splitRider(row.Rider)
+      const [rider1, rider2, rider3] = splitRiderColumns(row.Rider)
       const values = [
         escapeCSV(formattedDate),
         escapeCSV(foh),
@@ -314,12 +303,7 @@ app.get('/api/export/csv', async (c) => {
     const csv = csvRows.join('\n')
     
     return new Response(csv, {
-      headers: {
-        'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `inline; filename="ncpa-events-${month}.csv"`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Access-Control-Allow-Origin': '*'
-      }
+      headers: csvResponseHeaders(`ncpa-events-${month}.csv`)
     })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)

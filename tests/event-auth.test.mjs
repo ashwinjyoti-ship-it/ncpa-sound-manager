@@ -297,6 +297,19 @@ await assertAnonymousMutationRejected('POST', '/api/admin/backfill-embeddings', 
 
 {
   const db = createD1Stub();
+  const response = await request({ DB: db }, '/api/auth/me', {
+    method: 'GET',
+    headers: { cookie: 'session_token=expired-token' }
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 401, 'expired session should not authenticate /api/auth/me');
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'Invalid or expired session');
+}
+
+{
+  const db = createD1Stub();
   const response = await request({ DB: db }, '/api/events', {
     method: 'POST',
     headers: { cookie: 'session_token=valid-token' },

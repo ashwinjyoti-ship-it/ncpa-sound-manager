@@ -25,7 +25,22 @@ function createD1Stub() {
         user_id: 7,
         email: 'approved@example.com',
         role: 'user',
-        status: 'approved'
+        status: 'approved',
+        expires_at: '2999-01-01T00:00:00.000Z'
+      }],
+      ['admin-token', {
+        user_id: 1,
+        email: 'admin@example.com',
+        role: 'admin',
+        status: 'approved',
+        expires_at: '2999-01-01T00:00:00.000Z'
+      }],
+      ['expired-token', {
+        user_id: 8,
+        email: 'expired@example.com',
+        role: 'user',
+        status: 'approved',
+        expires_at: '2000-01-01T00:00:00.000Z'
       }]
     ])
   };
@@ -56,7 +71,12 @@ class Statement {
 
     if (sql.includes('from sessions s') && sql.includes('join users u')) {
       const token = this.args[0];
-      return this.state.sessions.get(token) || null;
+      const session = this.state.sessions.get(token);
+      if (!session) return null;
+      if (sql.includes('datetime(s.expires_at) > datetime')) {
+        return Date.parse(session.expires_at) > Date.now() ? session : null;
+      }
+      return session;
     }
 
     if (sql.includes('select id from events') && sql.includes('where event_date = ? and program = ? and venue = ?')) {
@@ -250,6 +270,30 @@ await assertAnonymousMutationRejected('POST', '/api/events/bulk', {
     venue: 'JBT'
   }]
 });
+
+await assertAnonymousMutationRejected('POST', '/api/admin/backfill-embeddings', {
+  batch_size: 1
+});
+
+{
+  const db = createD1Stub();
+  const before = JSON.stringify(db.state.events);
+  const response = await request({ DB: db }, '/api/events', {
+    method: 'POST',
+    headers: { cookie: 'session_token=expired-token' },
+    body: {
+      event_date: '2026-06-22',
+      program: 'Expired Session Create',
+      venue: 'Tata Theatre'
+    }
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 401, 'expired session should reject event creation');
+  assert.equal(payload.success, false);
+  assert.equal(payload.error, 'Invalid or expired session');
+  assert.equal(JSON.stringify(db.state.events), before, 'expired session should not mutate events');
+}
 
 {
   const db = createD1Stub();

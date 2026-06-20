@@ -12,7 +12,7 @@ import {
   setupExportEndpoints
 } from './v41-endpoints'
 import { setupCrewAssignmentEngine } from './crew-assignment-engine'
-import { requireAuth, setupAuthEndpoints } from './auth-endpoints'
+import { requireAdmin, requireAuth, setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 
 type Bindings = {
@@ -997,6 +997,9 @@ app.post('/api/ai/rag', handleRAGQuery)
 // ============================================
 app.post('/api/admin/backfill-embeddings', async (c) => {
   try {
+    const authError = await requireAdmin(c)
+    if (authError) return authError
+
     const { batch_size } = await c.req.json().catch(() => ({ batch_size: 50 }))
     
     const result = await backfillEmbeddings(c, batch_size || 50)

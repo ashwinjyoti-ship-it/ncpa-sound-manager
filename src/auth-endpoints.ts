@@ -39,7 +39,7 @@ export async function requireAuth(c: any) {
     SELECT s.user_id, u.email, u.role, u.status
     FROM sessions s
     JOIN users u ON s.user_id = u.id
-    WHERE s.token = ? AND s.expires_at > datetime('now')
+    WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
   `).bind(token).first() as any
 
   if (!session) {
@@ -48,6 +48,24 @@ export async function requireAuth(c: any) {
 
   if (session.status !== 'approved') {
     return c.json({ success: false, error: 'Account pending approval' }, 403)
+  }
+
+  c.set('user', {
+    id: session.user_id,
+    email: session.email,
+    role: session.role
+  })
+
+  return null
+}
+
+export async function requireAdmin(c: any) {
+  const authError = await requireAuth(c)
+  if (authError) return authError
+
+  const user = c.get('user')
+  if (user?.role !== 'admin') {
+    return c.json({ success: false, error: 'Admin access required' }, 403)
   }
 
   return null

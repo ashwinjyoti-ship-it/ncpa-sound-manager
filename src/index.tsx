@@ -178,7 +178,7 @@ const requireApprovedSession = async (c: Context<{ Bindings: Bindings }>): Promi
     FROM sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.token = ?
-      AND s.expires_at > datetime('now')
+      AND datetime(s.expires_at) > datetime('now')
       AND u.status = 'approved'
   `).bind(token).first()
 

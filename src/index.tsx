@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { cors } from 'hono/cors'
+import { getCookie } from 'hono/cookie'
 import { serveStatic } from 'hono/cloudflare-workers'
 import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
@@ -164,6 +166,28 @@ const csvResponseHeaders = (filename: string): Record<string, string> => ({
   'Pragma': 'no-cache',
   'Access-Control-Allow-Origin': '*'
 })
+
+const requireApprovedSession = async (c: Context<{ Bindings: Bindings }>): Promise<Response | null> => {
+  const token = getCookie(c, 'session_token')
+  if (!token) {
+    return c.json({ success: false, error: 'Authentication required' }, 401)
+  }
+
+  const session = await c.env.DB.prepare(`
+    SELECT s.user_id, u.email, u.role
+    FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.token = ?
+      AND s.expires_at > datetime('now')
+      AND u.status = 'approved'
+  `).bind(token).first()
+
+  if (!session) {
+    return c.json({ success: false, error: 'Authentication required' }, 401)
+  }
+
+  return null
+}
 
 // ============================================
 // GOOGLE SHEETS AUTO-SYNC: CSV EXPORT ENDPOINT
@@ -633,6 +657,9 @@ async function deleteMonthEventDependencies(db: D1Database, monthKey: string) {
 // Delete event
 app.delete('/api/events/:id', async (c) => {
   try {
+    const authError = await requireApprovedSession(c)
+    if (authError) return authError
+
     const id = Number(c.req.param('id'))
     if (!id) {
       return c.json({ success: false, error: 'Invalid event id' }, 400)
@@ -652,6 +679,9 @@ app.delete('/api/events/:id', async (c) => {
 // Bulk delete events by date range
 app.post('/api/events/bulk-delete', async (c) => {
   try {
+    const authError = await requireApprovedSession(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const month = Number(body.month)
     const year = Number(body.year)

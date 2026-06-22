@@ -2505,6 +2505,38 @@ function convertEventsToCSV(events) {
 // iCALENDAR EXPORT FOR CALENDAR APPS
 // ============================================
 
+// Parse a call_time value into a validated [hours, minutes] pair.
+// Accepts "HH:MM" (with optional seconds/AM-PM). Returns null when the value
+// is missing or not a real time (e.g. "not specified", "TBD"), so callers can
+// fall back to a sensible default instead of crashing on undefined parts.
+function parseCallTime(callTime) {
+  if (!callTime || typeof callTime !== 'string') return null;
+  const trimmed = callTime.trim();
+  if (!trimmed) return null;
+
+  // Reject placeholders that are not real times
+  const lower = trimmed.toLowerCase();
+  if (lower === 'not specified' || lower === 'tbd' || lower === 'n/a' || lower === 'na') {
+    return null;
+  }
+
+  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
+  if (!match) return null;
+
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const meridiem = match[3];
+
+  if (meridiem) {
+    const isPM = meridiem.toLowerCase() === 'pm';
+    if (hours === 12) hours = isPM ? 12 : 0;
+    else if (isPM) hours += 12;
+  }
+
+  if (hours < 0 || hours > 23) return null;
+  return [String(hours).padStart(2, '0'), minutes];
+}
+
 function convertEventsToICalendar(events) {
   // iCalendar header
   const icsLines = [
@@ -2520,15 +2552,25 @@ function convertEventsToICalendar(events) {
   // Convert each event to VEVENT
   events.forEach(event => {
     const eventDate = event.event_date; // Format: YYYY-MM-DD
-    const callTime = event.call_time || '09:00'; // Default to 9 AM if no call time
-    
-    // Parse date and time
-    const [year, month, day] = eventDate.split('-');
-    const [hours, minutes] = callTime.split(':');
+
+    // Parse date defensively — skip malformed/missing dates instead of crashing
+    const dateParts = eventDate ? String(eventDate).split('-') : [];
+    let year, month, day;
+    if (dateParts.length === 3 && dateParts.every(p => /^\d+$/.test(p))) {
+      [year, month, day] = dateParts.map(p => p.padStart(2, '0'));
+    } else {
+      console.warn('Skipping event with invalid date for iCalendar export:', event.id, eventDate);
+      return;
+    }
+
+    // Parse call time defensively — fall back to 09:00 when missing/invalid
+    const parsed = parseCallTime(event.call_time);
+    const hours = parsed ? parsed[0] : '09';
+    const minutes = parsed ? parsed[1] : '00';
     
     // Create datetime stamps (iCalendar format: YYYYMMDDTHHmmss)
-    const dtStart = `${year}${month}${day}T${hours.padStart(2, '0')}${minutes.padStart(2, '0')}00`;
-    const dtEnd = `${year}${month}${day}T${(parseInt(hours) + 2).toString().padStart(2, '0')}${minutes.padStart(2, '0')}00`; // +2 hours duration
+    const dtStart = `${year}${month}${day}T${hours}${minutes}00`;
+    const dtEnd = `${year}${month}${day}T${(parseInt(hours, 10) + 2).toString().padStart(2, '0')}${minutes}00`; // +2 hours duration
     
     // Create unique ID
     const uid = `${event.id}-${eventDate}@ncpa-sound.pages.dev`;

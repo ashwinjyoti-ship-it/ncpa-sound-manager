@@ -12,7 +12,7 @@ import {
   setupExportEndpoints
 } from './v41-endpoints'
 import { setupCrewAssignmentEngine } from './crew-assignment-engine'
-import { setupAuthEndpoints } from './auth-endpoints'
+import { requireAdmin, requireAuth, setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 
 type Bindings = {
@@ -425,6 +425,9 @@ app.get('/api/events/:id', async (c) => {
 // Create new event
 app.post('/api/events', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = body
     
@@ -515,6 +518,9 @@ app.post('/api/events', async (c) => {
 // Bulk-update crew fields across multiple events (for multi-date show propagation)
 app.put('/api/events/bulk-crew', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const { ids, foh_crew, stage_crew } = await c.req.json()
     if (!Array.isArray(ids) || ids.length === 0)
       return c.json({ success: false, error: 'ids array required' }, 400)
@@ -540,6 +546,9 @@ app.put('/api/events/bulk-crew', async (c) => {
 // Update event
 app.put('/api/events/:id', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const id = c.req.param('id')
     const body = await c.req.json()
     const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes } = body
@@ -633,6 +642,9 @@ async function deleteMonthEventDependencies(db: D1Database, monthKey: string) {
 // Delete event
 app.delete('/api/events/:id', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const id = Number(c.req.param('id'))
     if (!id) {
       return c.json({ success: false, error: 'Invalid event id' }, 400)
@@ -652,6 +664,9 @@ app.delete('/api/events/:id', async (c) => {
 // Bulk delete events by date range
 app.post('/api/events/bulk-delete', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const month = Number(body.month)
     const year = Number(body.year)
@@ -693,6 +708,9 @@ app.post('/api/events/bulk-delete', async (c) => {
 // Bulk upload events (for CSV/Word import with duplicate detection)
 app.post('/api/events/bulk', async (c) => {
   try {
+    const authError = await requireAuth(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const { events } = body
     
@@ -963,6 +981,9 @@ app.post('/api/ai/rag', handleRAGQuery)
 // ============================================
 app.post('/api/admin/backfill-embeddings', async (c) => {
   try {
+    const authError = await requireAdmin(c)
+    if (authError) return authError
+
     const { batch_size } = await c.req.json().catch(() => ({ batch_size: 50 }))
     
     const result = await backfillEmbeddings(c, batch_size || 50)

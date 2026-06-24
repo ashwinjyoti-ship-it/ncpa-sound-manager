@@ -28,6 +28,49 @@ function generateToken(): string {
   return crypto.randomUUID()
 }
 
+export async function requireAuth(c: any) {
+  const token = getCookie(c, 'session_token')
+
+  if (!token) {
+    return c.json({ success: false, error: 'Not authenticated' }, 401)
+  }
+
+  const session = await c.env.DB.prepare(`
+    SELECT s.user_id, u.email, u.role, u.status
+    FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
+  `).bind(token).first() as any
+
+  if (!session) {
+    return c.json({ success: false, error: 'Invalid or expired session' }, 401)
+  }
+
+  if (session.status !== 'approved') {
+    return c.json({ success: false, error: 'Account pending approval' }, 403)
+  }
+
+  c.set('user', {
+    id: session.user_id,
+    email: session.email,
+    role: session.role
+  })
+
+  return null
+}
+
+export async function requireAdmin(c: any) {
+  const authError = await requireAuth(c)
+  if (authError) return authError
+
+  const user = c.get('user')
+  if (user?.role !== 'admin') {
+    return c.json({ success: false, error: 'Admin access required' }, 403)
+  }
+
+  return null
+}
+
 export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
   
   // Initialize database tables
@@ -216,7 +259,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT s.*, u.email, u.role, u.status
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session) {
@@ -250,7 +293,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -286,7 +329,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.id, u.email, u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -323,7 +366,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -356,7 +399,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.*
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session) {

@@ -3,6 +3,7 @@
 
 import { Hono } from 'hono'
 import type { Context } from 'hono'
+import { requireAuth } from './auth-endpoints'
 
 type Bindings = {
   DB: D1Database;
@@ -389,6 +390,9 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
   // Bulk assign crew to multiple events
   app.post('/api/events/bulk-assign', async (c) => {
     try {
+      const authError = await requireAuth(c)
+      if (authError) return authError
+
       const body = await c.req.json()
       const { eventIds, crew } = body
       
@@ -421,6 +425,9 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
   // Update event status (bulk or single)
   app.post('/api/events/update-status', async (c) => {
     try {
+      const authError = await requireAuth(c)
+      if (authError) return authError
+
       const body = await c.req.json()
       const { eventIds, status } = body
       

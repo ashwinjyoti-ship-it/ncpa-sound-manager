@@ -216,7 +216,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT s.*, u.email, u.role, u.status
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session) {
@@ -250,7 +250,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -286,7 +286,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.id, u.email, u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -323,7 +323,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.role
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session || session.role !== 'admin') {
@@ -356,7 +356,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
         SELECT u.*
         FROM sessions s
         JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND s.expires_at > datetime('now')
+        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
       `).bind(token).first() as any
       
       if (!session) {

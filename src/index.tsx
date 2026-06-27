@@ -1,5 +1,7 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { cors } from 'hono/cors'
+import { getCookie } from 'hono/cookie'
 import { serveStatic } from 'hono/cloudflare-workers'
 import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
@@ -24,6 +26,32 @@ type Bindings = {
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+type AppContext = Context<{ Bindings: Bindings }>
+
+async function getAuthenticatedUser(c: AppContext) {
+  const token = getCookie(c, 'session_token')
+  if (!token) return null
+
+  const session = await c.env.DB.prepare(`
+    SELECT u.id, u.email, u.role, u.status
+    FROM sessions s
+    JOIN users u ON s.user_id = u.id
+    WHERE s.token = ? AND s.expires_at > datetime('now')
+  `).bind(token).first() as { id: number; email: string; role: string; status: string } | null
+
+  if (!session || session.status !== 'approved') return null
+  return session
+}
+
+async function requireAuthenticatedEventWrite(c: AppContext) {
+  const user = await getAuthenticatedUser(c)
+  if (!user) {
+    return c.json({ success: false, error: 'Not authenticated' }, 401)
+  }
+
+  return null
+}
 
 // Enable CORS for all routes (Safari compatibility)
 app.use('*', cors({
@@ -633,6 +661,9 @@ async function deleteMonthEventDependencies(db: D1Database, monthKey: string) {
 // Delete event
 app.delete('/api/events/:id', async (c) => {
   try {
+    const authError = await requireAuthenticatedEventWrite(c)
+    if (authError) return authError
+
     const id = Number(c.req.param('id'))
     if (!id) {
       return c.json({ success: false, error: 'Invalid event id' }, 400)
@@ -652,6 +683,9 @@ app.delete('/api/events/:id', async (c) => {
 // Bulk delete events by date range
 app.post('/api/events/bulk-delete', async (c) => {
   try {
+    const authError = await requireAuthenticatedEventWrite(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const month = Number(body.month)
     const year = Number(body.year)

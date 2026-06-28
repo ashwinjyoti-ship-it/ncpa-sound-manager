@@ -2487,18 +2487,34 @@ function convertEventsToCSV(events) {
   // Convert events to CSV rows
   const rows = events.map(event => {
     return [
-      event.event_date || '',
-      `"${(event.program || '').replace(/"/g, '""')}"`, // Escape quotes
-      `"${(event.venue || '').replace(/"/g, '""')}"`,
-      `"${(event.team || '').replace(/"/g, '""')}"`,
-      `"${(event.sound_requirements || '').replace(/"/g, '""')}"`,
-      event.call_time || '',
-      `"${(event.crew || '').replace(/"/g, '""')}"`
+      escapeCSVExportField(event.event_date),
+      escapeCSVExportField(event.program),
+      escapeCSVExportField(event.venue),
+      escapeCSVExportField(event.team),
+      escapeCSVExportField(event.sound_requirements),
+      escapeCSVExportField(event.call_time),
+      escapeCSVExportField(event.crew)
     ].join(',');
   });
   
   // Combine headers and rows
   return [headers.join(','), ...rows].join('\n');
+}
+
+function normalizeCSVExportField(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function escapeCSVExportField(value) {
+  const normalized = normalizeCSVExportField(value);
+  if (normalized.includes(',') || normalized.includes('"')) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+  return normalized;
 }
 
 // ============================================
@@ -2537,6 +2553,15 @@ function parseCallTime(callTime) {
   return [String(hours).padStart(2, '0'), minutes];
 }
 
+function formatICalendarDateTime(date) {
+  const year = String(date.getUTCFullYear()).padStart(4, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hours = String(date.getUTCHours()).padStart(2, '0');
+  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${year}${month}${day}T${hours}${minutes}00`;
+}
+
 function convertEventsToICalendar(events) {
   // iCalendar header
   const icsLines = [
@@ -2569,8 +2594,16 @@ function convertEventsToICalendar(events) {
     const minutes = parsed ? parsed[1] : '00';
     
     // Create datetime stamps (iCalendar format: YYYYMMDDTHHmmss)
-    const dtStart = `${year}${month}${day}T${hours}${minutes}00`;
-    const dtEnd = `${year}${month}${day}T${(parseInt(hours, 10) + 2).toString().padStart(2, '0')}${minutes}00`; // +2 hours duration
+    const startDateTime = new Date(Date.UTC(
+      parseInt(year, 10),
+      parseInt(month, 10) - 1,
+      parseInt(day, 10),
+      parseInt(hours, 10),
+      parseInt(minutes, 10)
+    ));
+    const endDateTime = new Date(startDateTime.getTime() + (2 * 60 * 60 * 1000));
+    const dtStart = formatICalendarDateTime(startDateTime);
+    const dtEnd = formatICalendarDateTime(endDateTime);
     
     // Create unique ID
     const uid = `${event.id}-${eventDate}@ncpa-sound.pages.dev`;

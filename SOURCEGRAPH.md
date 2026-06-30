@@ -64,10 +64,9 @@ flowchart TB
 ## Local one-off index (optional)
 
 ```bash
+npm install -g @sourcegraph/scip-typescript @sourcegraph/src
 npm install
-npx @sourcegraph/scip-typescript index
-curl -L https://sourcegraph.com/.api/src-cli/src_linux_amd64 -o /usr/local/bin/src
-chmod +x /usr/local/bin/src
+scip-typescript index
 src code-intel upload -github-token=<token>
 ```
 
@@ -75,6 +74,6 @@ For the frontend:
 
 ```bash
 cd public/static
-npx @sourcegraph/scip-typescript index --infer-tsconfig
+scip-typescript index --infer-tsconfig
 src code-intel upload -github-token=<token>
 ```

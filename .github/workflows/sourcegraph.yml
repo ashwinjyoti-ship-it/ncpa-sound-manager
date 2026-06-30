@@ -1,0 +1,42 @@
+name: Sourcegraph Code Graph
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  create-and-upload-index:
+    if: github.repository == 'ashwinjyoti-ship-it/ncpa-sound-manager'
+    runs-on: ubuntu-latest
+    container: sourcegraph/scip-typescript:latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Index TypeScript backend
+        run: scip-typescript index
+
+      - name: Upload TypeScript index
+        run: src code-intel upload -github-token=${{ secrets.GITHUB_TOKEN }} -no-progress
+        env:
+          SRC_ENDPOINT: https://sourcegraph.com/
+
+      - name: Index JavaScript frontend
+        working-directory: public/static
+        run: scip-typescript index --infer-tsconfig
+
+      - name: Upload JavaScript index
+        working-directory: public/static
+        run: src code-intel upload -github-token=${{ secrets.GITHUB_TOKEN }} -no-progress
+        env:
+          SRC_ENDPOINT: https://sourcegraph.com/

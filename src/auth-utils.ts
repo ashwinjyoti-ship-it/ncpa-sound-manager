@@ -21,6 +21,13 @@ async function getAuthenticatedSession(c: AuthContext): Promise<AuthSession | Re
     return c.json({ success: false, error: 'Not authenticated' }, 401)
   }
 
+  // Session cookie is SameSite=None, so reject cross-site requests before
+  // trusting it — otherwise any site can ride an approved session's cookie.
+  const origin = c.req.header('Origin')
+  if (origin && origin !== new URL(c.req.url).origin) {
+    return c.json({ success: false, error: 'Invalid request origin' }, 403)
+  }
+
   const session = await c.env.DB.prepare(`
     SELECT u.id, u.email, u.role, u.status
     FROM sessions s

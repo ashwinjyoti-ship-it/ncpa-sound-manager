@@ -15,6 +15,16 @@ import { setupCrewAssignmentEngine } from './crew-assignment-engine'
 import { setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 import { requireAdminUser, requireAuthenticatedUser } from './auth-utils'
+import {
+  addDaysUtc,
+  applyCrewPropagationInBatch,
+  assignGroupIdsByIndex,
+  datesAreConsecutive,
+  findMultiDateClusters,
+  findMultiDateSiblings,
+  generateShowGroupId,
+  programVenueKey,
+} from './multi-date-groups'
 
 type Bindings = {
   DB: D1Database;
@@ -417,7 +427,95 @@ app.get('/api/events/:id', async (c) => {
       return c.json({ success: false, error: 'Event not found' }, 404)
     }
     
-    return c.json({ success: true, data: result })
+    const siblings = await c.env.DB.prepare(`
+      SELECT * FROM events ORDER BY event_date ASC
+    `).all()
+    const multiDateSiblings = findMultiDateSiblings(
+      result as { id: number; event_date: string; program: string; venue: string; show_group_id?: string | null },
+      (siblings.results || []) as { id: number; event_date: string; program: string; venue: string; show_group_id?: string | null }[]
+    )
+
+    return c.json({ success: true, data: result, multi_date_siblings: multiDateSiblings })
+  } catch (error: any) {
+    return c.json({ success: false, error: error.message }, 500)
+  }
+})
+
+// Create consecutive multi-date show (one row per date, shared show_group_id)
+app.post('/api/events/multi-date', async (c) => {
+  try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
+    const body = await c.req.json()
+    const {
+      dates,
+      program,
+      venue,
+      team,
+      sound_requirements,
+      call_time,
+      crew,
+      foh_crew,
+      stage_crew,
+      rider,
+      notes,
+    } = body
+
+    if (!Array.isArray(dates) || dates.length < 2) {
+      return c.json({ success: false, error: 'At least two dates required for multi-date show' }, 400)
+    }
+    if (!program || !venue) {
+      return c.json({ success: false, error: 'Program and venue are required' }, 400)
+    }
+    const sortedDates = [...dates].map((d: string) => String(d).trim()).sort()
+    if (!datesAreConsecutive(sortedDates)) {
+      return c.json({ success: false, error: 'Dates must be consecutive with no gaps' }, 400)
+    }
+
+    const stageCrew = Array.isArray(stage_crew)
+      ? (stage_crew as string[]).filter(Boolean).join(', ')
+      : (stage_crew as string || '')
+    const fohCrew = (foh_crew as string || '')
+    const allCrew = [fohCrew, stageCrew].filter(Boolean).join(', ') || crew || null
+    const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
+    const showGroupId = generateShowGroupId()
+    const created: Record<string, unknown>[] = []
+
+    for (const event_date of sortedDates) {
+      const result = await c.env.DB.prepare(`
+        INSERT INTO events (
+          event_date, program, venue, team, sound_requirements, call_time,
+          crew, foh_crew, stage_crew, requirements_updated, source, show_group_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).bind(
+        event_date,
+        program,
+        venue,
+        team || null,
+        sound_requirements || null,
+        call_time || null,
+        allCrew,
+        fohCrew || null,
+        stageCrew || null,
+        requirements_updated,
+        'manual',
+        showGroupId
+      ).run()
+      created.push({
+        id: result.meta.last_row_id,
+        event_date,
+        program,
+        venue,
+        show_group_id: showGroupId,
+        foh_crew: fohCrew || null,
+        stage_crew: stageCrew || null,
+        crew: allCrew,
+      })
+    }
+
+    return c.json({ success: true, show_group_id: showGroupId, data: created }, 201)
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }
@@ -430,7 +528,7 @@ app.post('/api/events', async (c) => {
     if (authError) return authError
 
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = body
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, show_group_id } = body
     
     if (!event_date || !program || !venue) {
       return c.json({ success: false, error: 'Date, program, and venue are required' }, 400)
@@ -447,8 +545,8 @@ app.post('/api/events', async (c) => {
     const allCrew = [fohCrew, stageCrew].filter(Boolean).join(', ') || crew || null
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source, show_group_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
       program,
@@ -460,7 +558,8 @@ app.post('/api/events', async (c) => {
       fohCrew || null,
       stageCrew || null,
       requirements_updated,
-      'manual'
+      'manual',
+      show_group_id || null
     ).run()
 
     const eventId = result.meta.last_row_id
@@ -522,7 +621,7 @@ app.put('/api/events/bulk-crew', async (c) => {
     const authError = await requireAuthenticatedUser(c)
     if (authError) return authError
 
-    const { ids, foh_crew, stage_crew } = await c.req.json()
+    const { ids, foh_crew, stage_crew, show_group_id } = await c.req.json()
     if (!Array.isArray(ids) || ids.length === 0)
       return c.json({ success: false, error: 'ids array required' }, 400)
 
@@ -533,12 +632,19 @@ app.put('/api/events/bulk-crew', async (c) => {
     const combined = [fohCrew, stageCrew].filter(Boolean).join(', ') || null
     const ph       = ids.map(() => '?').join(',')
 
-    await c.env.DB.prepare(
-      `UPDATE events SET foh_crew = ?, stage_crew = ?, crew = ?,
-       updated_at = CURRENT_TIMESTAMP WHERE id IN (${ph})`
-    ).bind(fohCrew || null, stageCrew || null, combined, ...ids).run()
+    if (show_group_id) {
+      await c.env.DB.prepare(
+        `UPDATE events SET foh_crew = ?, stage_crew = ?, crew = ?, show_group_id = ?,
+         updated_at = CURRENT_TIMESTAMP WHERE id IN (${ph})`
+      ).bind(fohCrew || null, stageCrew || null, combined, show_group_id, ...ids).run()
+    } else {
+      await c.env.DB.prepare(
+        `UPDATE events SET foh_crew = ?, stage_crew = ?, crew = ?,
+         updated_at = CURRENT_TIMESTAMP WHERE id IN (${ph})`
+      ).bind(fohCrew || null, stageCrew || null, combined, ...ids).run()
+    }
 
-    return c.json({ success: true, updated: ids.length })
+    return c.json({ success: true, updated: ids.length, show_group_id: show_group_id || null })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
   }
@@ -552,7 +658,7 @@ app.put('/api/events/:id', async (c) => {
 
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes } = body
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id } = body
 
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
@@ -587,6 +693,7 @@ app.put('/api/events/:id', async (c) => {
           rider = ?,
           notes = ?,
           requirements_updated = ?,
+          show_group_id = COALESCE(?, show_group_id),
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
@@ -602,6 +709,7 @@ app.put('/api/events/:id', async (c) => {
       rider || null,
       notes || null,
       requirements_updated,
+      show_group_id || null,
       id
     ).run()
 
@@ -713,49 +821,118 @@ app.post('/api/events/bulk', async (c) => {
     if (authError) return authError
 
     const body = await c.req.json()
-    const { events } = body
+    const { events, source: batchSource } = body
     
     if (!Array.isArray(events) || events.length === 0) {
       return c.json({ success: false, error: 'Events array is required' }, 400)
     }
-    
-    // Track results and skipped duplicates
-    const inserted = []
-    const skipped = []
+
+    const importSource = batchSource === 'manual' ? 'manual' : 'import_word'
+
+    // Normalize venues and validate
+    const prepared: {
+      event_date: string
+      program: string
+      venue: string
+      team?: string | null
+      sound_requirements?: string | null
+      call_time?: string | null
+      crew?: string | null
+      foh_crew?: string | null
+      stage_crew?: string | null
+      rider?: string | null
+      notes?: string | null
+    }[] = []
+
     const invalid = []
-    
     for (const event of events) {
       const { event_date, program, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = event
       let { venue } = event
-
-      // Validate required fields
       if (!event_date || !program || !venue) {
         invalid.push({ ...event, reason: 'Missing required fields (date, program, or venue)' })
         continue
       }
-
-      // Normalise JBT Museum variants only (e.g. "JBT Museum 7pm", "JBT Museum 9am to 8pm").
-      // All other venues are stored exactly as received — nothing else is touched.
       const venueUpper = venue.trim().toUpperCase()
       if (venueUpper === 'JBT MUSEUM' || venueUpper.startsWith('JBT MUSEUM ') || venueUpper.startsWith('JBT MUSEUM\t')) {
         venue = 'JBT Museum'
       }
+      prepared.push({
+        event_date,
+        program,
+        venue,
+        team: team || null,
+        sound_requirements: sound_requirements || null,
+        call_time: call_time || null,
+        crew: crew || null,
+        foh_crew: foh_crew || null,
+        stage_crew: stage_crew || null,
+        rider: event.rider || null,
+        notes: event.notes || null,
+        show_group_id: event.show_group_id || null,
+      })
+    }
 
-      // Check for duplicate: same date + program + venue
-      // This prevents re-importing events that already exist (from manual entry or previous imports)
+    // Propagate crew within consecutive multi-date clusters; assign show_group_id
+    const withCrew = applyCrewPropagationInBatch(prepared)
+
+    // Reuse an existing show_group_id from the day immediately before/after a
+    // cluster when one exists, so re-uploading only part of an already-grouped
+    // run (e.g. a corrected subset of nights) doesn't fragment it onto a
+    // freshly minted id and orphan the untouched sibling rows.
+    const existingGroupIdByCluster = new Map<string, string>()
+    for (const cluster of findMultiDateClusters(withCrew)) {
+      const key = programVenueKey(cluster[0].program, cluster[0].venue)
+      const before = addDaysUtc(cluster[0].event_date, -1)
+      const after = addDaysUtc(cluster[cluster.length - 1].event_date, 1)
+      const adjacent = await c.env.DB.prepare(`
+        SELECT program, venue, show_group_id FROM events
+        WHERE event_date IN (?, ?) AND show_group_id IS NOT NULL
+      `).bind(before, after).all()
+      const match = (adjacent.results || []).find(
+        (row: any) => programVenueKey(row.program, row.venue) === key
+      ) as { show_group_id: string } | undefined
+      if (match) existingGroupIdByCluster.set(`${key}|${cluster[0].event_date}`, match.show_group_id)
+    }
+
+    const groupIds = assignGroupIdsByIndex(withCrew, (cluster) => {
+      const key = `${programVenueKey(cluster[0].program, cluster[0].venue)}|${cluster[0].event_date}`
+      return existingGroupIdByCluster.get(key) || null
+    })
+
+    const inserted = []
+    const skipped = []
+
+    for (let i = 0; i < withCrew.length; i++) {
+      const event = withCrew[i]
+      const showGroupId = (event as { show_group_id?: string | null }).show_group_id || groupIds[i]
+      const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew } = event
+
       const existing = await c.env.DB.prepare(`
-        SELECT id FROM events
+        SELECT id, show_group_id FROM events
         WHERE event_date = ? AND program = ? AND venue = ?
         LIMIT 1
-      `).bind(event_date, program, venue).first()
+      `).bind(event_date, program, venue).first() as { id: number; show_group_id?: string | null } | null
+
+      const hasCrew = !!(crew && crew.trim()) || !!(foh_crew && String(foh_crew).trim()) || !!(stage_crew && String(stage_crew).trim())
 
       if (existing) {
-        // Duplicate found — if CSV has crew, update the existing record's crew fields
-        if (crew && crew.trim()) {
+        if (hasCrew || showGroupId) {
           await c.env.DB.prepare(`
-            UPDATE events SET crew = ?, foh_crew = ?, stage_crew = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
-          `).bind(crew.trim(), foh_crew || null, stage_crew || null, existing.id).run()
-          inserted.push({ id: existing.id, ...event, _action: 'crew_updated' })
+            UPDATE events SET
+              crew = COALESCE(?, crew),
+              foh_crew = COALESCE(?, foh_crew),
+              stage_crew = COALESCE(?, stage_crew),
+              show_group_id = COALESCE(?, show_group_id),
+              updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+          `).bind(
+            crew?.trim() || null,
+            foh_crew || null,
+            stage_crew || null,
+            showGroupId,
+            existing.id
+          ).run()
+          inserted.push({ id: existing.id, ...event, _action: 'updated' })
         } else {
           skipped.push({
             ...event,
@@ -766,12 +943,13 @@ app.post('/api/events/bulk', async (c) => {
         continue
       }
 
-      // Not a duplicate - insert new event
       const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
-
       const result = await c.env.DB.prepare(`
-        INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO events (
+          event_date, program, venue, team, sound_requirements, call_time,
+          crew, foh_crew, stage_crew, requirements_updated, source, show_group_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -783,18 +961,18 @@ app.post('/api/events/bulk', async (c) => {
         foh_crew || null,
         stage_crew || null,
         requirements_updated,
-        'import_word'
+        importSource,
+        showGroupId
       ).run()
 
-      inserted.push({ id: result.meta.last_row_id, ...event })
+      inserted.push({ id: result.meta.last_row_id, ...event, show_group_id: showGroupId })
     }
     
-    // Build detailed response message
-    const crewUpdated = inserted.filter((e: any) => e._action === 'crew_updated').length
+    const crewUpdated = inserted.filter((e: any) => e._action === 'updated').length
     const newInserts = inserted.length - crewUpdated
     let message = newInserts > 0 ? `${newInserts} events uploaded successfully` : ''
     if (crewUpdated > 0) {
-      message += (message ? ', ' : '') + `${crewUpdated} crew assignments updated`
+      message += (message ? ', ' : '') + `${crewUpdated} existing events updated`
     }
     if (skipped.length > 0) {
       message += `, ${skipped.length} skipped`

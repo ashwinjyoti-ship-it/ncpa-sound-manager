@@ -40,6 +40,72 @@ function displayVenue(venue) {
   return venue;
 }
 
+// ============================================
+// MULTI-DATE SHOW HELPERS (consecutive dates only)
+// ============================================
+
+function eventHasCrew(e) {
+  var sc = e.stage_crew;
+  if (Array.isArray(sc)) return sc.some(Boolean) || !!(e.foh_crew && String(e.foh_crew).trim()) || !!(e.crew && String(e.crew).trim());
+  return !!(e.foh_crew && String(e.foh_crew).trim()) || !!(sc && String(sc).trim()) || !!(e.crew && String(e.crew).trim());
+}
+
+function addDaysUtc(dateStr, days) {
+  var d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function isConsecutiveDate(prev, next) {
+  return addDaysUtc(prev, 1) === next;
+}
+
+function venueGroupKey(venue) {
+  var v = (venue || '').trim();
+  var upper = v.toUpperCase();
+  if (upper === 'JBT MUSEUM' || upper.indexOf('JBT MUSEUM ') === 0) return 'JBT Museum';
+  if (v === 'TET' || v === 'TT' || v === 'Tata Theatre') return 'TT';
+  return v;
+}
+
+function programVenueKey(program, venue) {
+  return (program || '').trim() + '|' + venueGroupKey(venue);
+}
+
+// Union of same show_group_id and inferred consecutive cluster (2+), not
+// "ID if present else dates" — a show_group_id that's drifted out of sync
+// with the actual consecutive run (e.g. a partial re-upload minted a new id
+// for part of an existing run) must not orphan the rows left on the old id.
+function findMultiDateSiblings(event, events) {
+  var byGroupId = event.show_group_id
+    ? events.filter(function(e) { return e.id !== event.id && e.show_group_id === event.show_group_id; })
+    : [];
+
+  var key = programVenueKey(event.program, event.venue);
+  var peers = events.filter(function(e) {
+    return e.id !== event.id && programVenueKey(e.program, e.venue) === key;
+  });
+  var cluster = [event].concat(peers).sort(function(a, b) {
+    return a.event_date.localeCompare(b.event_date);
+  });
+  var clusters = [];
+  for (var i = 0; i < cluster.length; i++) {
+    if (i === 0 || !isConsecutiveDate(cluster[i - 1].event_date, cluster[i].event_date)) {
+      clusters.push([cluster[i]]);
+    } else {
+      clusters[clusters.length - 1].push(cluster[i]);
+    }
+  }
+  var mine = clusters.find(function(c) {
+    return c.some(function(e) { return e.id === event.id; });
+  });
+  var byDate = (!mine || mine.length < 2) ? [] : mine.filter(function(e) { return e.id !== event.id; });
+
+  var merged = new Map();
+  byGroupId.concat(byDate).forEach(function(e) { merged.set(e.id, e); });
+  return Array.from(merged.values());
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
    renderCurrentView();
    await loadEvents();
@@ -1148,11 +1214,7 @@ async function handleAddShow(e) {
         renderCurrentView();
       }
     } else {
-      // Multiple dates (date range) — create each date as an individual event
-      // using POST /api/events (same path as single-date) so that:
-      //   - source is 'manual' (not 'import_word')
-      //   - stage_crew array is normalised correctly
-      //   - rider, notes, and all other fields are preserved
+      // Multiple dates — one API call, shared show_group_id, crew on every day
       const startUTC = new Date(data.start_date + 'T00:00:00Z');
       const endUTC   = new Date(data.end_date   + 'T00:00:00Z');
 
@@ -1161,34 +1223,37 @@ async function handleAddShow(e) {
         return;
       }
 
-      const totalDays = Math.round((endUTC - startUTC) / (1000 * 60 * 60 * 24)) + 1;
-      showNotification(`Creating ${totalDays} event${totalDays > 1 ? 's' : ''}...`, 'info');
-
+      const dates = [];
       const iter = new Date(startUTC);
-      let created = 0;
       while (iter <= endUTC) {
-        const dateStr = iter.toISOString().slice(0, 10);
-        await axios.post(`${API_BASE}/events`, {
-          event_date: dateStr,
-          program: data.program,
-          venue: data.venue,
-          team: data.team || null,
-          sound_requirements: data.sound_requirements || null,
-          call_time: data.call_time || null,
-          foh_crew: fohCrewSelected,
-          stage_crew: stageCrewSelected,
-          rider: data.rider || null,
-          notes: data.notes || null,
-        });
-        created++;
+        dates.push(iter.toISOString().slice(0, 10));
         iter.setUTCDate(iter.getUTCDate() + 1);
       }
 
-      showNotification(`${created} event${created > 1 ? 's' : ''} created`, 'success');
+      showNotification('Creating ' + dates.length + ' event' + (dates.length > 1 ? 's' : '') + '...', 'info');
+
+      const response = await axios.post(`${API_BASE}/events/multi-date`, {
+        dates: dates,
+        program: data.program,
+        venue: data.venue,
+        team: data.team || null,
+        sound_requirements: data.sound_requirements || null,
+        call_time: data.call_time || null,
+        foh_crew: fohCrewSelected,
+        stage_crew: stageCrewSelected,
+        rider: data.rider || null,
+        notes: data.notes || null,
+      });
+
+      if (!response.data.success) {
+        showNotification('Failed to add show: ' + (response.data.error || 'Unknown error'), 'error');
+        return;
+      }
+
+      showNotification(dates.length + ' event' + (dates.length > 1 ? 's' : '') + ' created', 'success');
       closeAddShowModal();
       await loadEvents();
 
-      // Navigate to the month of the first date
       currentDate = new Date(startUTC.getUTCFullYear(), startUTC.getUTCMonth(), 1);
       if (isMobileView()) {
         currentDate = getWeekStart(new Date(startUTC));
@@ -1407,26 +1472,28 @@ async function editEventFromModal(eventId) {
       document.querySelector('input[name="editDateType"][value="single"]').checked = true;
       toggleEditDateFields();
 
-      // Detect sibling events (same program + venue, different ID) for crew propagation
-      const siblings = allEvents.filter(function(e) {
-        return e.program === event.program && e.venue === event.venue && e.id !== event.id;
-      });
+      // Multi-date siblings (consecutive run or shared show_group_id)
+      const siblings = (response.data.multi_date_siblings && response.data.multi_date_siblings.length > 0)
+        ? response.data.multi_date_siblings
+        : findMultiDateSiblings(event, allEvents);
       var propagateRow = document.getElementById('editCrewPropagateRow');
       var propagateCb  = document.getElementById('editPropagateCrew');
       if (propagateRow && propagateCb) {
         if (siblings.length > 0) {
-          var siblingsHaveNoCrew = siblings.every(function(e) { return !e.foh_crew && !e.stage_crew && !e.crew; });
+          var siblingsHaveNoCrew = siblings.every(function(e) { return !eventHasCrew(e); });
           var sibDates = siblings.map(function(e) { return e.event_date; }).sort().join(', ');
           document.getElementById('editPropagateLabel').textContent =
             'Apply crew to ' + siblings.length + ' other date' + (siblings.length > 1 ? 's' : '') +
-            ' of this show (' + sibDates + ')';
+            ' in this run (' + sibDates + ')';
           propagateCb.checked = siblingsHaveNoCrew;
           propagateRow.style.display = 'block';
           propagateRow.dataset.siblingIds = JSON.stringify(siblings.map(function(e) { return e.id; }));
+          propagateRow.dataset.showGroupId = event.show_group_id || '';
         } else {
           propagateRow.style.display = 'none';
           propagateCb.checked = false;
           propagateRow.dataset.siblingIds = '[]';
+          propagateRow.dataset.showGroupId = '';
         }
       }
 
@@ -1448,6 +1515,7 @@ function closeEditEventModal() {
   if (propagateRow) {
     propagateRow.style.display = 'none';
     propagateRow.dataset.siblingIds = '[]';
+    propagateRow.dataset.showGroupId = '';
   }
   var propagateCb = document.getElementById('editPropagateCrew');
   if (propagateCb) propagateCb.checked = false;
@@ -1501,10 +1569,16 @@ async function handleEditEvent(e) {
           var siblingIds = JSON.parse((propagateRow && propagateRow.dataset.siblingIds) || '[]');
           if (siblingIds.length > 0) {
             try {
+              var groupId = (propagateRow && propagateRow.dataset.showGroupId) || '';
+              if (!groupId && typeof crypto !== 'undefined' && crypto.randomUUID) {
+                groupId = crypto.randomUUID();
+              }
+              var allIds = [parseInt(eventId, 10)].concat(siblingIds);
               await axios.put(`${API_BASE}/events/bulk-crew`, {
-                ids: siblingIds,
+                ids: allIds,
                 foh_crew: fohCrew || null,
                 stage_crew: stageCrewString,
+                show_group_id: groupId || undefined,
               });
             } catch (propErr) {
               console.error('Crew propagation failed:', propErr);
@@ -1527,6 +1601,12 @@ async function handleEditEvent(e) {
         return;
       }
 
+      var propagateRowExtend = document.getElementById('editCrewPropagateRow');
+      var groupIdExtend = (propagateRowExtend && propagateRowExtend.dataset.showGroupId) || '';
+      if (!groupIdExtend && typeof crypto !== 'undefined' && crypto.randomUUID) {
+        groupIdExtend = crypto.randomUUID();
+      }
+
       // Update original event to start date
       await axios.put(`${API_BASE}/events/${eventId}`, {
         event_date: data.start_date,
@@ -1537,13 +1617,14 @@ async function handleEditEvent(e) {
         call_time: data.call_time || null,
         crew: crewString,
         foh_crew: fohCrew || null,
-        stage_crew: stageCrewString
+        stage_crew: stageCrewString,
+        show_group_id: groupIdExtend || null,
       });
 
       // Create copies for remaining dates
       const events = [];
       const currentDateIter = new Date(startDate);
-      currentDateIter.setDate(currentDateIter.getDate() + 1); // Start from day after start date
+      currentDateIter.setDate(currentDateIter.getDate() + 1);
 
       while (currentDateIter <= endDate) {
         events.push({
@@ -1555,13 +1636,14 @@ async function handleEditEvent(e) {
           call_time: data.call_time || null,
           crew: crewString,
           foh_crew: fohCrew || null,
-          stage_crew: stageCrewString
+          stage_crew: stageCrewString,
+          show_group_id: groupIdExtend || null,
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }
       
       if (events.length > 0) {
-        await axios.post(`${API_BASE}/events/bulk`, { events });
+        await axios.post(`${API_BASE}/events/bulk`, { events, source: 'manual' });
       }
       
       const totalDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;

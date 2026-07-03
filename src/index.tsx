@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
-import { getCookie } from 'hono/cookie'
 import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
 import { generateEventEmbedding } from './rag-utils'
@@ -15,6 +14,7 @@ import {
 import { setupCrewAssignmentEngine } from './crew-assignment-engine'
 import { setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
+import { requireAdminUser, requireAuthenticatedUser } from './auth-utils'
 import {
   addDaysUtc,
   applyCrewPropagationInBatch,
@@ -35,31 +35,6 @@ type Bindings = {
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
-
-async function requireAuthenticatedUser(c: any) {
-  const token = getCookie(c, 'session_token')
-  if (!token) {
-    return c.json({ success: false, error: 'Not authenticated' }, 401)
-  }
-
-  const origin = c.req.header('Origin')
-  if (origin && origin !== new URL(c.req.url).origin) {
-    return c.json({ success: false, error: 'Invalid request origin' }, 403)
-  }
-
-  const session = await c.env.DB.prepare(`
-    SELECT u.id, u.email, u.role, u.status
-    FROM sessions s
-    JOIN users u ON s.user_id = u.id
-    WHERE s.token = ? AND s.expires_at > datetime('now')
-  `).bind(token).first() as any
-
-  if (!session || session.status !== 'approved') {
-    return c.json({ success: false, error: 'Not authenticated' }, 401)
-  }
-
-  return null
-}
 
 // Enable CORS for all routes (Safari compatibility)
 app.use('*', cors({
@@ -469,6 +444,9 @@ app.get('/api/events/:id', async (c) => {
 // Create consecutive multi-date show (one row per date, shared show_group_id)
 app.post('/api/events/multi-date', async (c) => {
   try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const {
       dates,
@@ -546,6 +524,9 @@ app.post('/api/events/multi-date', async (c) => {
 // Create new event
 app.post('/api/events', async (c) => {
   try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, show_group_id } = body
     
@@ -637,6 +618,9 @@ app.post('/api/events', async (c) => {
 // Bulk-update crew fields across multiple events (for multi-date show propagation)
 app.put('/api/events/bulk-crew', async (c) => {
   try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
     const { ids, foh_crew, stage_crew, show_group_id } = await c.req.json()
     if (!Array.isArray(ids) || ids.length === 0)
       return c.json({ success: false, error: 'ids array required' }, 400)
@@ -669,6 +653,9 @@ app.put('/api/events/bulk-crew', async (c) => {
 // Update event
 app.put('/api/events/:id', async (c) => {
   try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
     const id = c.req.param('id')
     const body = await c.req.json()
     const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id } = body
@@ -830,6 +817,9 @@ app.post('/api/events/bulk-delete', async (c) => {
 // Bulk upload events (for CSV/Word import with duplicate detection)
 app.post('/api/events/bulk', async (c) => {
   try {
+    const authError = await requireAuthenticatedUser(c)
+    if (authError) return authError
+
     const body = await c.req.json()
     const { events, source: batchSource } = body
     
@@ -1170,6 +1160,9 @@ app.post('/api/ai/rag', handleRAGQuery)
 // ============================================
 app.post('/api/admin/backfill-embeddings', async (c) => {
   try {
+    const authError = await requireAdminUser(c)
+    if (authError) return authError
+
     const { batch_size } = await c.req.json().catch(() => ({ batch_size: 50 }))
     
     const result = await backfillEmbeddings(c, batch_size || 50)

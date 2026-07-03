@@ -72,12 +72,15 @@ function programVenueKey(program, venue) {
   return (program || '').trim() + '|' + venueGroupKey(venue);
 }
 
+// Union of same show_group_id and inferred consecutive cluster (2+), not
+// "ID if present else dates" — a show_group_id that's drifted out of sync
+// with the actual consecutive run (e.g. a partial re-upload minted a new id
+// for part of an existing run) must not orphan the rows left on the old id.
 function findMultiDateSiblings(event, events) {
-  if (event.show_group_id) {
-    return events.filter(function(e) {
-      return e.id !== event.id && e.show_group_id === event.show_group_id;
-    });
-  }
+  var byGroupId = event.show_group_id
+    ? events.filter(function(e) { return e.id !== event.id && e.show_group_id === event.show_group_id; })
+    : [];
+
   var key = programVenueKey(event.program, event.venue);
   var peers = events.filter(function(e) {
     return e.id !== event.id && programVenueKey(e.program, e.venue) === key;
@@ -96,8 +99,11 @@ function findMultiDateSiblings(event, events) {
   var mine = clusters.find(function(c) {
     return c.some(function(e) { return e.id === event.id; });
   });
-  if (!mine || mine.length < 2) return [];
-  return mine.filter(function(e) { return e.id !== event.id; });
+  var byDate = (!mine || mine.length < 2) ? [] : mine.filter(function(e) { return e.id !== event.id; });
+
+  var merged = new Map();
+  byGroupId.concat(byDate).forEach(function(e) { merged.set(e.id, e); });
+  return Array.from(merged.values());
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

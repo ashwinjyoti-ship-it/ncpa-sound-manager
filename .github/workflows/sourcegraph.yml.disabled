@@ -1,3 +1,7 @@
+# Disabled: renamed off the .yml extension so Actions won't pick it up.
+# Uploads failed with "no current user" - sourcegraph.com requires a
+# SRC_ACCESS_TOKEN secret that isn't configured for this repo. Add that
+# secret and rename back to sourcegraph.yml to re-enable.
 name: Sourcegraph Code Graph
 
 on:
@@ -19,6 +23,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       - name: Install dependencies
         run: npm install

@@ -15,11 +15,14 @@ import { setupCrewAssignmentEngine } from './crew-assignment-engine'
 import { setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 import {
+  addDaysUtc,
   applyCrewPropagationInBatch,
   assignGroupIdsByIndex,
   datesAreConsecutive,
+  findMultiDateClusters,
   findMultiDateSiblings,
   generateShowGroupId,
+  programVenueKey,
 } from './multi-date-groups'
 
 type Bindings = {
@@ -849,7 +852,30 @@ app.post('/api/events/bulk', async (c) => {
 
     // Propagate crew within consecutive multi-date clusters; assign show_group_id
     const withCrew = applyCrewPropagationInBatch(prepared)
-    const groupIds = assignGroupIdsByIndex(withCrew)
+
+    // Reuse an existing show_group_id from the day immediately before/after a
+    // cluster when one exists, so re-uploading only part of an already-grouped
+    // run (e.g. a corrected subset of nights) doesn't fragment it onto a
+    // freshly minted id and orphan the untouched sibling rows.
+    const existingGroupIdByCluster = new Map<string, string>()
+    for (const cluster of findMultiDateClusters(withCrew)) {
+      const key = programVenueKey(cluster[0].program, cluster[0].venue)
+      const before = addDaysUtc(cluster[0].event_date, -1)
+      const after = addDaysUtc(cluster[cluster.length - 1].event_date, 1)
+      const adjacent = await c.env.DB.prepare(`
+        SELECT program, venue, show_group_id FROM events
+        WHERE event_date IN (?, ?) AND show_group_id IS NOT NULL
+      `).bind(before, after).all()
+      const match = (adjacent.results || []).find(
+        (row: any) => programVenueKey(row.program, row.venue) === key
+      ) as { show_group_id: string } | undefined
+      if (match) existingGroupIdByCluster.set(`${key}|${cluster[0].event_date}`, match.show_group_id)
+    }
+
+    const groupIds = assignGroupIdsByIndex(withCrew, (cluster) => {
+      const key = `${programVenueKey(cluster[0].program, cluster[0].venue)}|${cluster[0].event_date}`
+      return existingGroupIdByCluster.get(key) || null
+    })
 
     const inserted = []
     const skipped = []

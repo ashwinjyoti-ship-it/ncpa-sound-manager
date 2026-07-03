@@ -1,0 +1,24 @@
+# Sourcegraph code graph auto-indexing for NCPA Sound Crew.
+# See: https://sourcegraph.com/docs/code-navigation/auto-indexing-configuration
+index_jobs:
+  # TypeScript backend (Hono worker on Cloudflare Pages)
+  - steps:
+      - image: sourcegraph/scip-typescript:autoindex
+        commands:
+          - npm install
+    indexer: sourcegraph/scip-typescript:autoindex
+    indexer_args:
+      - scip-typescript
+      - index
+
+  # Vanilla JS frontend served from public/static
+  - steps:
+      - image: sourcegraph/scip-typescript:autoindex
+        commands:
+          - npm install
+    indexer: sourcegraph/scip-typescript:autoindex
+    indexer_args:
+      - scip-typescript
+      - index
+      - --infer-tsconfig
+    root: public/static

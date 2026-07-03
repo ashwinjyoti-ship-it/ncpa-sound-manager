@@ -1,0 +1,52 @@
+# Disabled: renamed off the .yml extension so Actions won't pick it up.
+# Uploads failed with "no current user" - sourcegraph.com requires a
+# SRC_ACCESS_TOKEN secret that isn't configured for this repo. Add that
+# secret and rename back to sourcegraph.yml to re-enable.
+name: Sourcegraph Code Graph
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  create-and-upload-index:
+    if: github.repository == 'ashwinjyoti-ship-it/ncpa-sound-manager'
+    runs-on: ubuntu-latest
+    container: sourcegraph/scip-typescript:latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Sourcegraph CLI
+        run: npm install -g @sourcegraph/src
+
+      - name: Index TypeScript backend
+        run: scip-typescript index
+
+      - name: Upload TypeScript index
+        run: src code-intel upload -github-token=${{ secrets.GITHUB_TOKEN }} -no-progress
+        env:
+          SRC_ENDPOINT: https://sourcegraph.com/
+
+      - name: Index JavaScript frontend
+        working-directory: public/static
+        run: scip-typescript index --infer-tsconfig
+
+      - name: Upload JavaScript index
+        working-directory: public/static
+        run: src code-intel upload -github-token=${{ secrets.GITHUB_TOKEN }} -no-progress
+        env:
+          SRC_ENDPOINT: https://sourcegraph.com/

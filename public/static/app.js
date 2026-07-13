@@ -1618,6 +1618,8 @@ async function handleEditEvent(e) {
         crew: crewString,
         foh_crew: fohCrew || null,
         stage_crew: stageCrewString,
+        rider: data.rider || null,
+        notes: data.notes || null,
         show_group_id: groupIdExtend || null,
       });
 
@@ -1637,6 +1639,8 @@ async function handleEditEvent(e) {
           crew: crewString,
           foh_crew: fohCrew || null,
           stage_crew: stageCrewString,
+          rider: data.rider || null,
+          notes: data.notes || null,
           show_group_id: groupIdExtend || null,
         });
         currentDateIter.setDate(currentDateIter.getDate() + 1);

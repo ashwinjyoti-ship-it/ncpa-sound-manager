@@ -36,6 +36,12 @@ type Bindings = {
 
 const app = new Hono<{ Bindings: Bindings }>()
 
+const nullableText = (value: unknown): string | null => {
+  if (value === undefined || value === null) return null
+  const text = String(value)
+  return text.trim() ? text : null
+}
+
 // Enable CORS for all routes (Safari compatibility)
 app.use('*', cors({
   origin: '*',
@@ -486,9 +492,9 @@ app.post('/api/events/multi-date', async (c) => {
       const result = await c.env.DB.prepare(`
         INSERT INTO events (
           event_date, program, venue, team, sound_requirements, call_time,
-          crew, foh_crew, stage_crew, requirements_updated, source, show_group_id
+          crew, foh_crew, stage_crew, rider, notes, requirements_updated, source, show_group_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -499,6 +505,8 @@ app.post('/api/events/multi-date', async (c) => {
         allCrew,
         fohCrew || null,
         stageCrew || null,
+        nullableText(rider),
+        nullableText(notes),
         requirements_updated,
         'manual',
         showGroupId
@@ -528,7 +536,7 @@ app.post('/api/events', async (c) => {
     if (authError) return authError
 
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, show_group_id } = body
+    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id } = body
     
     if (!event_date || !program || !venue) {
       return c.json({ success: false, error: 'Date, program, and venue are required' }, 400)
@@ -545,8 +553,8 @@ app.post('/api/events', async (c) => {
     const allCrew = [fohCrew, stageCrew].filter(Boolean).join(', ') || crew || null
     
     const result = await c.env.DB.prepare(`
-      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, requirements_updated, source, show_group_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, requirements_updated, source, show_group_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       event_date,
       program,
@@ -557,6 +565,8 @@ app.post('/api/events', async (c) => {
       allCrew,
       fohCrew || null,
       stageCrew || null,
+      nullableText(rider),
+      nullableText(notes),
       requirements_updated,
       'manual',
       show_group_id || null
@@ -607,6 +617,8 @@ app.post('/api/events', async (c) => {
         crew: allCrew,
         foh_crew: fohCrew || null,
         stage_crew: stageCrew || null,
+        rider: nullableText(rider),
+        notes: nullableText(notes),
         requirements_updated
       }
     }, 201)
@@ -659,6 +671,8 @@ app.put('/api/events/:id', async (c) => {
     const id = c.req.param('id')
     const body = await c.req.json()
     const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id } = body
+    const hasRider = Object.prototype.hasOwnProperty.call(body, 'rider')
+    const hasNotes = Object.prototype.hasOwnProperty.call(body, 'notes')
 
     // Check if sound_requirements is filled
     const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
@@ -690,8 +704,8 @@ app.put('/api/events/:id', async (c) => {
           crew = ?,
           foh_crew = ?,
           stage_crew = ?,
-          rider = ?,
-          notes = ?,
+          rider = CASE WHEN ? THEN ? ELSE rider END,
+          notes = CASE WHEN ? THEN ? ELSE notes END,
           requirements_updated = ?,
           show_group_id = COALESCE(?, show_group_id),
           updated_at = CURRENT_TIMESTAMP
@@ -706,8 +720,10 @@ app.put('/api/events/:id', async (c) => {
       combinedCrew,
       normFohCrew,
       normStageCrew,
-      rider || null,
-      notes || null,
+      hasRider ? 1 : 0,
+      nullableText(rider),
+      hasNotes ? 1 : 0,
+      nullableText(notes),
       requirements_updated,
       show_group_id || null,
       id
@@ -947,9 +963,9 @@ app.post('/api/events/bulk', async (c) => {
       const result = await c.env.DB.prepare(`
         INSERT INTO events (
           event_date, program, venue, team, sound_requirements, call_time,
-          crew, foh_crew, stage_crew, requirements_updated, source, show_group_id
+          crew, foh_crew, stage_crew, rider, notes, requirements_updated, source, show_group_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
         event_date,
         program,
@@ -960,6 +976,8 @@ app.post('/api/events/bulk', async (c) => {
         crew || null,
         foh_crew || null,
         stage_crew || null,
+        nullableText((event as { rider?: string | null }).rider),
+        nullableText((event as { notes?: string | null }).notes),
         requirements_updated,
         importSource,
         showGroupId

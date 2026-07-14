@@ -3064,7 +3064,7 @@ async function askAI(predefinedQuery) {
       if (showSecondaryAnalysis && follow_up_queries && follow_up_queries.length > 0) {
         resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
         follow_up_queries.forEach(suggestion => {
-          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${suggestion}</button>`;
+          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${escapeHtml(suggestion)}</button>`;
         });
         resultsHTML += '</div></div>';
       }

@@ -251,10 +251,12 @@ Real-time UI Update
 
 ### AI Services
 
-- `POST /api/ai/query` - Natural language to SQL conversion
-  - Input: `{ query: "your question" }`
-  - Output: SQL query + results + explanation
-  - Example: "Show all events tomorrow" → generates SQL → returns matching events
+- `POST /api/ai/chat` - Ask AI chat: agentic natural-language Q&A over the events database
+  - Input: `{ messages: [{ role: "user"|"assistant", content: "..." }] }`
+  - Claude writes its own read-only SQL against the live schema and answers in natural language, asking a clarifying question when needed
+  - Output: `{ success, answer }`
+
+- `POST /api/ai/rag` - Legacy RAG search/analytics endpoint (superseded by `/api/ai/chat`, kept for compatibility)
 
 - `POST /api/ai/parse-word` - AI-powered Word document parsing
   - Input: `{ text: "document text", filename: "optional.docx" }`

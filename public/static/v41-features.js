@@ -56,7 +56,7 @@ function initializeFilters() {
       <div>
         <label class="filter-panel-label block text-sm font-medium mb-1">Venue</label>
         <select id="filterVenue" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
-          <option value="">All Venues</option>
+          <option value="" disabled>All Venues (select none)</option>
         </select>
       </div>
       
@@ -64,7 +64,7 @@ function initializeFilters() {
       <div>
         <label class="filter-panel-label block text-sm font-medium mb-1">Crew</label>
         <select id="filterCrew" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
-          <option value="">All Crew</option>
+          <option value="" disabled>All Crew (select none)</option>
         </select>
       </div>
       
@@ -72,7 +72,7 @@ function initializeFilters() {
       <div>
         <label class="filter-panel-label block text-sm font-medium mb-1">Team</label>
         <select id="filterTeam" multiple class="filter-panel-control w-full px-3 py-2 rounded-xl text-sm" style="height:80px;">
-          <option value="">All Teams</option>
+          <option value="" disabled>All Teams (select none)</option>
         </select>
       </div>
       
@@ -327,15 +327,16 @@ function matchesTeamPattern(eventTeam, selectedTeam) {
 }
 
 async function applyFilters() {
-  // Read filter values
-  const venueSelect = document.getElementById('filterVenue');
-  filterState.venues = Array.from(venueSelect.selectedOptions).map(o => o.value);
-  
-  const crewSelect = document.getElementById('filterCrew');
-  filterState.crews = Array.from(crewSelect.selectedOptions).map(o => o.value);
-  
-  const teamSelect = document.getElementById('filterTeam');
-  const selectedTeams = Array.from(teamSelect.selectedOptions).map(o => o.value);
+  // Read filter values, dropping the empty "All ..." placeholder if a browser
+  // lets it be selected — a "" value used to make filters return zero results
+  const readSelections = (id) =>
+    Array.from(document.getElementById(id).selectedOptions)
+      .map(o => o.value)
+      .filter(v => v && v.trim());
+
+  filterState.venues = readSelections('filterVenue');
+  filterState.crews = readSelections('filterCrew');
+  const selectedTeams = readSelections('filterTeam');
   
   filterState.dateFrom = document.getElementById('filterDateFrom').value || null;
   filterState.dateTo = document.getElementById('filterDateTo').value || null;

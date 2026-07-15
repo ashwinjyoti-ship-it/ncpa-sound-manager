@@ -43,48 +43,92 @@ function isValidCrewMember(name: string): boolean {
 // 1. ADVANCED FILTERING & SORTING
 // ============================================
 
+// Stored venue strings are messy ('JBT 8pm', 'TT 6.30pm', 'Tata Theatre',
+// 'Jamshed Bhabha Theatre', 'TET & JBT Museum'...), so each main-venue
+// selection expands to a group of LIKE conditions instead of an exact match.
+// Returns a SQL fragment and its bind params.
+function venueCondition(selected: string): { sql: string; params: string[] } {
+  switch (selected) {
+    case 'JBT':
+      // JBT proper (incl. 'JBT Foyer', 'JBT 8pm') but not the Museum
+      return {
+        sql: "((venue LIKE 'JBT%' OR venue LIKE '%Jamshed%' OR venue LIKE '%Bhabha%') AND venue NOT LIKE '%Museum%')",
+        params: []
+      }
+    case 'JBT Museum':
+      return { sql: "(venue LIKE 'JBT Museum%')", params: [] }
+    case 'TET':
+      return { sql: "(venue LIKE 'TET%' OR venue LIKE '%Experimental%')", params: [] }
+    case 'TT':
+      return { sql: "(venue LIKE 'TT%' OR venue LIKE 'Tata%')", params: [] }
+    case 'GDT':
+      return { sql: "(venue LIKE 'GDT%' OR venue LIKE '%Godrej%')", params: [] }
+    case 'LT':
+      return { sql: "(venue LIKE 'LT%' OR venue LIKE 'Little%')", params: [] }
+    case 'SVR':
+      return { sql: "(venue LIKE 'SVR%' OR venue LIKE 'Sea View%')", params: [] }
+    case 'DP Art Gallery':
+      return { sql: "(venue LIKE 'DP Art%' OR venue LIKE 'DPAG%')", params: [] }
+    default:
+      // Unknown selection: match as a prefix of the stored value
+      return { sql: '(venue LIKE ?)', params: [`${selected}%`] }
+  }
+}
+
 export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
-  
+
   // Advanced filter events with multiple criteria
   app.post('/api/events/filter', async (c) => {
     try {
       const body = await c.req.json()
-      const { 
-        venues, 
-        crews, 
-        teams, 
-        dateFrom, 
-        dateTo, 
-        tags,
+      const {
+        venues,
+        crews,
+        teams,
+        dateFrom,
+        dateTo,
         hasRequirements,
         sortBy = 'event_date',
         sortOrder = 'ASC',
-        limit = 100
+        limit = 500
       } = body
-      
+
+      // Drop empty selections (the UI's "All ..." placeholder options have
+      // value "" — treating them as real values made filters return nothing)
+      const cleanList = (arr: unknown): string[] =>
+        Array.isArray(arr) ? arr.map((v) => String(v).trim()).filter(Boolean) : []
+      const venueList = cleanList(venues)
+      const crewList = cleanList(crews)
+      const teamList = cleanList(teams)
+
       // Build dynamic query
       let query = 'SELECT * FROM events WHERE 1=1'
       const params: any[] = []
-      
-      // Venue filter
-      if (venues && venues.length > 0) {
-        const placeholders = venues.map(() => '?').join(',')
-        query += ` AND venue IN (${placeholders})`
-        params.push(...venues)
+
+      // Venue filter (alias-aware: 'JBT' matches 'JBT 8pm', 'Jamshed Bhabha Theatre', ...)
+      if (venueList.length > 0) {
+        const groups = venueList.map((v) => venueCondition(v))
+        query += ` AND (${groups.map((g) => g.sql).join(' OR ')})`
+        groups.forEach((g) => params.push(...g.params))
       }
-      
-      // Crew filter (support partial matches)
-      if (crews && crews.length > 0) {
-        const crewConditions = crews.map(() => 'crew LIKE ?').join(' OR ')
+
+      // Crew filter: names can live in legacy 'crew' or the FOH/Stage split columns
+      if (crewList.length > 0) {
+        const crewConditions = crewList
+          .map(() => "(COALESCE(crew,'') LIKE ? OR COALESCE(foh_crew,'') LIKE ? OR COALESCE(stage_crew,'') LIKE ?)")
+          .join(' OR ')
         query += ` AND (${crewConditions})`
-        params.push(...crews.map((c: string) => `%${c}%`))
+        crewList.forEach((name: string) => {
+          const value = `%${name}%`
+          params.push(value, value, value)
+        })
       }
-      
+
       // Team filter
-      if (teams && teams.length > 0) {
-        const placeholders = teams.map(() => '?').join(',')
+      if (teamList.length > 0) {
+        const placeholders = teamList.map(() => '?').join(',')
         query += ` AND team IN (${placeholders})`
-        params.push(...teams)
+        params.push(...teamList)
       }
       
       // Date range filter
@@ -97,29 +141,28 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
         params.push(dateTo)
       }
       
-      // Tags filter (comma-separated)
-      if (tags && tags.length > 0) {
-        const tagConditions = tags.map(() => 'tags LIKE ?').join(' OR ')
-        query += ` AND (${tagConditions})`
-        params.push(...tags.map((t: string) => `%${t}%`))
-      }
-      
+      // (tags filter removed: the events table has no tags column, so any
+      // request that set it got a guaranteed SQL error)
+
       // Sound requirements filter
       if (hasRequirements === true) {
         query += ' AND sound_requirements IS NOT NULL AND sound_requirements != ""'
       } else if (hasRequirements === false) {
         query += ' AND (sound_requirements IS NULL OR sound_requirements = "")'
       }
-      
-      // Sorting
-      const validSortFields = ['event_date', 'program', 'venue', 'crew', 'created_at', 'status']
+
+      // Sorting ('status' removed: the events table has no status column,
+      // so sorting by it was a guaranteed SQL error)
+      const validSortFields = ['event_date', 'program', 'venue', 'crew', 'created_at']
       const sortField = validSortFields.includes(sortBy) ? sortBy : 'event_date'
-      const order = sortOrder.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
+      const order = String(sortOrder).toUpperCase() === 'DESC' ? 'DESC' : 'ASC'
       query += ` ORDER BY ${sortField} ${order}`
-      
-      // Limit
+
+      // Limit (sanitized: this endpoint also feeds whole-month analyses,
+      // so the cap needs headroom beyond one page of results)
+      const safeLimit = Math.min(Math.max(parseInt(String(limit), 10) || 500, 1), 1000)
       query += ' LIMIT ?'
-      params.push(limit)
+      params.push(safeLimit)
       
       const { results } = await c.env.DB.prepare(query).bind(...params).all()
       

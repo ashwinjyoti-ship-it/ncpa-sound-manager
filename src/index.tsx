@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/cloudflare-workers'
 import type { Env } from './types'
 import { handleRAGQuery } from './rag-endpoint'
+import { handleAIChat } from './ai-chat-endpoint'
 import { generateEventEmbedding } from './rag-utils'
 import { backfillEmbeddings } from './backfill-embeddings'
 import {
@@ -1172,6 +1173,11 @@ function classifyIntent(query: string, pastContext: any[]) {
 // RAG QUERY ENDPOINT (Version 4.0 - Claude Sonnet 4 + Vectorize)
 // ============================================
 app.post('/api/ai/rag', handleRAGQuery)
+
+// ============================================
+// ASK AI CHAT ENDPOINT (Version 5.0 - agentic SQL tool loop)
+// ============================================
+app.post('/api/ai/chat', handleAIChat)
 
 // ============================================
 // EMBEDDING BACKFILL ENDPOINT (Admin Only)
@@ -6274,44 +6280,32 @@ app.get('/', (c) => {
         <!-- AI Assistant Floating Button -->
         <!-- (Removed) Floating Ask AI button — Ask AI is in top toolbar -->
 
-        <!-- AI Assistant Modal -->
+        <!-- AI Assistant Modal (chat) -->
 <div id="aiAssistantModal" class="modal">
-             <div class="modal-content" style="max-width: 700px;">
-                 <div class="flex justify-between items-center mb-4">
+             <div class="modal-content" style="max-width: 700px; display: flex; flex-direction: column;">
+                 <div class="flex justify-between items-center mb-3">
                      <h2 class="text-2xl font-bold" style="color: #2d3338;">
                          <i class="fas fa-robot mr-2"></i>Ask AI
                      </h2>
-                     <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                     <div class="flex items-center gap-3">
+                         <button onclick="clearAIChat()" class="text-sm px-3 py-1.5 rounded-lg transition-colors" style="background:rgba(152,162,215,0.12);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.22)'" onmouseout="this.style.background='rgba(152,162,215,0.12)'">
+                             New Chat
+                         </button>
+                         <button onclick="closeAIAssistant()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                     </div>
                  </div>
-                 
-                  <div class="mb-6">
-                      <p class="text-gray-400 italic mb-4">Search your events using natural language. Ask anything about dates, venues, crew, or availability.</p>
-                      
-                      <div class="flex space-x-2">
-                          <input type="text" id="aiQueryInput" placeholder="Ask a question about your events..." 
-                                 class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
-                                 onkeypress="if(event.key==='Enter') askAI()">
-                          <button onclick="askAI()" class="btn-primary px-6 py-3">
-                              <i class="fas fa-paper-plane"></i>
-                          </button>
-                      </div>
-                  </div>
-                 
-                  <div id="aiResponse" style="display: none;">
-                      <div class="bg-gray-50 rounded-lg p-4 mb-4">
-                          <div class="flex items-center justify-between mb-2">
-                              <div class="flex items-center">
-                                  <div class="loading mr-2" id="aiLoading" style="display: none;"></div>
-                                  <h3 class="font-semibold text-gray-700">Response:</h3>
-                              </div>
-                              <button onclick="clearAIResults()" class="text-sm px-3 py-1.5 rounded-lg transition-colors" style="background:rgba(152,162,215,0.12);color:#465080;" onmouseover="this.style.background='rgba(152,162,215,0.22)'" onmouseout="this.style.background='rgba(152,162,215,0.12)'">
-                                  Clear Results
-                              </button>
-                          </div>
-                          <p id="aiExplanation" class="text-gray-600 mb-3"></p>
-                          <div id="aiResultsContainer" class="overflow-x-auto"></div>
-                      </div>
-                  </div>
+
+                 <div id="aiChatMessages" class="bg-gray-50 rounded-lg p-4 mb-3 space-y-3"
+                      style="height: 55vh; min-height: 280px; overflow-y: auto;"></div>
+
+                 <div class="flex space-x-2">
+                     <input type="text" id="aiChatInput" placeholder="Ask about crew, dates, venues, equipment..."
+                            class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#98A2D7]"
+                            onkeypress="if(event.key==='Enter') sendAIChat()">
+                     <button id="aiChatSendBtn" onclick="sendAIChat()" class="btn-primary px-6 py-3">
+                         <i class="fas fa-paper-plane"></i>
+                     </button>
+                 </div>
              </div>
          </div>
 

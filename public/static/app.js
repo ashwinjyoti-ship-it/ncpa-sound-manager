@@ -2859,97 +2859,95 @@ function toggleAIAssistant() {
 
 function openAIAssistant() {
   document.getElementById('aiAssistantModal').classList.add('active');
-  document.getElementById('aiQueryInput').focus();
+  renderAIChat();
+  document.getElementById('aiChatInput').focus();
 }
 
 function closeAIAssistant() {
   document.getElementById('aiAssistantModal').classList.remove('active');
-  clearAIResults();
 }
 
-function clearAIResults() {
-  document.getElementById('aiResponse').style.display = 'none';
-  document.getElementById('aiLoading').style.display = 'none';
-  document.getElementById('aiExplanation').textContent = '';
-  document.getElementById('aiExplanation').style.display = 'block';
-  document.getElementById('aiResultsContainer').innerHTML = '';
-  setAILastQuery('');
+// Chat history lives in memory only — it resets on page reload or "New Chat".
+let aiChatHistory = [];
+let aiChatPending = false;
+
+const AI_SUGGESTED_QUESTIONS = [
+  'How many events this month?',
+  'What dates is Tata Theatre free next month?',
+  "Show Ashwin's upcoming events",
+  'Which venue was busiest last month?'
+];
+
+function clearAIChat() {
+  aiChatHistory = [];
+  aiChatPending = false;
+  renderAIChat();
 }
 
-// Session management for context memory
-// Keep AI context scoped to the current browser tab so older unrelated chats
-// don't keep biasing new queries days later.
-let aiSessionId = sessionStorage.getItem('ai_session_id');
-if (!aiSessionId) {
-  aiSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-  sessionStorage.setItem('ai_session_id', aiSessionId);
+function renderAIChat() {
+  const container = document.getElementById('aiChatMessages');
+  if (!container) return;
+
+  if (aiChatHistory.length === 0 && !aiChatPending) {
+    const chips = AI_SUGGESTED_QUESTIONS.map(q =>
+      `<button onclick="askAI('${q.replace(/'/g, "\\'")}')" class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${escapeHtml(q)}</button>`
+    ).join('');
+    container.innerHTML = `
+      <div class="text-sm text-gray-500">
+        <p class="mb-3">Hi! Ask me anything about your events — crew, dates, venues, equipment, availability. I'll ask a follow-up question if something is unclear.</p>
+        <div class="flex flex-wrap gap-2">${chips}</div>
+      </div>`;
+    return;
+  }
+
+  let html = aiChatHistory.map(msg => aiChatBubbleHTML(msg)).join('');
+  if (aiChatPending) {
+    html += `
+      <div class="flex justify-start">
+        <div class="rounded-lg px-4 py-3 text-sm bg-white text-gray-500" style="outline:1px solid rgba(173,179,184,0.25);">
+          <div class="loading" style="display:inline-block;"></div>
+          <span class="ml-2">Checking the database...</span>
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html;
+  container.scrollTop = container.scrollHeight;
 }
 
-const DEFAULT_AI_PLACEHOLDER = 'Ask a question about your events...';
-
-function setAILastQuery(query) {
-  const input = document.getElementById('aiQueryInput');
-  if (!input) return;
-
-  if (query) {
-    input.placeholder = query;
-  } else {
-    input.placeholder = DEFAULT_AI_PLACEHOLDER;
+function aiChatBubbleHTML(msg) {
+  if (msg.role === 'user') {
+    return `
+      <div class="flex justify-end">
+        <div class="rounded-lg px-4 py-2.5 text-sm text-white" style="background:#98A2D7; max-width: 85%;">${escapeHtml(msg.content)}</div>
+      </div>`;
   }
+  const cls = msg.error ? 'ncpa-status ncpa-status--error' : 'bg-white text-gray-700';
+  return `
+    <div class="flex justify-start">
+      <div class="rounded-lg px-4 py-2.5 text-sm ${cls}" style="outline:1px solid rgba(173,179,184,0.25); max-width: 85%;">${formatAIMessage(msg.content)}</div>
+    </div>`;
 }
 
-function formatInsightLabel(key) {
-  const labels = {
-    total_events: 'Total events',
-    date_range: 'Date range',
-    busiest_venue: 'Busiest venue',
-    busiest_crew: 'Busiest crew',
-    venue_stats: 'Venue breakdown',
-    crew_workload: 'Crew workload',
-    team_stats: 'Team breakdown'
-  };
-  return labels[key] || key.replace(/_/g, ' ');
-}
-
-function formatInsightValue(key, value) {
-  if (!value && value !== 0) return 'N/A';
-
-  if (key === 'date_range' && typeof value === 'object' && value.start && value.end) {
-    return `${value.start} to ${value.end}`;
+// Minimal markdown rendering: **bold**, `code`, bullet lists, paragraphs
+function formatAIMessage(text) {
+  const escaped = escapeHtml(String(text || ''));
+  const lines = escaped.split('\n');
+  let html = '';
+  let inList = false;
+  for (const line of lines) {
+    const bullet = line.match(/^\s*[-*]\s+(.*)$/);
+    if (bullet) {
+      if (!inList) { html += '<ul class="list-disc list-inside space-y-1 my-1">'; inList = true; }
+      html += `<li>${bullet[1]}</li>`;
+    } else {
+      if (inList) { html += '</ul>'; inList = false; }
+      if (line.trim()) html += `<p class="my-1">${line}</p>`;
+    }
   }
-
-  if (key === 'venue_stats' && typeof value === 'object') {
-    return Object.entries(value)
-      .sort((a, b) => Number(b[1]) - Number(a[1]))
-      .slice(0, 5)
-      .map(([name, count]) => `${name} (${count})`)
-      .join(', ');
-  }
-
-  if (key === 'crew_workload' && typeof value === 'object') {
-    return Object.entries(value)
-      .sort((a, b) => Number(b[1]) - Number(a[1]))
-      .slice(0, 5)
-      .map(([name, count]) => `${name} (${count})`)
-      .join(', ');
-  }
-
-  if (key === 'team_stats' && Array.isArray(value)) {
-    return value
-      .slice(0, 5)
-      .map(stat => `${stat.team} (${Math.round(Number(stat.percentage) || 0)}%)`)
-      .join(', ');
-  }
-
-  if (Array.isArray(value)) {
-    return value.join(', ');
-  }
-
-  if (typeof value === 'object') {
-    return JSON.stringify(value);
-  }
-
-  return String(value);
+  if (inList) html += '</ul>';
+  return html
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code class="px-1 rounded" style="background:rgba(152,162,215,0.12);">$1</code>');
 }
 
 function escapeHtml(input) {
@@ -2961,131 +2959,54 @@ function escapeHtml(input) {
     .replace(/'/g, '&#39;');
 }
 
-async function askAI(predefinedQuery) {
-  const input = document.getElementById('aiQueryInput');
-  const explanationEl = document.getElementById('aiExplanation');
-  const query = predefinedQuery || input.value.trim();
-  
+// Kept for suggestion chips and legacy callers: submits a canned question.
+function askAI(predefinedQuery) {
+  if (predefinedQuery) {
+    document.getElementById('aiChatInput').value = predefinedQuery;
+  }
+  sendAIChat();
+}
+
+async function sendAIChat() {
+  const input = document.getElementById('aiChatInput');
+  const query = input.value.trim();
+
   if (!query) {
     showNotification('Please enter a question', 'error');
     return;
   }
-  
-  // Show loading
-  document.getElementById('aiResponse').style.display = 'block';
-  document.getElementById('aiLoading').style.display = 'inline-block';
-  explanationEl.style.display = 'block';
-  explanationEl.textContent = 'Thinking...';
-  document.getElementById('aiResultsContainer').innerHTML = '';
-  
+  if (aiChatPending) return;
+
+  aiChatHistory.push({ role: 'user', content: query });
+  input.value = '';
+  aiChatPending = true;
+  renderAIChat();
+
   try {
-    // Use the new RAG endpoint for better responses
-    const response = await axios.post(`${API_BASE}/ai/rag`, { 
-      query,
-      session_id: aiSessionId
-    });
-    
+    // Send the recent conversation (error bubbles excluded) so the AI has
+    // in-session context; nothing is persisted between sessions.
+    const payload = aiChatHistory
+      .filter(m => !m.error)
+      .slice(-20)
+      .map(m => ({ role: m.role, content: m.content }));
+
+    const response = await axios.post(`${API_BASE}/ai/chat`, { messages: payload }, { timeout: 180000 });
+
     if (response.data.success) {
-      const { answer, events, insights, recommendations, follow_up_queries, needs_clarification, clarification_questions, metadata } = response.data;
-      
-      // Hide loading
-      document.getElementById('aiLoading').style.display = 'none';
-      
-      // Show natural language answer
-      const queryIntent = metadata?.query_intent;
-      const showSecondaryAnalysis = queryIntent === 'analytics' || queryIntent === 'comparison';
-      const hasInsights = Boolean(insights && Object.keys(insights).length > 0);
-      const hasRecommendations = Boolean(recommendations && recommendations.length > 0);
-      const shouldHideExplanation = Boolean(
-        events &&
-        events.length > 0 &&
-        !needs_clarification &&
-        !hasInsights &&
-        !hasRecommendations
-      );
-      explanationEl.textContent = answer || 'Here are the results:';
-      explanationEl.style.display = shouldHideExplanation ? 'none' : 'block';
-      setAILastQuery(query);
-      
-      // Display results
-      let resultsHTML = '';
-      
-      // Show events if any
-      if (needs_clarification && clarification_questions?.length) {
-        resultsHTML += '<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-yellow-800 mb-2">Need clarification</h4><ul class="space-y-1 text-sm list-disc list-inside">';
-        clarification_questions.forEach(q => { resultsHTML += `<li class="text-gray-700">${escapeHtml(q)}</li>`; });
-        resultsHTML += '</ul></div>';
-      } else if (events && events.length > 0) {
-        resultsHTML += '<div class="space-y-3 mb-4">';
-        events.forEach(event => {
-          resultsHTML += `
-            <div class="bg-white border border-orange-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-              <div class="flex justify-between items-start mb-2">
-                <div class="flex-1">
-                  <div class="text-sm font-semibold" style="color:#98A2D7;">${formatDate(event.event_date)}</div>
-                  <div class="text-lg font-bold text-gray-800 mt-1">${escapeHtml(event.program || '')}</div>
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-2 text-sm mt-3">
-                <div><span class="text-gray-600">Venue:</span> <span class="font-medium">${escapeHtml(event.venue || 'N/A')}</span></div>
-                <div><span class="text-gray-600">Crew:</span> <span class="font-medium">${escapeHtml(event.foh_crew ? `${event.foh_crew}${event.stage_crew ? ` | ${event.stage_crew}` : ''}` : (event.stage_crew || event.crew || 'N/A'))}</span></div>
-                <div><span class="text-gray-600">Call Time:</span> <span class="font-medium">${escapeHtml(event.call_time || 'N/A')}</span></div>
-                <div><span class="text-gray-600">Team:</span> <span class="font-medium">${escapeHtml(event.team || 'N/A')}</span></div>
-              </div>
-              ${event.sound_requirements ? `<div class="mt-3 text-sm"><span class="text-gray-600">Sound Requirements:</span> <div class="mt-1 text-gray-700">${formatLinksInText(event.sound_requirements)}</div></div>` : ''}
-            </div>
-          `;
-        });
-        resultsHTML += '</div>';
-      }
-      // Note: Don't show "No events found" for aggregation queries
-      // The answer already contains the count/summary
-      
-      // Show insights
-      if (showSecondaryAnalysis && insights && Object.keys(insights).length > 0) {
-        resultsHTML += '<div class="rounded-xl p-4 mb-4" style="background:rgba(152,162,215,0.08);outline:1px solid rgba(173,179,184,0.18);"><h4 class="font-semibold mb-2" style="color:#465080;">📊 Insights</h4><ul class="space-y-1 text-sm">';
-        for (const [key, value] of Object.entries(insights)) {
-          const formattedValue = formatInsightValue(key, value);
-          resultsHTML += `<li><span class="text-gray-600">${escapeHtml(formatInsightLabel(key))}:</span> <span class="font-medium text-gray-800">${escapeHtml(formattedValue)}</span></li>`;
-        }
-        resultsHTML += '</ul></div>';
-      }
-      
-      // Show recommendations
-      if (showSecondaryAnalysis && recommendations && recommendations.length > 0) {
-        resultsHTML += '<div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4"><h4 class="font-semibold text-blue-800 mb-2">💡 Recommendations</h4><ul class="space-y-1 text-sm list-disc list-inside">';
-        recommendations.forEach(rec => {
-          resultsHTML += `<li class="text-gray-700">${escapeHtml(rec)}</li>`;
-        });
-        resultsHTML += '</ul></div>';
-      }
-      
-      // Show follow-up suggestions
-      if (showSecondaryAnalysis && follow_up_queries && follow_up_queries.length > 0) {
-        resultsHTML += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">💬 Try asking:</h4><div class="flex flex-wrap gap-2">';
-        follow_up_queries.forEach(suggestion => {
-          resultsHTML += `<button onclick="askAI('${suggestion.replace(/'/g, "\\'")}')"; class="text-xs rounded-full px-3 py-1 transition-colors" style="background:rgba(255,255,255,0.70);outline:1px solid rgba(173,179,184,0.25);color:#5a6065;">${escapeHtml(suggestion)}</button>`;
-        });
-        resultsHTML += '</div></div>';
-      }
-      
-      document.getElementById('aiResultsContainer').innerHTML = resultsHTML;
-      
-      // Clear input after successful query
-      input.value = '';
-      
+      aiChatHistory.push({ role: 'assistant', content: response.data.answer || 'No answer returned.' });
     } else {
-      throw new Error(response.data.error || 'AI query failed');
+      throw new Error(response.data.error || 'AI chat failed');
     }
-    
   } catch (error) {
-    console.error('AI query error:', error);
-    document.getElementById('aiLoading').style.display = 'none';
-    explanationEl.style.display = 'block';
-    explanationEl.textContent = 'Sorry, I encountered an error processing your question.';
-    document.getElementById('aiResultsContainer').innerHTML = `<p class="ncpa-status ncpa-status--error text-sm">${error.response?.data?.error || error.message}</p>`;
-    setAILastQuery(query);
+    console.error('AI chat error:', error);
+    const detail = error.response?.data?.details || error.response?.data?.error || error.message;
+    aiChatHistory.push({ role: 'assistant', error: true, content: `Sorry, something went wrong: ${detail}` });
     showNotification('AI query failed', 'error');
+  } finally {
+    aiChatPending = false;
+    renderAIChat();
+    const inputEl = document.getElementById('aiChatInput');
+    if (inputEl) inputEl.focus();
   }
 }
 

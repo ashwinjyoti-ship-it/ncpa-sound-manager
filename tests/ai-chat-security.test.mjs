@@ -169,7 +169,7 @@ test('AI chat denies private tables not named in a static blocklist', async () =
 })
 
 test('AI chat still executes event queries containing protected words in string values', async () => {
-  const sql = "SELECT program FROM events WHERE notes LIKE '%users%'"
+  const sql = "SELECT program FROM events WHERE program = 'users'"
   const { anthropicRequests, preparedSql } = await runModelQuery(sql)
 
   assert.equal(preparedSql.some((prepared) => prepared.startsWith(sql)), true)
@@ -177,4 +177,15 @@ test('AI chat still executes event queries containing protected words in string 
   const toolResult = anthropicRequests[1].messages.at(-1).content[0]
   assert.equal(toolResult.is_error, false)
   assert.match(toolResult.content, /User Sessions Seminar/)
+})
+
+test('AI chat rejects SQLite table-valued PRAGMAs outside the event-table allowlist', async () => {
+  const sql = "SELECT * FROM pragma_table_info('conversation_' || 'history')"
+  const { anthropicRequests, preparedSql } = await runModelQuery(sql)
+
+  assert.equal(preparedSql.some((prepared) => prepared.startsWith(sql)), false)
+
+  const toolResult = anthropicRequests[1].messages.at(-1).content[0]
+  assert.equal(toolResult.is_error, true)
+  assert.match(toolResult.content, /tables are allowed/i)
 })

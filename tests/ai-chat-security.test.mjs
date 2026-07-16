@@ -149,7 +149,7 @@ test('AI chat never executes model-generated queries against protected auth tabl
   const toolResult = anthropicRequests[1].messages.at(-1).content[0]
   assert.equal(toolResult.type, 'tool_result')
   assert.equal(toolResult.is_error, true)
-  assert.match(toolResult.content, /protected/i)
+  assert.match(toolResult.content, /tables are allowed/i)
 })
 
 test('AI chat denies private tables not named in a static blocklist', async () => {
@@ -165,7 +165,7 @@ test('AI chat denies private tables not named in a static blocklist', async () =
 
   const toolResult = anthropicRequests[1].messages.at(-1).content[0]
   assert.equal(toolResult.is_error, true)
-  assert.match(toolResult.content, /allowed tables/i)
+  assert.match(toolResult.content, /tables are allowed/i)
 })
 
 test('AI chat still executes event queries containing protected words in string values', async () => {

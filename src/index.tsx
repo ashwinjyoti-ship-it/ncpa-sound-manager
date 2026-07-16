@@ -1073,7 +1073,12 @@ app.post('/api/ai/rag', handleRAGQuery)
 // ============================================
 // ASK AI CHAT ENDPOINT (Version 5.0 - agentic SQL tool loop)
 // ============================================
-app.post('/api/ai/chat', handleAIChat)
+app.post('/api/ai/chat', async (c) => {
+  const authError = await requireAuthenticatedUser(c)
+  if (authError) return authError
+
+  return handleAIChat(c)
+})
 
 // ============================================
 // EMBEDDING BACKFILL ENDPOINT (Admin Only)

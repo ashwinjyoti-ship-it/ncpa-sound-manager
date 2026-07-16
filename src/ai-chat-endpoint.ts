@@ -11,6 +11,7 @@ const MAX_TOOL_ITERATIONS = 10
 const MAX_RESULT_ROWS = 300
 const MAX_RESULT_CHARS = 30000
 const MAX_HISTORY_MESSAGES = 30
+const PROTECTED_TABLES = ['users', 'sessions', 'query_context', 'conversation_history']
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -75,6 +76,12 @@ export function validateReadOnlySql(sql: string): { ok: true; sql: string } | { 
     if (pattern.test(cleaned)) {
       return { ok: false, error: 'Only read-only SELECT queries are allowed' }
     }
+  }
+
+  // Auth and chat-history tables share the primary D1 database with events.
+  // Never let model-generated SQL read credentials, tokens, or private prompts.
+  if (PROTECTED_TABLES.some((table) => new RegExp(`\\b${table}\\b`, 'i').test(cleaned))) {
+    return { ok: false, error: 'Queries against protected tables are not allowed' }
   }
 
   // Keep result sets bounded unless the query already limits itself

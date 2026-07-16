@@ -31,6 +31,12 @@ function createEnv({ session = null, apiKey = 'test-key' } = {}) {
           if (/SELECT\s+token\s+FROM\s+sessions/i.test(sql)) {
             return { results: [{ token: 'stolen-session-token' }] }
           }
+          if (/SELECT\s+query_text\s+FROM\s+query_analytics/i.test(sql)) {
+            return { results: [{ query_text: 'private previous question' }] }
+          }
+          if (/SELECT\s+program\s+FROM\s+events/i.test(sql)) {
+            return { results: [{ program: 'User Sessions Seminar' }] }
+          }
           return { results: [] }
         },
         bind() {
@@ -62,6 +68,47 @@ async function request(env, headers = {}) {
   }), env)
 }
 
+async function runModelQuery(sql) {
+  const session = { id: 7, email: 'crew@example.com', role: 'user', status: 'approved' }
+  const { env, preparedSql } = createEnv({ session })
+  const anthropicRequests = []
+
+  globalThis.fetch = async (_url, options) => {
+    const payload = JSON.parse(options.body)
+    anthropicRequests.push(payload)
+
+    if (anthropicRequests.length === 1) {
+      return Response.json({
+        content: [{
+          type: 'tool_use',
+          id: 'tool-1',
+          name: 'query_database',
+          input: { sql }
+        }],
+        stop_reason: 'tool_use',
+        usage: { input_tokens: 10, output_tokens: 5 }
+      })
+    }
+
+    return Response.json({
+      content: [{ type: 'text', text: 'Query complete.' }],
+      stop_reason: 'end_turn',
+      usage: { input_tokens: 10, output_tokens: 5 }
+    })
+  }
+
+  const response = await request(env, {
+    cookie: 'session_token=valid-token'
+  })
+  const body = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.equal(body.success, true)
+  assert.equal(anthropicRequests.length, 2)
+
+  return { anthropicRequests, preparedSql }
+}
+
 test('AI chat rejects anonymous requests before database or Anthropic access', async () => {
   const { env, preparedSql } = createEnv()
   let anthropicCalls = 0
@@ -80,42 +127,7 @@ test('AI chat rejects anonymous requests before database or Anthropic access', a
 })
 
 test('AI chat never executes model-generated queries against protected auth tables', async () => {
-  const session = { id: 7, email: 'crew@example.com', role: 'user', status: 'approved' }
-  const { env, preparedSql } = createEnv({ session })
-  const anthropicRequests = []
-
-  globalThis.fetch = async (_url, options) => {
-    const payload = JSON.parse(options.body)
-    anthropicRequests.push(payload)
-
-    if (anthropicRequests.length === 1) {
-      return Response.json({
-        content: [{
-          type: 'tool_use',
-          id: 'tool-1',
-          name: 'query_database',
-          input: { sql: 'SELECT token FROM sessions' }
-        }],
-        stop_reason: 'tool_use',
-        usage: { input_tokens: 10, output_tokens: 5 }
-      })
-    }
-
-    return Response.json({
-      content: [{ type: 'text', text: 'I cannot access authentication data.' }],
-      stop_reason: 'end_turn',
-      usage: { input_tokens: 10, output_tokens: 5 }
-    })
-  }
-
-  const response = await request(env, {
-    cookie: 'session_token=valid-token'
-  })
-  const body = await response.json()
-
-  assert.equal(response.status, 200)
-  assert.equal(body.success, true)
-  assert.equal(anthropicRequests.length, 2)
+  const { anthropicRequests, preparedSql } = await runModelQuery('SELECT token FROM sessions')
   assert.equal(
     preparedSql.some((sql) => /SELECT\s+token\s+FROM\s+sessions/i.test(sql)),
     false,
@@ -126,4 +138,31 @@ test('AI chat never executes model-generated queries against protected auth tabl
   assert.equal(toolResult.type, 'tool_result')
   assert.equal(toolResult.is_error, true)
   assert.match(toolResult.content, /protected/i)
+})
+
+test('AI chat denies private tables not named in a static blocklist', async () => {
+  const { anthropicRequests, preparedSql } = await runModelQuery(
+    'SELECT query_text FROM query_analytics'
+  )
+
+  assert.equal(
+    preparedSql.some((sql) => /SELECT\s+query_text\s+FROM\s+query_analytics/i.test(sql)),
+    false,
+    'private query history reached D1'
+  )
+
+  const toolResult = anthropicRequests[1].messages.at(-1).content[0]
+  assert.equal(toolResult.is_error, true)
+  assert.match(toolResult.content, /allowed tables/i)
+})
+
+test('AI chat still executes event queries containing protected words in string values', async () => {
+  const sql = "SELECT program FROM events WHERE notes LIKE '%users%'"
+  const { anthropicRequests, preparedSql } = await runModelQuery(sql)
+
+  assert.equal(preparedSql.some((prepared) => prepared.startsWith(sql)), true)
+
+  const toolResult = anthropicRequests[1].messages.at(-1).content[0]
+  assert.equal(toolResult.is_error, false)
+  assert.match(toolResult.content, /User Sessions Seminar/)
 })

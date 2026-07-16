@@ -28,6 +28,18 @@ function createEnv({ session = null, apiKey = 'test-key' } = {}) {
           return null
         },
         async all() {
+          if (sql.includes("FROM sqlite_master WHERE type IN ('table', 'view')")) {
+            return {
+              results: [
+                { name: 'events' },
+                { name: 'venue_aliases' },
+                { name: 'users' },
+                { name: 'sessions' },
+                { name: 'conversation_history' },
+                { name: 'query_analytics' }
+              ]
+            }
+          }
           if (/SELECT\s+token\s+FROM\s+sessions/i.test(sql)) {
             return { results: [{ token: 'stolen-session-token' }] }
           }

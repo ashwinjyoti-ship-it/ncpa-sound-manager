@@ -11,7 +11,7 @@ const MAX_TOOL_ITERATIONS = 10
 const MAX_RESULT_ROWS = 300
 const MAX_RESULT_CHARS = 30000
 const MAX_HISTORY_MESSAGES = 30
-const PROTECTED_TABLES = ['users', 'sessions', 'query_context', 'conversation_history']
+const ALLOWED_QUERY_TABLES = new Set(['events', 'venue_aliases'])
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -78,12 +78,6 @@ export function validateReadOnlySql(sql: string): { ok: true; sql: string } | { 
     }
   }
 
-  // Auth and chat-history tables share the primary D1 database with events.
-  // Never let model-generated SQL read credentials, tokens, or private prompts.
-  if (PROTECTED_TABLES.some((table) => new RegExp(`\\b${table}\\b`, 'i').test(cleaned))) {
-    return { ok: false, error: 'Queries against protected tables are not allowed' }
-  }
-
   // Keep result sets bounded unless the query already limits itself
   if (!/\blimit\b/i.test(cleaned)) {
     cleaned = `${cleaned} LIMIT ${MAX_RESULT_ROWS}`
@@ -92,10 +86,83 @@ export function validateReadOnlySql(sql: string): { ok: true; sql: string } | { 
   return { ok: true, sql: cleaned }
 }
 
+function stripSqlStringLiterals(sql: string): string {
+  let result = ''
+
+  for (let index = 0; index < sql.length; index++) {
+    if (sql[index] !== "'") {
+      result += sql[index]
+      continue
+    }
+
+    result += ' '
+    index++
+    while (index < sql.length) {
+      if (sql[index] !== "'") {
+        result += ' '
+        index++
+        continue
+      }
+      if (sql[index + 1] === "'") {
+        result += '  '
+        index += 2
+        continue
+      }
+      result += ' '
+      break
+    }
+  }
+
+  return result
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+async function validateAllowedTables(
+  sql: string,
+  db: D1Database
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const schema = await db.prepare(
+      `SELECT name FROM sqlite_master WHERE type IN ('table', 'view')`
+    ).all<{ name: string }>()
+    const sqlWithoutStrings = stripSqlStringLiterals(sql)
+    const databaseObjects = (schema.results || [])
+      .map((row) => String(row.name || '').toLowerCase())
+      .filter((name) => name && !ALLOWED_QUERY_TABLES.has(name))
+
+    databaseObjects.push('sqlite_master', 'sqlite_schema', 'sqlite_temp_master', 'sqlite_temp_schema')
+
+    for (const name of new Set(databaseObjects)) {
+      const escapedName = escapeRegExp(name)
+      const identifierPattern = new RegExp(`(^|[^a-z0-9_])${escapedName}([^a-z0-9_]|$)`, 'i')
+      const singleQuotedIdentifier = new RegExp(`'${escapedName.replace(/'/g, "''")}'`, 'i')
+
+      if (identifierPattern.test(sqlWithoutStrings) || singleQuotedIdentifier.test(sql)) {
+        return {
+          ok: false,
+          error: `Only the ${Array.from(ALLOWED_QUERY_TABLES).join(' and ')} tables are allowed`
+        }
+      }
+    }
+
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Unable to verify allowed database tables' }
+  }
+}
+
 async function executeQueryTool(sql: string, db: D1Database): Promise<{ content: string; isError: boolean }> {
   const validation = validateReadOnlySql(sql)
   if (!validation.ok) {
     return { content: `SQL rejected: ${validation.error}`, isError: true }
+  }
+
+  const tableValidation = await validateAllowedTables(validation.sql, db)
+  if (!tableValidation.ok) {
+    return { content: `SQL rejected: ${tableValidation.error}`, isError: true }
   }
 
   try {

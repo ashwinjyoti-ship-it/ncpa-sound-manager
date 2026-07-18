@@ -1463,25 +1463,15 @@ function renderDayAvail(d) {
   h += '<span class="davail-count davail-count-avail"><i class="fas fa-check" aria-hidden="true"></i> ' + avail.length + ' available</span>';
   h += '</div>';
 
-  // On shows — grouped by show so the crew split is visible at a glance
+  // On shows — just the names of crew occupied on shows (the calendar
+  // already shows which shows those are)
   h += '<div class="davail-sec-hdr">On shows (' + onShows.length + ')</div>';
-  if (!d.conflicts || !d.conflicts.length) {
-    h += '<div class="davail-empty">No shows on this date.</div>';
+  if (!onShows.length) {
+    h += '<div class="davail-empty">Nobody on shows.</div>';
   } else {
-    d.conflicts.forEach(function(c) {
-      h += '<div class="davail-show">';
-      h += '<div class="davail-show-title">' + esc(c.program || 'Untitled show') + '</div>';
-      if (c.venue) h += '<div class="davail-show-venue">' + esc(c.venue) + '</div>';
-      var clean = function(v) { return (v && v !== 'null' && v !== 'undefined') ? v : ''; };
-      var foh = clean(c.foh_crew), stage = clean(c.stage_crew), legacy = clean(c.crew);
-      var lines = [];
-      if (foh) lines.push('<strong>FOH:</strong> ' + esc(foh));
-      if (stage) lines.push('<strong>Stage:</strong> ' + esc(stage));
-      // Legacy combined column — only shown when no FOH/Stage split exists
-      if (!foh && !stage && legacy) lines.push('<strong>Crew:</strong> ' + esc(legacy));
-      h += '<div class="davail-show-crewline">' + (lines.length ? lines.join(' &nbsp;&middot;&nbsp; ') : '<span class="davail-empty">No crew assigned yet</span>') + '</div>';
-      h += '</div>';
-    });
+    h += '<div class="davail-tags">';
+    onShows.forEach(function(n) { h += '<span class="davail-tag davail-tag-show">' + esc(n) + '</span>'; });
+    h += '</div>';
   }
 
   // On leave / blocked
@@ -1539,6 +1529,59 @@ function toggleEditDateFields() {
   }
 }
 
+// Live crew roster (from the shared crew DB) — cached for the session so we
+// don't refetch on every edit. The roster is the single source of truth, so
+// crew removed in the automation app (e.g. Nikhil) no longer appear here.
+var _crewRosterCache = null;
+async function fetchCrewRoster() {
+  if (_crewRosterCache) return _crewRosterCache;
+  try {
+    var r = await fetch('/api/crew-roster');
+    var d = await r.json();
+    if (d && d.success && Array.isArray(d.roster)) {
+      _crewRosterCache = d.roster;
+      return _crewRosterCache;
+    }
+  } catch (e) { /* fall through to empty */ }
+  return [];
+}
+
+// Rebuild the Edit modal's FOH dropdown and Stage checkbox grid from the live
+// roster. Any crew already assigned to this event but no longer in the roster
+// are still shown (tagged "removed") so editing an older show never silently
+// drops them.
+function renderEditCrewControls(roster, fohValue, stageList) {
+  roster = Array.isArray(roster) ? roster.slice() : [];
+  var extra = [];
+  [fohValue].concat(stageList || []).forEach(function(n) {
+    n = (n || '').trim();
+    if (n && roster.indexOf(n) === -1 && extra.indexOf(n) === -1) extra.push(n);
+  });
+  var all = roster.concat(extra);
+  var isRemoved = function(n) { return roster.indexOf(n) === -1; };
+
+  var fohSelect = document.getElementById('editFohCrew');
+  if (fohSelect) {
+    var opts = '<option value="">— none —</option>';
+    all.forEach(function(n) {
+      opts += '<option value="' + addShowEscHtml(n) + '">' + addShowEscHtml(n) +
+              (isRemoved(n) ? ' (removed)' : '') + '</option>';
+    });
+    fohSelect.innerHTML = opts;
+  }
+
+  var grid = document.querySelector('#editEventForm .stage-crew-grid');
+  if (grid) {
+    var html = '';
+    all.forEach(function(n) {
+      html += '<label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">' +
+              '<input type="checkbox" value="' + addShowEscHtml(n) + '" class="crew-checkbox stage-checkbox">' +
+              '<span class="text-sm">' + addShowEscHtml(n) + (isRemoved(n) ? ' (removed)' : '') + '</span></label>';
+    });
+    grid.innerHTML = html;
+  }
+}
+
 async function editEventFromModal(eventId) {
   // Close event detail modal
   closeEventModal();
@@ -1560,21 +1603,28 @@ async function editEventFromModal(eventId) {
       document.getElementById('editRider').value = event.rider || '';
       document.getElementById('editNotes').value = event.notes || '';
 
-      // FOH — single select dropdown
-      const fohSelect = document.getElementById('editFohCrew');
-      if (fohSelect) {
-        fohSelect.value = event.foh_crew || '';
-      }
-
-      // Stage — multi-select checkboxes
-      // Prefer stage_crew; fall back to full crew list for pre-FOH/Stage events
-      // Guard against stage_crew being a non-string (e.g. empty BLOB returned as [] by D1)
+      // Stage list — prefer stage_crew; fall back to the combined crew list
+      // for pre-FOH/Stage events. Guard against stage_crew being a non-string
+      // (e.g. empty BLOB returned as [] by D1).
       const _sc = event.stage_crew;
       const stageList = (typeof _sc === 'string' && _sc)
         ? _sc.split(',').map(c => c.trim())
         : (!event.foh_crew && event.crew && typeof event.crew === 'string')
           ? event.crew.split(',').map(c => c.trim())
           : [];
+
+      // Build FOH + Stage controls from the live crew roster (removed crew such
+      // as Nikhil drop off), then apply this event's current selections.
+      const roster = await fetchCrewRoster();
+      renderEditCrewControls(roster, event.foh_crew || '', stageList);
+
+      // FOH — single select dropdown
+      const fohSelect = document.getElementById('editFohCrew');
+      if (fohSelect) {
+        fohSelect.value = event.foh_crew || '';
+      }
+
+      // Stage — check the boxes for this event's stage crew
       document.querySelectorAll('.stage-checkbox').forEach(cb => {
         cb.checked = stageList.includes(cb.value);
       });

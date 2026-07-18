@@ -75,12 +75,32 @@ app.get('/api/crew-availability', async (c) => {
     const assignedSet = new Set<string>()
     const parseCSV = (s: string | null) => {
       if (!s) return
-      s.split(',').map(m => m.trim()).filter(Boolean).forEach(m => assignedSet.add(m))
+      s.split(',').map(m => m.trim())
+        .filter(m => m && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined')
+        .forEach(m => assignedSet.add(m))
     }
     for (const row of soundRows.results as any[]) {
       parseCSV(row.crew)
       parseCSV(row.foh_crew)
       parseCSV(row.stage_crew)
+    }
+
+    // Live roster from the shared crew DB — the source of truth maintained in
+    // the Crew-Assignment-Automation app. Reading it here (instead of a
+    // hardcoded list) means adding/removing crew there flows through
+    // automatically, so this view never goes stale.
+    const rosterRows = await c.env.DB_CREW.prepare(`SELECT name FROM crew ORDER BY name`).all()
+    let roster = (rosterRows.results as any[]).map(r => r.name as string).filter(Boolean)
+
+    // Defensive fallback: if the roster query ever returns nothing (e.g. the
+    // crew DB is unreachable), fall back to a static list so the Add Show crew
+    // picker never breaks. Not hit in normal operation.
+    if (!roster.length) {
+      roster = [
+        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
+        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
+        'OC1', 'OC2', 'OC3'
+      ]
     }
 
     const crewRows = await c.env.DB_CREW.prepare(
@@ -92,20 +112,41 @@ app.get('/api/crew-availability', async (c) => {
 
     const unavailSet = new Set<string>(crewRows.results.map((r: any) => r.name as string))
 
-    const VALID_CREW = [
-      'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya',
-      'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
-      'OC1', 'OC2', 'OC3'
-    ]
+    // Names to classify: the live roster plus anyone actually assigned on a
+    // show that day (so an ad-hoc/outside name on a real show is never hidden),
+    // de-duplicated while preserving roster (alphabetical) order first.
+    const everyone: string[] = [...roster]
+    assignedSet.forEach(n => { if (!everyone.includes(n)) everyone.push(n) })
 
-    const available   = VALID_CREW.filter(m => !assignedSet.has(m) && !unavailSet.has(m))
-    const assigned    = VALID_CREW.filter(m => assignedSet.has(m))
-    const unavailable = VALID_CREW.filter(m => unavailSet.has(m) && !assignedSet.has(m))
+    const available   = everyone.filter(m => !assignedSet.has(m) && !unavailSet.has(m))
+    const assigned    = everyone.filter(m => assignedSet.has(m))
+    const unavailable = everyone.filter(m => unavailSet.has(m) && !assignedSet.has(m))
 
     return c.json({
       success: true, available, assigned, unavailable,
       conflicts: soundRows.results, dates
     })
+  } catch (err: any) {
+    return c.json({ success: false, error: err.message }, 500)
+  }
+})
+
+
+// ─── GET /api/crew-roster ─────────────────────────────────────────────────────
+// Live crew roster from the shared crew DB (the Crew-Assignment-Automation
+// source of truth). Used to populate crew pickers so they never go stale.
+app.get('/api/crew-roster', async (c) => {
+  try {
+    const rosterRows = await c.env.DB_CREW.prepare(`SELECT name FROM crew ORDER BY name`).all()
+    let roster = (rosterRows.results as any[]).map(r => r.name as string).filter(Boolean)
+    if (!roster.length) {
+      roster = [
+        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
+        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
+        'OC1', 'OC2', 'OC3'
+      ]
+    }
+    return c.json({ success: true, roster })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
   }
@@ -2279,13 +2320,9 @@ app.get('/', (c) => {
           .davail-sec-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ncpa-text-secondary);margin:16px 0 8px}
           .davail-tags{display:flex;flex-wrap:wrap;gap:6px}
           .davail-tag{display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:500}
+          .davail-tag-show{background:rgba(224,164,88,.14);color:#F3D9B0;border:1px solid rgba(224,164,88,.32)}
           .davail-tag-avail{background:rgba(168,195,160,.15);color:#CDE3C6;border:1px solid rgba(168,195,160,.30)}
           .davail-tag-leave{background:rgba(199,91,57,.14);color:#F3C9B8;border:1px solid rgba(199,91,57,.32)}
-          .davail-show{background:rgba(255,255,255,.05);border:1px solid rgba(224,164,88,.30);border-radius:10px;padding:10px 13px;margin-bottom:8px}
-          .davail-show-title{font-size:13.5px;font-weight:700;color:var(--ncpa-text-bright);margin-bottom:2px}
-          .davail-show-venue{font-size:12px;color:var(--ncpa-text-secondary);margin-bottom:6px}
-          .davail-show-crewline{font-size:12.5px;color:var(--ncpa-text-secondary);line-height:1.6}
-          .davail-show-crewline strong{font-weight:700;color:#F3D9B0}
           .davail-empty{color:rgba(201,192,180,.55);font-size:12.5px;font-style:italic}
 
           /* ── Landscape phone: collapse all chrome, maximise calendar rows ── */

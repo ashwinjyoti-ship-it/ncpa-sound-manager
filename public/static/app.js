@@ -1421,6 +1421,8 @@ function addShowEscHtml(s) {
 // DAY CREW AVAILABILITY MODAL (calendar date link)
 // ============================================
 
+var _dayAvailRequestedDate = null;
+
 function openDayAvailModal(dateStr) {
   var modal = document.getElementById('dayAvailModal');
   if (!modal) return;
@@ -1433,13 +1435,16 @@ function openDayAvailModal(dateStr) {
   var body = document.getElementById('dayAvailBody');
   if (body) body.innerHTML = '<div class="avail-loading"><div class="avail-spinner"></div>Checking crew availability…</div>';
   modal.classList.add('active');
+  _dayAvailRequestedDate = dateStr;
   fetch('/api/crew-availability?dates=' + encodeURIComponent(dateStr))
     .then(function(r) { return r.json(); })
     .then(function(d) {
+      if (dateStr !== _dayAvailRequestedDate) return; // superseded by a later request
       if (!d.success) throw new Error(d.error || 'Failed to load availability');
       renderDayAvail(d);
     })
     .catch(function(e) {
+      if (dateStr !== _dayAvailRequestedDate) return; // superseded by a later request
       if (body) body.innerHTML = '<div class="ncpa-status ncpa-status--error" style="font-size:13px;padding:8px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
     });
 }
@@ -1447,6 +1452,7 @@ function openDayAvailModal(dateStr) {
 function closeDayAvailModal() {
   var modal = document.getElementById('dayAvailModal');
   if (modal) modal.classList.remove('active');
+  _dayAvailRequestedDate = null;
 }
 
 function renderDayAvail(d) {

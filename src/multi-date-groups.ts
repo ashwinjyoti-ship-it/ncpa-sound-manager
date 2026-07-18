@@ -111,11 +111,16 @@ export function findMultiDateSiblings<T extends GroupableEvent & { id: number }>
   event: T,
   allEvents: T[]
 ): T[] {
+  const key = programVenueKey(event.program, event.venue)
   const byGroupId = event.show_group_id
-    ? allEvents.filter(e => e.id !== event.id && e.show_group_id === event.show_group_id)
+    ? allEvents.filter(
+        e =>
+          e.id !== event.id &&
+          e.show_group_id === event.show_group_id &&
+          programVenueKey(e.program, e.venue) === key
+      )
     : []
 
-  const key = programVenueKey(event.program, event.venue)
   const peers = allEvents.filter(
     e => e.id !== event.id && programVenueKey(e.program, e.venue) === key
   )

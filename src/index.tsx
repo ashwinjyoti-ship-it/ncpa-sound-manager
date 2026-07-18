@@ -5154,12 +5154,11 @@ app.get('/', (c) => {
                             <datalist id="venueList">
                                 <option value="JBT Museum">JBT Museum</option>
                                 <option value="JBT">Jamshed Bhabha Theatre</option>
-                                <option value="TET">Tata Theatre</option>
+                                <option value="TET">Experimental Theatre</option>
                                 <option value="GDT">Godrej Dance Theatre</option>
                                 <option value="LT">Little Theatre</option>
                                 <option value="SVR">Sea View Room</option>
                                 <option value="TT">Tata Theatre</option>
-                                <option value="Experimental Theatre">Experimental Theatre</option>
                             </datalist>
                         </div>
                         <div>

@@ -96,7 +96,7 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
      - Date (required, dropdown calendar)
      - Program/Event (required)
      - **Venue (required) - Autocomplete dropdown with custom entry**
-       - Common venues: JBT, TET, GDT, LT, SVR, Experimental Theatre
+       - Common venues: JBT, TT (Tata Theatre), TET (Experimental Theatre), GDT, LT, SVR
        - Type custom venue name if needed
      - **Team (optional) - Autocomplete dropdown with custom entry**
        - Common teams: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
@@ -823,7 +823,7 @@ WHERE program LIKE '%Dance%';
    - SheetJS library integration (client-side processing)
 
 4. **Smart Autocomplete Dropdowns** ⚡
-   - Venue: JBT, TET, GDT, LT, SVR (Sea View Room), Experimental Theatre
+   - Venue: JBT, TT (Tata Theatre), TET (Experimental Theatre), GDT, LT, SVR (Sea View Room)
    - Team: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
    - Crew: All 15 crew members with custom text option
    - Custom text entry still allowed - type anything you need

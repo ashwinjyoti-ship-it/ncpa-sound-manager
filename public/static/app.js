@@ -608,10 +608,17 @@ function renderCalendar() {
       });
     }
     
-    // Day number
-    const dayNumber = document.createElement('div');
-    dayNumber.className = isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number';
+    // Day number — clickable link that opens the crew availability modal
+    const dayNumber = document.createElement('button');
+    dayNumber.type = 'button';
+    dayNumber.className = (isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number') + ' calendar-day-number-link';
     dayNumber.textContent = day;
+    dayNumber.title = 'View crew availability';
+    dayNumber.setAttribute('aria-label', 'View crew availability for ' + dateStr);
+    dayNumber.onclick = function(e) {
+      e.stopPropagation();
+      openDayAvailModal(dateStr);
+    };
     cell.appendChild(dayNumber);
     
     // Event cards
@@ -742,10 +749,22 @@ function renderMobileWeekEvents(weekStart, weekEnd) {
     daySection.id = 'mobile-day-' + dateStr;
     daySection.dataset.mobileDate = dateStr;
 
-    // Day header
+    // Day header — tappable, opens the crew availability modal
     const dayHeader = document.createElement('div');
     dayHeader.className = 'mobile-day-header' + (dateStr === todayStr ? ' today' : '');
     dayHeader.textContent = formatMobileDayHeader(dayDate);
+    const availIco = document.createElement('i');
+    availIco.className = 'fas fa-users davail-mobile-ico';
+    availIco.setAttribute('aria-hidden', 'true');
+    dayHeader.appendChild(availIco);
+    dayHeader.title = 'View crew availability';
+    dayHeader.setAttribute('role', 'button');
+    dayHeader.tabIndex = 0;
+    dayHeader.style.cursor = 'pointer';
+    dayHeader.onclick = function() { openDayAvailModal(dateStr); };
+    dayHeader.onkeydown = function(e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDayAvailModal(dateStr); }
+    };
     daySection.appendChild(dayHeader);
 
     // Events
@@ -1397,6 +1416,97 @@ function addShowEscHtml(s) {
     });
   });
 })();
+
+// ============================================
+// DAY CREW AVAILABILITY MODAL (calendar date link)
+// ============================================
+
+function openDayAvailModal(dateStr) {
+  var modal = document.getElementById('dayAvailModal');
+  if (!modal) return;
+  var title = document.getElementById('dayAvailTitle');
+  if (title) {
+    var d = new Date(dateStr + 'T00:00:00');
+    title.textContent = isNaN(d.getTime()) ? dateStr
+      : d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+  var body = document.getElementById('dayAvailBody');
+  if (body) body.innerHTML = '<div class="avail-loading"><div class="avail-spinner"></div>Checking crew availability…</div>';
+  modal.classList.add('active');
+  fetch('/api/crew-availability?dates=' + encodeURIComponent(dateStr))
+    .then(function(r) { return r.json(); })
+    .then(function(d) {
+      if (!d.success) throw new Error(d.error || 'Failed to load availability');
+      renderDayAvail(d);
+    })
+    .catch(function(e) {
+      if (body) body.innerHTML = '<div class="ncpa-status ncpa-status--error" style="font-size:13px;padding:8px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
+    });
+}
+
+function closeDayAvailModal() {
+  var modal = document.getElementById('dayAvailModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function renderDayAvail(d) {
+  var esc = addShowEscHtml;
+  var onShows = d.assigned || [];
+  var onLeave = d.unavailable || [];
+  var avail = d.available || [];
+  var h = '';
+
+  // Summary strip
+  h += '<div class="davail-summary">';
+  h += '<span class="davail-count davail-count-show"><i class="fas fa-music" aria-hidden="true"></i> ' + onShows.length + ' on shows</span>';
+  h += '<span class="davail-count davail-count-leave"><i class="fas fa-ban" aria-hidden="true"></i> ' + onLeave.length + ' on leave</span>';
+  h += '<span class="davail-count davail-count-avail"><i class="fas fa-check" aria-hidden="true"></i> ' + avail.length + ' available</span>';
+  h += '</div>';
+
+  // On shows — grouped by show so the crew split is visible at a glance
+  h += '<div class="davail-sec-hdr">On shows (' + onShows.length + ')</div>';
+  if (!d.conflicts || !d.conflicts.length) {
+    h += '<div class="davail-empty">No shows on this date.</div>';
+  } else {
+    d.conflicts.forEach(function(c) {
+      h += '<div class="davail-show">';
+      h += '<div class="davail-show-title">' + esc(c.program || 'Untitled show') + '</div>';
+      if (c.venue) h += '<div class="davail-show-venue">' + esc(c.venue) + '</div>';
+      var clean = function(v) { return (v && v !== 'null' && v !== 'undefined') ? v : ''; };
+      var foh = clean(c.foh_crew), stage = clean(c.stage_crew), legacy = clean(c.crew);
+      var lines = [];
+      if (foh) lines.push('<strong>FOH:</strong> ' + esc(foh));
+      if (stage) lines.push('<strong>Stage:</strong> ' + esc(stage));
+      // Legacy combined column — only shown when no FOH/Stage split exists
+      if (!foh && !stage && legacy) lines.push('<strong>Crew:</strong> ' + esc(legacy));
+      h += '<div class="davail-show-crewline">' + (lines.length ? lines.join(' &nbsp;&middot;&nbsp; ') : '<span class="davail-empty">No crew assigned yet</span>') + '</div>';
+      h += '</div>';
+    });
+  }
+
+  // On leave / blocked
+  h += '<div class="davail-sec-hdr">On leave / blocked (' + onLeave.length + ')</div>';
+  if (!onLeave.length) {
+    h += '<div class="davail-empty">Nobody on leave.</div>';
+  } else {
+    h += '<div class="davail-tags">';
+    onLeave.forEach(function(n) { h += '<span class="davail-tag davail-tag-leave">&#9940; ' + esc(n) + '</span>'; });
+    h += '</div>';
+  }
+
+  // Available
+  h += '<div class="davail-sec-hdr">Available (' + avail.length + ')</div>';
+  if (!avail.length) {
+    h += '<div class="davail-empty">No crew available.</div>';
+  } else {
+    h += '<div class="davail-tags">';
+    avail.forEach(function(n) { h += '<span class="davail-tag davail-tag-avail">' + esc(n) + '</span>'; });
+    h += '</div>';
+  }
+
+  var body = document.getElementById('dayAvailBody');
+  if (body) body.innerHTML = h;
+}
 
 // ============================================
 // EDIT EVENT
@@ -2297,7 +2407,8 @@ window.onclick = function(event) {
   const whatsappModal = document.getElementById('whatsappExportModal');
   const csvModal = document.getElementById('csvExportModal');
   const aiModal = document.getElementById('aiAssistantModal');
-  
+  const dayAvailModal = document.getElementById('dayAvailModal');
+
   if (event.target === eventModal) {
     closeEventModal();
   }
@@ -2318,6 +2429,9 @@ window.onclick = function(event) {
   }
   if (event.target === aiModal) {
     closeAIAssistant();
+  }
+  if (event.target === dayAvailModal) {
+    closeDayAvailModal();
   }
 }
 

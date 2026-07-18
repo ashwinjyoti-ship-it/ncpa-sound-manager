@@ -2264,6 +2264,30 @@ app.get('/', (c) => {
           .avail-etag-b{background:rgba(140,140,155,.10);color:#777;border:1px solid rgba(140,140,155,.20)}
           .avail-no-crew{text-align:center;padding:20px 0 8px;color:#7280a8;font-size:14px}
 
+          /* ── Day Crew Availability Modal (calendar date link) ── */
+          .calendar-day-number-link{background:none;border:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-align:left}
+          .calendar-day-number-link:hover{color:var(--ncpa-amber);text-decoration:underline}
+          .calendar-day-number-today.calendar-day-number-link:hover{color:var(--ncpa-text-dark);text-decoration:underline}
+          .davail-mobile-ico{margin-left:8px;font-size:11px;opacity:.55}
+          .day-avail-modal{display:flex;flex-direction:column;width:520px;max-width:min(520px,92vw);max-height:min(640px,88vh);padding:0;overflow:hidden;border-radius:28px}
+          .day-avail-body{flex:1;min-height:0;overflow-y:auto;padding:14px 20px 20px}
+          .davail-summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+          .davail-count{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:600}
+          .davail-count-avail{background:rgba(168,195,160,.18);color:#CDE3C6;border:1px solid rgba(168,195,160,.35)}
+          .davail-count-show{background:rgba(224,164,88,.18);color:#F3D9B0;border:1px solid rgba(224,164,88,.40)}
+          .davail-count-leave{background:rgba(199,91,57,.18);color:#F3C9B8;border:1px solid rgba(199,91,57,.40)}
+          .davail-sec-hdr{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--ncpa-text-secondary);margin:16px 0 8px}
+          .davail-tags{display:flex;flex-wrap:wrap;gap:6px}
+          .davail-tag{display:inline-flex;align-items:center;padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:500}
+          .davail-tag-avail{background:rgba(168,195,160,.15);color:#CDE3C6;border:1px solid rgba(168,195,160,.30)}
+          .davail-tag-leave{background:rgba(199,91,57,.14);color:#F3C9B8;border:1px solid rgba(199,91,57,.32)}
+          .davail-show{background:rgba(255,255,255,.05);border:1px solid rgba(224,164,88,.30);border-radius:10px;padding:10px 13px;margin-bottom:8px}
+          .davail-show-title{font-size:13.5px;font-weight:700;color:var(--ncpa-text-bright);margin-bottom:2px}
+          .davail-show-venue{font-size:12px;color:var(--ncpa-text-secondary);margin-bottom:6px}
+          .davail-show-crewline{font-size:12.5px;color:var(--ncpa-text-secondary);line-height:1.6}
+          .davail-show-crewline strong{font-weight:700;color:#F3D9B0}
+          .davail-empty{color:rgba(201,192,180,.55);font-size:12.5px;font-style:italic}
+
           /* ── Landscape phone: collapse all chrome, maximise calendar rows ── */
           @media (orientation: landscape) and (max-height: 500px) {
             /* Thin the sticky app header to ~28px */
@@ -5086,6 +5110,17 @@ app.get('/', (c) => {
                 </div>
                 <div id="eventModalContent" class="event-detail-body"></div>
                 <div id="eventModalFooter" class="event-detail-footer"></div>
+            </div>
+        </div>
+
+        <!-- Day Crew Availability Modal (opened from calendar date links) -->
+        <div id="dayAvailModal" class="modal">
+            <div class="modal-content day-avail-modal">
+                <div class="event-detail-header">
+                    <h2 id="dayAvailTitle">Crew Availability</h2>
+                    <button type="button" onclick="closeDayAvailModal()" class="event-detail-close" aria-label="Close">&times;</button>
+                </div>
+                <div id="dayAvailBody" class="day-avail-body"></div>
             </div>
         </div>
 

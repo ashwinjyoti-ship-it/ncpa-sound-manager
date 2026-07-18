@@ -37,7 +37,7 @@ Your job: Extract structured information from natural language queries about eve
 VENUE NAMES (be flexible with variations):
 - Tata Theatre (TT, Tata, Tata Theater)
 - Jamshed Bhabha Theatre (JBT, Bhabha, Jamshed Bhabha)
-- Experimental Theatre (ET, Exp, Experimental)
+- Experimental Theatre (ET, TET, Exp, Experimental)
 - Godrej Dance Theatre (GDT, Godrej)
 - Little Theatre (LT, Little)
 - Sea View Room (SVR, Sea View)

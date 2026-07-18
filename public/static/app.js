@@ -64,7 +64,8 @@ function venueGroupKey(venue) {
   var v = (venue || '').trim();
   var upper = v.toUpperCase();
   if (upper === 'JBT MUSEUM' || upper.indexOf('JBT MUSEUM ') === 0) return 'JBT Museum';
-  if (v === 'TET' || v === 'TT' || v === 'Tata Theatre') return 'TT';
+  if (v === 'TT' || v === 'Tata Theatre') return 'TT';
+  if (v === 'TET' || v === 'Experimental Theatre') return 'TET';
   return v;
 }
 
@@ -1878,8 +1879,8 @@ function parseEventLine(text) {
   let crew = '';
   
   // Extract venue
-  if (text.includes('TET')) venue = 'Tata Theatre';
-  else if (text.includes('Experimental')) venue = 'Experimental Theatre';
+  if (text.includes('TET') || text.includes('Experimental')) venue = 'Experimental Theatre';
+  else if (text.includes('TT') || text.includes('Tata')) venue = 'Tata Theatre';
   else if (text.includes('Jamshed')) venue = 'Jamshed Bhabha Theatre';
   else if (text.includes('Little')) venue = 'Little Theatre';
   

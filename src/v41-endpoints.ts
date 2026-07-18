@@ -560,10 +560,10 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
 
         // Partial matches
         if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
-        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
+        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TT'
         if (upper.includes('GODREJ') || (upper.includes('DANCE') && upper.includes('THEATRE'))) return 'GDT'
         if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
-        if (upper.includes('EXPERIMENTAL')) return 'TT'
+        if (upper.includes('EXPERIMENTAL')) return 'TET'
         if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
 
         // Check if starts with main venue codes
@@ -748,10 +748,10 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
 
         // Partial matches for full names
         if (upper.includes('JAMSHED') || upper.includes('BHABHA')) return 'JBT'
-        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TET'
+        if (upper.includes('TATA') && upper.includes('THEATRE')) return 'TT'
         if (upper.includes('GODREJ') || (upper.includes('DANCE') && upper.includes('THEATRE'))) return 'GDT'
         if (upper.includes('LITTLE') && upper.includes('THEATRE')) return 'LT'
-        if (upper.includes('EXPERIMENTAL')) return 'TT'
+        if (upper.includes('EXPERIMENTAL')) return 'TET'
         if (upper.includes('DPAG') || upper.includes('DP AG')) return 'DP Art Gallery'
 
         // If still no match, check if it starts with main venue codes

@@ -30,7 +30,8 @@ export function venueGroupKey(venue: string): string {
   const v = (venue || '').trim()
   const upper = v.toUpperCase()
   if (upper === 'JBT MUSEUM' || upper.startsWith('JBT MUSEUM ')) return 'JBT Museum'
-  if (v === 'TET' || v === 'TT' || v === 'Tata Theatre') return 'TT'
+  if (v === 'TT' || v === 'Tata Theatre') return 'TT'
+  if (v === 'TET' || v === 'Experimental Theatre') return 'TET'
   return v
 }
 

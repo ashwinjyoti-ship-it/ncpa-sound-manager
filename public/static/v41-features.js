@@ -710,8 +710,8 @@ function exportShortNotice(analysis, monthStr) {
       event.isAddedAfter5th ? 'Yes' : 'No'
     ]);
   
-  const csv = [headers, ...rows].map(row => 
-    row.map(cell => `"${cell}"`).join(',')
+  const csv = [headers, ...rows].map(row =>
+    row.map(escapeV41CSVField).join(',')
   ).join('\n');
   
   // Download
@@ -1574,18 +1574,18 @@ function exportEventsToCSV(events, filename) {
   
   // Convert events to CSV rows
   const rows = events.map(event => [
-    event.id || '',
-    event.event_date || '',
-    `"${(event.program || '').replace(/"/g, '""')}"`,
-    `"${(event.venue || '').replace(/"/g, '""')}"`,
-    `"${(event.team || '').replace(/"/g, '""')}"`,
-    `"${(event.sound_requirements || '').replace(/"/g, '""')}"`,
-    event.call_time || '',
-    `"${(event.crew || '').replace(/"/g, '""')}"`,
-    event.status || 'confirmed',
-    event.tags || '',
-    event.created_at || '',
-    event.updated_at || ''
+    escapeV41CSVField(event.id),
+    escapeV41CSVField(event.event_date),
+    escapeV41CSVField(event.program),
+    escapeV41CSVField(event.venue),
+    escapeV41CSVField(event.team),
+    escapeV41CSVField(event.sound_requirements),
+    escapeV41CSVField(event.call_time),
+    escapeV41CSVField(event.crew),
+    escapeV41CSVField(event.status || 'confirmed'),
+    escapeV41CSVField(event.tags),
+    escapeV41CSVField(event.created_at),
+    escapeV41CSVField(event.updated_at)
   ]);
   
   // Combine headers and rows
@@ -1605,6 +1605,22 @@ function exportEventsToCSV(events, filename) {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+function normalizeV41CSVField(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function escapeV41CSVField(value) {
+  const normalized = normalizeV41CSVField(value);
+  if (normalized.includes(',') || normalized.includes('"')) {
+    return `"${normalized.replace(/"/g, '""')}"`;
+  }
+  return normalized;
 }
 
 // Expose all functions globally

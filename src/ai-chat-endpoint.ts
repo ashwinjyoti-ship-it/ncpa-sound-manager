@@ -11,6 +11,7 @@ const MAX_TOOL_ITERATIONS = 10
 const MAX_RESULT_ROWS = 300
 const MAX_RESULT_CHARS = 30000
 const MAX_HISTORY_MESSAGES = 30
+const ALLOWED_QUERY_TABLES = new Set(['events', 'venue_aliases'])
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -85,10 +86,231 @@ export function validateReadOnlySql(sql: string): { ok: true; sql: string } | { 
   return { ok: true, sql: cleaned }
 }
 
+type SqlToken = {
+  type: 'identifier' | 'string' | 'punctuation' | 'other'
+  value: string
+  quoted?: boolean
+}
+
+function tokenizeSql(sql: string): SqlToken[] {
+  const tokens: SqlToken[] = []
+
+  for (let index = 0; index < sql.length;) {
+    const char = sql[index]
+    if (/\s/.test(char)) {
+      index++
+      continue
+    }
+
+    if (char === "'") {
+      let value = ''
+      index++
+      while (index < sql.length) {
+        if (sql[index] !== "'") {
+          value += sql[index++]
+          continue
+        }
+        if (sql[index + 1] === "'") {
+          value += "'"
+          index += 2
+          continue
+        }
+        index++
+        break
+      }
+      tokens.push({ type: 'string', value })
+      continue
+    }
+
+    if (char === '"' || char === '`' || char === '[') {
+      const closing = char === '[' ? ']' : char
+      let value = ''
+      index++
+      while (index < sql.length) {
+        if (sql[index] !== closing) {
+          value += sql[index++]
+          continue
+        }
+        if (closing !== ']' && sql[index + 1] === closing) {
+          value += closing
+          index += 2
+          continue
+        }
+        index++
+        break
+      }
+      tokens.push({ type: 'identifier', value, quoted: true })
+      continue
+    }
+
+    if (/[a-z_]/i.test(char)) {
+      let value = char
+      index++
+      while (index < sql.length && /[a-z0-9_$]/i.test(sql[index])) {
+        value += sql[index++]
+      }
+      tokens.push({ type: 'identifier', value })
+      continue
+    }
+
+    if ('(),.'.includes(char)) {
+      tokens.push({ type: 'punctuation', value: char })
+      index++
+      continue
+    }
+
+    tokens.push({ type: 'other', value: char })
+    index++
+  }
+
+  return tokens
+}
+
+function isKeyword(token: SqlToken | undefined, keyword: string): boolean {
+  return token?.type === 'identifier' && !token.quoted && token.value.toLowerCase() === keyword
+}
+
+function afterClosingParenthesis(tokens: SqlToken[], start: number): number {
+  if (tokens[start]?.value !== '(') return -1
+
+  let depth = 0
+  for (let index = start; index < tokens.length; index++) {
+    if (tokens[index].value === '(') depth++
+    if (tokens[index].value === ')') {
+      depth--
+      if (depth === 0) return index + 1
+    }
+  }
+  return -1
+}
+
+function collectTopLevelCteNames(tokens: SqlToken[]): Set<string> | null {
+  const names = new Set<string>()
+  if (!isKeyword(tokens[0], 'with')) return names
+
+  let cursor = 1
+  if (isKeyword(tokens[cursor], 'recursive')) cursor++
+
+  while (cursor < tokens.length) {
+    const name = tokens[cursor]
+    if (name?.type !== 'identifier') return null
+    cursor++
+
+    if (tokens[cursor]?.value === '(') {
+      cursor = afterClosingParenthesis(tokens, cursor)
+      if (cursor < 0) return null
+    }
+    if (!isKeyword(tokens[cursor], 'as')) return null
+    cursor++
+
+    if (isKeyword(tokens[cursor], 'not')) cursor++
+    if (isKeyword(tokens[cursor], 'materialized')) cursor++
+    if (tokens[cursor]?.value !== '(') return null
+
+    names.add(name.value.toLowerCase())
+    cursor = afterClosingParenthesis(tokens, cursor)
+    if (cursor < 0) return null
+
+    if (tokens[cursor]?.value !== ',') break
+    cursor++
+  }
+
+  return names
+}
+
+function validateAllowedTables(sql: string): { ok: true } | { ok: false; error: string } {
+  const tokens = tokenizeSql(sql)
+  const cteNames = collectTopLevelCteNames(tokens)
+  const rejection = {
+    ok: false as const,
+    error: `Only the ${Array.from(ALLOWED_QUERY_TABLES).join(' and ')} tables are allowed`
+  }
+  if (!cteNames) return rejection
+
+  let depth = 0
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index]
+    if (token.value === '(') {
+      depth++
+      continue
+    }
+    if (token.value === ')') {
+      depth = Math.max(0, depth - 1)
+      continue
+    }
+    if (isKeyword(token, 'with') && index !== 0 && depth > 0) {
+      return rejection
+    }
+  }
+
+  const fromDepths = new Set<number>()
+  const clauseEndKeywords = new Set([
+    'where', 'group', 'having', 'order', 'limit', 'union', 'except', 'intersect', 'window'
+  ])
+  depth = 0
+
+  const sourceIsAllowed = (sourceIndex: number): boolean => {
+    const source = tokens[sourceIndex]
+    if (!source) return false
+    if (source.value === '(') {
+      return isKeyword(tokens[sourceIndex + 1], 'select')
+    }
+    if (source.type !== 'identifier') return false
+    if (tokens[sourceIndex + 1]?.value === '.' || tokens[sourceIndex + 1]?.value === '(') {
+      return false
+    }
+
+    const name = source.value.toLowerCase()
+    if (/^(pragma_|sqlite_)/.test(name) || name === 'dbstat') return false
+    return ALLOWED_QUERY_TABLES.has(name) || cteNames.has(name)
+  }
+
+  for (let index = 0; index < tokens.length; index++) {
+    const token = tokens[index]
+    if (token.value === '(') {
+      depth++
+      continue
+    }
+    if (token.value === ')') {
+      fromDepths.delete(depth)
+      depth = Math.max(0, depth - 1)
+      continue
+    }
+
+    if (token.type === 'identifier' && !token.quoted) {
+      const keyword = token.value.toLowerCase()
+      if (clauseEndKeywords.has(keyword)) {
+        fromDepths.delete(depth)
+        continue
+      }
+      if (keyword === 'from') {
+        fromDepths.add(depth)
+        if (!sourceIsAllowed(index + 1)) return rejection
+        continue
+      }
+      if (keyword === 'join') {
+        if (!sourceIsAllowed(index + 1)) return rejection
+        continue
+      }
+    }
+
+    if (token.value === ',' && fromDepths.has(depth) && !sourceIsAllowed(index + 1)) {
+      return rejection
+    }
+  }
+
+  return { ok: true }
+}
+
 async function executeQueryTool(sql: string, db: D1Database): Promise<{ content: string; isError: boolean }> {
   const validation = validateReadOnlySql(sql)
   if (!validation.ok) {
     return { content: `SQL rejected: ${validation.error}`, isError: true }
+  }
+
+  const tableValidation = validateAllowedTables(validation.sql)
+  if (!tableValidation.ok) {
+    return { content: `SQL rejected: ${tableValidation.error}`, isError: true }
   }
 
   try {

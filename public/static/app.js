@@ -78,11 +78,15 @@ function programVenueKey(program, venue) {
 // with the actual consecutive run (e.g. a partial re-upload minted a new id
 // for part of an existing run) must not orphan the rows left on the old id.
 function findMultiDateSiblings(event, events) {
+  var key = programVenueKey(event.program, event.venue);
   var byGroupId = event.show_group_id
-    ? events.filter(function(e) { return e.id !== event.id && e.show_group_id === event.show_group_id; })
+    ? events.filter(function(e) {
+        return e.id !== event.id &&
+          e.show_group_id === event.show_group_id &&
+          programVenueKey(e.program, e.venue) === key;
+      })
     : [];
 
-  var key = programVenueKey(event.program, event.venue);
   var peers = events.filter(function(e) {
     return e.id !== event.id && programVenueKey(e.program, e.venue) === key;
   });

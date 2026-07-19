@@ -119,3 +119,27 @@ test('a stale roster response cannot mix the first event crew into the second ed
   assert.equal(elements.get('editProgram').value, 'Second show')
   assert.equal(elements.get('editFohCrew').value, 'Bob')
 })
+
+test('closing the editor invalidates its pending roster load', async () => {
+  const events = {
+    1: {
+      id: 1,
+      event_date: '2026-07-19',
+      program: 'First show',
+      venue: 'TET',
+      foh_crew: 'Alice',
+    },
+  }
+  const { context, elements, rosterRequests } = createEditorContext(events)
+
+  const edit = context.editEventFromModal(1)
+  await waitFor(() => rosterRequests.length === 1)
+  context.closeEditEventModal()
+
+  rosterRequests[0].resolve({
+    json: async () => ({ success: true, roster: ['Alice'] }),
+  })
+  await edit
+
+  assert.equal(elements.get('editFohCrew').value, '')
+})

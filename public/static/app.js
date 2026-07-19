@@ -1543,6 +1543,7 @@ function toggleEditDateFields() {
 // don't refetch on every edit. The roster is the single source of truth, so
 // crew removed in the automation app (e.g. Nikhil) no longer appear here.
 var _crewRosterCache = null;
+var _editEventRequestToken = 0;
 async function fetchCrewRoster() {
   if (_crewRosterCache) return _crewRosterCache;
   try {
@@ -1593,12 +1594,14 @@ function renderEditCrewControls(roster, fohValue, stageList) {
 }
 
 async function editEventFromModal(eventId) {
+  const requestToken = ++_editEventRequestToken;
   // Close event detail modal
   closeEventModal();
 
   // Fetch event details
   try {
     const response = await axios.get(`${API_BASE}/events/${eventId}`);
+    if (requestToken !== _editEventRequestToken) return;
     if (response.data.success) {
       const event = response.data.data;
 
@@ -1626,6 +1629,7 @@ async function editEventFromModal(eventId) {
       // Build FOH + Stage controls from the live crew roster (removed crew such
       // as Nikhil drop off), then apply this event's current selections.
       const roster = await fetchCrewRoster();
+      if (requestToken !== _editEventRequestToken) return;
       renderEditCrewControls(roster, event.foh_crew || '', stageList);
 
       // FOH — single select dropdown
@@ -1672,12 +1676,14 @@ async function editEventFromModal(eventId) {
       document.getElementById('editEventModal').classList.add('active');
     }
   } catch (error) {
+    if (requestToken !== _editEventRequestToken) return;
     console.error('Error fetching event:', error);
     showNotification('Failed to load event details', 'error');
   }
 }
 
 function closeEditEventModal() {
+  ++_editEventRequestToken;
   document.getElementById('editEventModal').classList.remove('active');
   const fohSelect = document.getElementById('editFohCrew');
   if (fohSelect) fohSelect.value = '';

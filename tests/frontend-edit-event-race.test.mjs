@@ -73,6 +73,8 @@ function createEditorContext(events) {
       return request.promise
     },
     findMultiDateSiblings: () => [],
+    showNotification() {},
+    toggleEditDateFields() {},
   }
   vm.createContext(context)
   vm.runInContext(editHelpers, context, { filename: 'public/static/app.js' })

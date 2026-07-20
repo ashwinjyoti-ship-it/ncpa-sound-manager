@@ -71,7 +71,7 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - **Intelligent duplicate detection**: Prevents re-importing existing events
    - Matching events are skipped unless the import supplies crew or a multi-date group to add
    - Consecutive same-program, same-venue rows share a group; crew from the first populated row fills only empty rows in that run
-   - Detailed feedback shows: inserted, existing events updated, skipped, invalid
+   - Upload feedback combines inserted/updated rows, then reports skipped and invalid rows separately
    - Validates data before import
    - Supports common CSV formats
 
@@ -325,7 +325,7 @@ When editing a grouped or inferred consecutive run, the optional **Apply crew** 
    - Optional columns: Team, Sound Requirements, Call Time, Crew
    - **Smart duplicate detection**: System checks for existing events
    - Matching events keep their existing details; supplied crew and multi-date grouping can be added
-   - Detailed feedback shows what was added, updated, skipped, or invalid
+   - Upload feedback counts additions and updates together, then reports skipped and invalid rows
 
 4. **Edit Event Details**
    - Switch to Table view
@@ -384,26 +384,22 @@ Date,Program,Venue,Team,Sound Requirement,Call Time,Crew
 
 ### Duplicate Detection & Data Preservation
 
-**🔒 Your Manual Entries Are Safe!**
-
-The system uses intelligent duplicate detection to protect your data:
-
 **How It Works:**
 - Events are considered duplicates if they have the **same date + program + venue**
 - When uploading CSV or Word files, the system checks every event before inserting
-- If an event already exists, it's skipped (not replaced)
+- A match with no incoming crew or group metadata is skipped
+- A match with crew or multi-date group metadata updates only `crew`, `foh_crew`, `stage_crew`, and/or `show_group_id`
 
 **What This Means:**
-1. ✅ **Manually-added shows are preserved** - They won't be overwritten during uploads
-2. ✅ **Append-only behavior** - New events are added alongside existing ones
-3. ✅ **Re-import protection** - If you upload the same file twice, duplicates are skipped
-4. ✅ **Detailed feedback** - You'll see exactly what was added vs. skipped
+1. ✅ **Non-crew details are preserved** - Program, venue, requirements, call time, rider, and notes are not replaced on a match
+2. ✅ **Crew can be completed from imports** - Supplied crew may update an existing event
+3. ✅ **Multi-date runs can be repaired** - Matching consecutive rows may receive or reuse `show_group_id`
+4. ⚠️ **Feedback combines changes** - The current upload toast reports inserted and updated rows together as events added
 
 **Example:**
 - You manually add: "Romeo and Juliet" on Nov 20 at JBT
-- You upload a Word document containing the same show
-- Result: System skips the duplicate, shows "1 duplicates skipped (already exist)"
-- Your manual entry remains unchanged! ✨
+- You upload a document containing the same show with FOH set to Naren
+- Result: the existing row keeps its event details and its crew fields are updated; no second event is inserted
 
 ### Color Coding
 

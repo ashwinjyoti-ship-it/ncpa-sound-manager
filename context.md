@@ -267,6 +267,7 @@ There are three propagation paths:
 
 **Constraints and failure behavior:**
 
+- `POST /api/events/multi-date` inserts one row at a time without a transaction. A later insert failure leaves earlier dates stored; retry only after checking for partial rows.
 - Edit-time propagation overwrites `foh_crew`, `stage_crew`, and combined `crew` on every supplied ID, including siblings that already have crew.
 - Saving the current event and propagating crew are separate, non-transactional requests. The event can save while propagation fails.
 - `PUT /api/events/bulk-crew` trusts the authenticated caller's IDs and does not recheck program, venue, dates, or group membership. Venue scoping is a sibling-discovery safeguard, not an endpoint invariant.

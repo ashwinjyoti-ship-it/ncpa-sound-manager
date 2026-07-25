@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
 import { setCookie, getCookie, deleteCookie } from 'hono/cookie'
+import { requireAdminSession, requireApprovedSession } from './auth-utils'
 
 type Bindings = {
   DB: D1Database
+}
+
+function isErrorResponse(value: unknown): value is Response {
+  return value instanceof Response
 }
 
 // Admin email
@@ -239,23 +244,9 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Admin: Get pending users
   app.get('/api/admin/pending-users', async (c) => {
     try {
-      const token = getCookie(c, 'session_token')
-      
-      if (!token) {
-        return c.json({ success: false, error: 'Not authenticated' }, 401)
-      }
-      
-      // Verify admin
-      const session = await c.env.DB.prepare(`
-        SELECT u.role
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
-      `).bind(token).first() as any
-      
-      if (!session || session.role !== 'admin') {
-        return c.json({ success: false, error: 'Admin access required' }, 403)
-      }
+      // SameSite=None cookie — use shared origin/CSRF guard before trusting session.
+      const session = await requireAdminSession(c)
+      if (isErrorResponse(session)) return session
       
       // Get pending users
       const users = await c.env.DB.prepare(`
@@ -274,24 +265,11 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Admin: Approve user
   app.post('/api/admin/approve-user/:userId', async (c) => {
     try {
-      const token = getCookie(c, 'session_token')
+      // SameSite=None cookie — reject cross-site form/fetch CSRF before approving.
+      const session = await requireAdminSession(c)
+      if (isErrorResponse(session)) return session
+
       const userId = c.req.param('userId')
-      
-      if (!token) {
-        return c.json({ success: false, error: 'Not authenticated' }, 401)
-      }
-      
-      // Verify admin
-      const session = await c.env.DB.prepare(`
-        SELECT u.id, u.email, u.role
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
-      `).bind(token).first() as any
-      
-      if (!session || session.role !== 'admin') {
-        return c.json({ success: false, error: 'Admin access required' }, 403)
-      }
       
       // Approve user
       await c.env.DB.prepare(`
@@ -311,24 +289,11 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Admin: Reject user
   app.post('/api/admin/reject-user/:userId', async (c) => {
     try {
-      const token = getCookie(c, 'session_token')
+      // SameSite=None cookie — reject cross-site form/fetch CSRF before deleting users.
+      const session = await requireAdminSession(c)
+      if (isErrorResponse(session)) return session
+
       const userId = c.req.param('userId')
-      
-      if (!token) {
-        return c.json({ success: false, error: 'Not authenticated' }, 401)
-      }
-      
-      // Verify admin
-      const session = await c.env.DB.prepare(`
-        SELECT u.role
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
-      `).bind(token).first() as any
-      
-      if (!session || session.role !== 'admin') {
-        return c.json({ success: false, error: 'Admin access required' }, 403)
-      }
       
       // Delete user
       await c.env.DB.prepare(
@@ -341,30 +306,28 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
     }
   })
   
-  // Admin: Change password
+  // Change password (authenticated user)
   app.post('/api/auth/change-password', async (c) => {
     try {
-      const token = getCookie(c, 'session_token')
+      // SameSite=None cookie — require same-origin before password updates.
+      const authSession = await requireApprovedSession(c)
+      if (isErrorResponse(authSession)) return authSession
+
       const { currentPassword, newPassword } = await c.req.json()
       
-      if (!token) {
-        return c.json({ success: false, error: 'Not authenticated' }, 401)
-      }
+      // Load password hash for the authenticated user only
+      const user = await c.env.DB.prepare(`
+        SELECT id, password_hash
+        FROM users
+        WHERE id = ?
+      `).bind(authSession.id).first() as { id: number; password_hash: string } | null
       
-      // Get user
-      const session = await c.env.DB.prepare(`
-        SELECT u.*
-        FROM sessions s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
-      `).bind(token).first() as any
-      
-      if (!session) {
+      if (!user) {
         return c.json({ success: false, error: 'Invalid session' }, 401)
       }
       
       // Verify current password
-      const valid = await verifyPassword(currentPassword, session.password_hash)
+      const valid = await verifyPassword(currentPassword, user.password_hash)
       if (!valid) {
         return c.json({ success: false, error: 'Current password incorrect' }, 401)
       }
@@ -375,7 +338,7 @@ export function setupAuthEndpoints(app: Hono<{ Bindings: Bindings }>) {
       // Update password
       await c.env.DB.prepare(
         'UPDATE users SET password_hash = ? WHERE id = ?'
-      ).bind(newHash, session.id).run()
+      ).bind(newHash, user.id).run()
       
       return c.json({ success: true, message: 'Password changed successfully' })
     } catch (error: any) {

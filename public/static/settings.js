@@ -35,33 +35,14 @@ function populateVenueDatalist(venues) {
   });
 }
 
-function showSettingsTabForAdmin() {
+function showSettingsTab() {
   const settingsTab = document.getElementById('settingsTab');
   if (settingsTab) settingsTab.style.display = '';
-}
-
-function hideSettingsTab() {
-  const settingsTab = document.getElementById('settingsTab');
-  if (settingsTab) settingsTab.style.display = 'none';
-
-  if (typeof currentView !== 'undefined' && currentView === 'settings') {
-    if (typeof showTab === 'function') showTab('calendar');
-  }
 }
 
 async function loadSettingsPage() {
   const content = document.getElementById('settingsContent');
   if (!content) return;
-
-  if (!currentUser || currentUser.role !== 'admin') {
-    content.innerHTML = `
-      <div class="text-center py-12">
-        <i class="fas fa-lock text-4xl text-gray-400"></i>
-        <p class="mt-4 text-gray-600">Admin access required to manage settings.</p>
-      </div>
-    `;
-    return;
-  }
 
   content.innerHTML = `
     <div class="text-center py-12">
@@ -369,5 +350,6 @@ async function handleClearApiKey() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  showSettingsTab();
   loadVenuesForDropdowns();
 });

@@ -4974,7 +4974,7 @@ app.get('/', (c) => {
                             <button type="button" id="crewTab" class="nav-tab" onclick="showTab('crew')" aria-label="Crew">
                                 <img src="/static/images/nav/crew-tab.png" alt="Crew" class="nav-tab-img">
                             </button>
-                            <button type="button" id="settingsTab" class="nav-tab" onclick="showTab('settings')" aria-label="Settings" style="display: none;" title="Settings">
+                            <button type="button" id="settingsTab" class="nav-tab" onclick="showTab('settings')" aria-label="Settings" title="Settings">
                                 <i class="fas fa-cog nav-tab-icon" aria-hidden="true"></i>
                             </button>
                         </div>
@@ -5971,8 +5971,8 @@ app.get('/', (c) => {
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
         <script src="/static/app.js?v=4.2.8"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
-        <script src="/static/auth.js?v=1.0.1"></script>
-        <script src="/static/settings.js?v=1.0.0"></script>
+        <script src="/static/auth.js?v=1.0.2"></script>
+        <script src="/static/settings.js?v=1.0.1"></script>
     </body>
     </html>
   `)

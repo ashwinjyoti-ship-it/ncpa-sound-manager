@@ -1,7 +1,6 @@
 // Configurable venues + app settings (Anthropic API key for Word parse / AI)
 import { Hono } from 'hono'
 import { getCookie } from 'hono/cookie'
-import { requireAdminUser } from './auth-utils'
 
 type Bindings = {
   DB: D1Database
@@ -117,11 +116,8 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
     }
   })
 
-  // Admin: all venues including inactive
+  // All venues including inactive (Settings UI)
   app.get('/api/admin/venues', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const { results } = await c.env.DB.prepare(`
         SELECT id, code, display_name, sort_order, active, created_at, updated_at
@@ -136,9 +132,6 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
   })
 
   app.post('/api/admin/venues', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const body = await c.req.json()
       const code = String(body.code || '').trim()
@@ -179,9 +172,6 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
   })
 
   app.put('/api/admin/venues/:id', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const id = Number(c.req.param('id'))
       if (!Number.isFinite(id)) {
@@ -241,9 +231,6 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
 
   // Soft-delete (deactivate) by default; ?hard=1 permanently removes the row
   app.delete('/api/admin/venues/:id', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const id = Number(c.req.param('id'))
       if (!Number.isFinite(id)) {
@@ -266,11 +253,8 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
     }
   })
 
-  // Admin settings (Anthropic / Word document API key)
+  // App settings (Anthropic / Word document API key) — open to all users
   app.get('/api/admin/settings', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const resolved = await resolveAnthropicApiKey(c.env.DB, c.env.ANTHROPIC_API_KEY)
       let settingsValue = ''
@@ -301,13 +285,10 @@ export function setupSettingsEndpoints(app: Hono<{ Bindings: Bindings }>) {
   })
 
   app.put('/api/admin/settings', async (c) => {
-    const authError = await requireAdminUser(c as any)
-    if (authError) return authError
-
     try {
       const body = await c.req.json()
       const token = getCookie(c, 'session_token')
-      let updatedBy = 'admin'
+      let updatedBy = 'settings'
       if (token) {
         const session = await c.env.DB.prepare(`
           SELECT u.email

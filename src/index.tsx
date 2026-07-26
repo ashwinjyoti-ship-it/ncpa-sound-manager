@@ -2572,7 +2572,12 @@ app.get('/', (c) => {
             }
           }
 
-          .glass-header,
+          .glass-header {
+            position: relative;
+            overflow: visible;
+            isolation: isolate;
+          }
+
           #todaySidebar,
           #calendarView {
             position: relative;
@@ -4107,6 +4112,15 @@ app.get('/', (c) => {
           #filterResults,
           #filterPanel .filter-panel-results {
             color: var(--ncpa-text-secondary);
+          }
+
+          #userMenu {
+            position: relative;
+            z-index: 50;
+          }
+
+          #userDropdown {
+            z-index: 51;
           }
 
           #actionsDropdown,

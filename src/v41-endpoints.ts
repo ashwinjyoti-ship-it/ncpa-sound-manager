@@ -4,6 +4,7 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { requireAuthenticatedUser } from './auth-utils'
+import { getActiveVenueCodes } from './settings-endpoints'
 
 type Bindings = {
   DB: D1Database;
@@ -69,6 +70,11 @@ function venueCondition(selected: string): { sql: string; params: string[] } {
       return { sql: "(venue LIKE 'SVR%' OR venue LIKE 'Sea View%')", params: [] }
     case 'DP Art Gallery':
       return { sql: "(venue LIKE 'DP Art%' OR venue LIKE 'DPAG%')", params: [] }
+    case 'Others':
+      return {
+        sql: "(venue = 'Others' OR venue LIKE 'Others%' OR lower(venue) LIKE '%maintenance%')",
+        params: []
+      }
     default:
       // Unknown selection: match as a prefix of the stored value
       return { sql: '(venue LIKE ?)', params: [`${selected}%`] }
@@ -180,17 +186,8 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Get unique filter values (for dropdown population)
   app.get('/api/events/filter-options', async (c) => {
     try {
-      // Define main venues (without time variations or combinations)
-      const MAIN_VENUES = [
-        'JBT',
-        'JBT Museum',
-        'TET',
-        'GDT',
-        'LT',
-        'TT',
-        'DP Art Gallery',
-        'SVR'
-      ]
+      // Configurable venues from Settings (falls back to defaults)
+      const MAIN_VENUES = await getActiveVenueCodes(c.env.DB)
       
       // Get all crews and filter to only valid crew members
       const crews = await c.env.DB.prepare('SELECT DISTINCT crew FROM events WHERE crew IS NOT NULL AND crew != "" ORDER BY crew').all()
@@ -533,8 +530,8 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
         ORDER BY count DESC
       `).bind(dateFrom, dateTo).all()
       
-      // Define main venues and normalization function
-      const MAIN_VENUES = ['JBT', 'JBT Museum', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+      // Configurable venues from Settings (falls back to defaults)
+      const MAIN_VENUES = await getActiveVenueCodes(c.env.DB)
 
       function normalizeVenue(venueName: string): string {
         if (!venueName) return 'Unknown'
@@ -719,8 +716,8 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
       // Default to current month if not specified
       const targetMonth = month || new Date().toISOString().slice(0, 7)
       
-      // Main venues to normalize to
-      const MAIN_VENUES = ['JBT', 'JBT Museum', 'TET', 'GDT', 'LT', 'TT', 'DP Art Gallery', 'SVR']
+      // Configurable venues from Settings (falls back to defaults)
+      const MAIN_VENUES = await getActiveVenueCodes(c.env.DB)
 
       // Function to normalize venue names (remove times, variations)
       function normalizeVenue(venueName: string): string {

@@ -17,6 +17,11 @@ import { setupAuthEndpoints } from './auth-endpoints'
 import { setupCrewStatsEndpoints } from './crew-stats-endpoints'
 import { requireAdminUser, requireAuthenticatedUser } from './auth-utils'
 import {
+  getActiveVenues,
+  resolveAnthropicApiKey,
+  setupSettingsEndpoints,
+} from './settings-endpoints'
+import {
   addDaysUtc,
   applyCrewPropagationInBatch,
   assignGroupIdsByIndex,
@@ -462,6 +467,7 @@ setupExportEndpoints(app)
 setupCrewAssignmentEngine(app)
 setupAuthEndpoints(app)
 setupCrewStatsEndpoints(app)
+setupSettingsEndpoints(app)
 
 // Get single event (This must be AFTER specific routes like /filter-options)
 app.get('/api/events/:id', async (c) => {
@@ -1144,7 +1150,26 @@ app.post('/api/admin/backfill-embeddings', async (c) => {
 })
 
 // Helper function: Parse a chunk of text with Claude
-async function parseChunkWithClaude(chunk: string, contextHint: string, apiKey: string, chunkNumber: number, totalChunks: number): Promise<any[]> {
+async function parseChunkWithClaude(
+  chunk: string,
+  contextHint: string,
+  apiKey: string,
+  chunkNumber: number,
+  totalChunks: number,
+  venueMappingText?: string
+): Promise<any[]> {
+  const venueMap = venueMappingText || `VENUE CODE MAPPING (always use these exact full names):
+- TT → "Tata Theatre"
+- TET → "Experimental Theatre"
+- JBT → "Jamshed Bhabha Theatre"
+- GDT → "Godrej Dance Theatre"
+- LT or Little → "Little Theatre"
+- DPAG → "Dilip Piramal Art Gallery"
+- OAP → "Open Air Plaza"
+- Stuart Liff or Stuart Liff Lib → "Stuart Liff Library"
+- Experimental Theatre or Exp → "Experimental Theatre"
+- Others → "Others"`
+
   const prompt = `You are parsing section ${chunkNumber} of ${totalChunks} from an NCPA Sound Crew event schedule document. Extract ALL events from this section and return them as a JSON array.${contextHint}
 
 Document section:
@@ -1166,16 +1191,7 @@ CRITICAL DATE INSTRUCTIONS:
 4. MULTI-DAY EVENTS: When an event spans multiple dates (e.g. "Thu 2nd & Fri 3rd & Sat 4th & Sun 5th" or "Sun 12th & Mon 13th"), create a SEPARATE event entry for EACH individual date. All fields are identical — only event_date changes.
 5. Treat "&", "and", "to" between dates as indicators of multi-day spans.
 
-VENUE CODE MAPPING (always use these exact full names):
-- TT → "Tata Theatre"
-- TET → "Experimental Theatre"
-- JBT → "Jamshed Bhabha Theatre"
-- GDT → "Godrej Dance Theatre"
-- LT or Little → "Little Theatre"
-- DPAG → "Dilip Piramal Art Gallery"
-- OAP → "Open Air Plaza"
-- Stuart Liff or Stuart Liff Lib → "Stuart Liff Library"
-- Experimental Theatre or Exp → "Experimental Theatre"
+${venueMap}
 
 Return ONLY a valid JSON array, nothing else. No explanations, no markdown, just the JSON array.
 
@@ -1310,11 +1326,23 @@ app.post('/api/ai/parse-word', async (c) => {
       return c.json({ success: false, error: 'Document text is required' }, 400)
     }
     
-    // Get API key from environment
-    const apiKey = c.env.ANTHROPIC_API_KEY
+    // Prefer Settings-stored key; fall back to Cloudflare env secret
+    const { key: apiKey } = await resolveAnthropicApiKey(c.env.DB, c.env.ANTHROPIC_API_KEY)
     if (!apiKey) {
-      return c.json({ success: false, error: 'AI service not configured' }, 500)
+      return c.json({
+        success: false,
+        error: 'AI service not configured. Add the Anthropic API key in Settings, or set ANTHROPIC_API_KEY.',
+      }, 500)
     }
+
+    const venues = await getActiveVenues(c.env.DB)
+    const venueMappingText = `VENUE CODE MAPPING (always use these exact full names / codes):
+${venues.map((v) => `- ${v.code} → "${v.display_name}"`).join('\n')}
+- DPAG → "Dilip Piramal Art Gallery"
+- OAP → "Open Air Plaza"
+- Stuart Liff or Stuart Liff Lib → "Stuart Liff Library"
+- Experimental Theatre or Exp → "Experimental Theatre"
+For maintenance / non-venue work with no theatre, use "Others".`
     
     // Extract month/year context from filename if available
     let contextHint = ''
@@ -1371,7 +1399,8 @@ app.post('/api/ai/parse-word', async (c) => {
           contextHint,
           apiKey,
           i + 1,
-          chunks.length
+          chunks.length,
+          venueMappingText
         )
         
         console.log(`✅ Chunk ${i + 1}: Found ${chunkEvents.length} events`)
@@ -2625,7 +2654,8 @@ app.get('/', (c) => {
           .glass-card,
           #calendarView,
           #tableView,
-          #crewView {
+          #crewView,
+          #settingsView {
             background: rgba(41, 37, 36, 0.22) !important;
             backdrop-filter: blur(32px) saturate(150%) !important;
             -webkit-backdrop-filter: blur(32px) saturate(150%) !important;
@@ -2695,6 +2725,29 @@ app.get('/', (c) => {
             width: auto;
             display: block;
             transition: filter 0.22s ease, opacity 0.22s ease, transform 0.18s ease;
+          }
+
+          .nav-tab-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            width: 40px;
+            font-size: 1.35rem;
+            color: #6b7280;
+            transition: color 0.22s ease, opacity 0.22s ease, transform 0.18s ease;
+          }
+
+          .nav-tab.tab-active .nav-tab-icon {
+            color: #4b5563;
+          }
+
+          .nav-tab:not(.tab-active) .nav-tab-icon {
+            opacity: 0.72;
+          }
+
+          .nav-tab:not(.tab-active):hover .nav-tab-icon {
+            opacity: 1;
           }
 
           .nav-tab.tab-active .nav-tab-img {
@@ -4145,16 +4198,20 @@ app.get('/', (c) => {
           }
 
           #tableView,
-          #crewView {
+          #crewView,
+          #settingsView {
             color: var(--ncpa-text);
           }
 
           #tableView select,
           #crewView select,
+          #settingsView select,
           #tableView input,
           #crewView input,
+          #settingsView input,
           #tableView textarea,
-          #crewView textarea {
+          #crewView textarea,
+          #settingsView textarea {
             background: rgba(255,255,255,0.08) !important;
             color: var(--ncpa-text-bright) !important;
             border: 1px solid rgba(255,255,255,0.14) !important;
@@ -4162,7 +4219,8 @@ app.get('/', (c) => {
           }
 
           #tableView option,
-          #crewView option {
+          #crewView option,
+          #settingsView option {
             background: #241F1B;
             color: var(--ncpa-text-bright);
           }
@@ -4200,7 +4258,28 @@ app.get('/', (c) => {
           #crewView .text-gray-500,
           #crewView .text-gray-600,
           #crewView .text-gray-700,
-          #crewView label {
+          #crewView label,
+          #settingsView .text-gray-500,
+          #settingsView .text-gray-600,
+          #settingsView .text-gray-700,
+          #settingsView .text-gray-800,
+          #settingsView label,
+          #settingsView h2,
+          #settingsView h3,
+          #settingsView h4 {
+            color: var(--ncpa-text-secondary) !important;
+          }
+
+          #settingsView h2,
+          #settingsView h3 {
+            color: var(--ncpa-text-bright) !important;
+          }
+
+          #settingsView table th {
+            color: var(--ncpa-amber-light) !important;
+          }
+
+          #settingsView table td {
             color: var(--ncpa-text-secondary) !important;
           }
 
@@ -4895,6 +4974,9 @@ app.get('/', (c) => {
                             <button type="button" id="crewTab" class="nav-tab" onclick="showTab('crew')" aria-label="Crew">
                                 <img src="/static/images/nav/crew-tab.png" alt="Crew" class="nav-tab-img">
                             </button>
+                            <button type="button" id="settingsTab" class="nav-tab" onclick="showTab('settings')" aria-label="Settings" style="display: none;" title="Settings">
+                                <i class="fas fa-cog nav-tab-icon" aria-hidden="true"></i>
+                            </button>
                         </div>
 
                         <!-- Center: Ask AI button -->
@@ -5140,6 +5222,20 @@ app.get('/', (c) => {
                         </div>
                     </div>
                 </div>
+
+                <!-- Settings Tab (admin) -->
+                <div id="settingsView" class="glass-card rounded-2xl p-6" style="display: none;">
+                    <div class="mb-5">
+                        <h2 class="text-xl font-semibold text-gray-800">Settings</h2>
+                        <p class="text-sm text-gray-500 mt-1">Manage venues and the Word document AI API key.</p>
+                    </div>
+                    <div id="settingsContent">
+                        <div class="text-center py-12">
+                            <i class="fas fa-spinner fa-spin text-4xl text-gray-400"></i>
+                            <p class="mt-4 text-gray-600">Loading settings...</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -5229,6 +5325,7 @@ app.get('/', (c) => {
                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]"
                                    placeholder="Select or type venue">
                             <datalist id="venueList">
+                                <!-- Populated from /api/venues (includes Others) -->
                                 <option value="JBT Museum">JBT Museum</option>
                                 <option value="JBT">Jamshed Bhabha Theatre</option>
                                 <option value="TET">Experimental Theatre</option>
@@ -5236,6 +5333,8 @@ app.get('/', (c) => {
                                 <option value="LT">Little Theatre</option>
                                 <option value="SVR">Sea View Room</option>
                                 <option value="TT">Tata Theatre</option>
+                                <option value="DP Art Gallery">Dilip Piramal Art Gallery</option>
+                                <option value="Others">Others</option>
                             </datalist>
                         </div>
                         <div>
@@ -5870,9 +5969,10 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.7"></script>
+        <script src="/static/app.js?v=4.2.8"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
-        <script src="/static/auth.js?v=1.0.0"></script>
+        <script src="/static/auth.js?v=1.0.1"></script>
+        <script src="/static/settings.js?v=1.0.0"></script>
     </body>
     </html>
   `)

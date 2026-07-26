@@ -435,9 +435,10 @@ export async function handleAIChat(c: Context<{ Bindings: Env }>) {
       return c.json({ success: false, error: 'Last message must be from the user' }, 400)
     }
 
-    const apiKey = c.env.ANTHROPIC_API_KEY
+    const { resolveAnthropicApiKey } = await import('./settings-endpoints')
+    const { key: apiKey } = await resolveAnthropicApiKey(c.env.DB, c.env.ANTHROPIC_API_KEY)
     if (!apiKey) {
-      return c.json({ success: false, error: 'AI is not configured (missing API key)' }, 500)
+      return c.json({ success: false, error: 'AI is not configured (missing API key). Add it in Settings.' }, 500)
     }
 
     const systemPrompt = await buildSystemPrompt(c.env.DB)

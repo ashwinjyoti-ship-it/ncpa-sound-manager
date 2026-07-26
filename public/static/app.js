@@ -1297,10 +1297,19 @@ async function handleAddShow(e) {
 
 var _addShowAvailTimer = null;
 var _addShowAvail = null;
+var _addShowAvailRequestId = 0;
 
 function schedAddShowAvailCheck() {
   clearTimeout(_addShowAvailTimer);
-  _addShowAvailTimer = setTimeout(doAddShowAvailCheck, 280);
+  var requestId = ++_addShowAvailRequestId;
+  _addShowAvail = null;
+  var card = document.getElementById('addShowCrewCard');
+  if (card) card.style.display = 'none';
+  var body = document.getElementById('addShowCrewBody');
+  if (body) body.innerHTML = '<div class="avail-loading"><div class="avail-spinner"></div>Checking availability…</div>';
+  _addShowAvailTimer = setTimeout(function() {
+    return doAddShowAvailCheck(requestId);
+  }, 280);
 }
 
 function getAddShowDates() {
@@ -1320,7 +1329,9 @@ function getAddShowDates() {
   return [];
 }
 
-async function doAddShowAvailCheck() {
+async function doAddShowAvailCheck(requestId) {
+  if (requestId == null) requestId = ++_addShowAvailRequestId;
+  if (requestId !== _addShowAvailRequestId) return;
   var dates = getAddShowDates();
   var card = document.getElementById('addShowCrewCard');
   if (!dates.length) { if (card) card.style.display = 'none'; return; }
@@ -1330,10 +1341,12 @@ async function doAddShowAvailCheck() {
   try {
     var r = await fetch('/api/crew-availability?dates=' + dates.join(','));
     var d = await r.json();
+    if (requestId !== _addShowAvailRequestId) return;
     if (!d.success) throw new Error(d.error);
     _addShowAvail = d;
     renderAddShowAvail(d);
   } catch(e) {
+    if (requestId !== _addShowAvailRequestId) return;
     if (body) body.innerHTML = '<div class="ncpa-status ncpa-status--error" style="font-size:13px;padding:4px 0">&#9888; ' + addShowEscHtml(e.message) + '</div>';
   }
 }

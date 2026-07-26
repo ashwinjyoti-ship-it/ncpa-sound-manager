@@ -53,6 +53,14 @@ function showUserMenu() {
   if (currentUser.role === 'admin') {
     document.getElementById('adminBadge').style.display = 'inline';
     document.getElementById('adminPanelBtn').style.display = 'block';
+    if (typeof showSettingsTabForAdmin === 'function') {
+      showSettingsTabForAdmin();
+    } else {
+      const settingsTab = document.getElementById('settingsTab');
+      if (settingsTab) settingsTab.style.display = '';
+    }
+  } else if (typeof hideSettingsTab === 'function') {
+    hideSettingsTab();
   }
 
   // Crew tab is always visible (no login required)
@@ -69,6 +77,13 @@ function showLoginButton() {
   // Crew tab stays visible after logout
   const crewTab = document.getElementById('crewTab');
   if (crewTab) crewTab.style.display = 'block';
+
+  if (typeof hideSettingsTab === 'function') {
+    hideSettingsTab();
+  } else {
+    const settingsTab = document.getElementById('settingsTab');
+    if (settingsTab) settingsTab.style.display = 'none';
+  }
 }
 
 // Toggle user dropdown

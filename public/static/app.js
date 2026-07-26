@@ -193,12 +193,20 @@ function showTab(tab) {
   document.getElementById('tableTab').classList.remove('tab-active');
   const crewTab = document.getElementById('crewTab');
   if (crewTab) crewTab.classList.remove('tab-active');
+  const settingsTab = document.getElementById('settingsTab');
+  if (settingsTab) settingsTab.classList.remove('tab-active');
+  const dashboardTab = document.getElementById('dashboardTab');
+  if (dashboardTab) dashboardTab.classList.remove('tab-active');
   
   // Hide all views
   document.getElementById('calendarView').style.display = 'none';
   document.getElementById('tableView').style.display = 'none';
   const crewView = document.getElementById('crewView');
   if (crewView) crewView.style.display = 'none';
+  const settingsView = document.getElementById('settingsView');
+  if (settingsView) settingsView.style.display = 'none';
+  const dashboardView = document.getElementById('dashboardView');
+  if (dashboardView) dashboardView.style.display = 'none';
   
   if (tab === 'calendar') {
     document.getElementById('calendarTab').classList.add('tab-active');
@@ -216,6 +224,15 @@ function showTab(tab) {
       crewView.style.display = 'block';
       if (typeof loadCrewStats === 'function') {
         loadCrewStats();
+      }
+    }
+  } else if (tab === 'settings') {
+    stopTodaySidebarClock();
+    if (settingsTab) settingsTab.classList.add('tab-active');
+    if (settingsView) {
+      settingsView.style.display = 'block';
+      if (typeof loadSettingsPage === 'function') {
+        loadSettingsPage();
       }
     }
   }

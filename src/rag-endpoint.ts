@@ -67,7 +67,8 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
                           queryLower.includes('out of')
     
     const sessionId = session_id || `session_${Date.now()}_${Math.random().toString(36).substring(7)}`
-    const apiKey = c.env.ANTHROPIC_API_KEY
+    const { resolveAnthropicApiKey } = await import('./settings-endpoints')
+    const { key: apiKey } = await resolveAnthropicApiKey(c.env.DB, c.env.ANTHROPIC_API_KEY)
     
     // ============================================
     // STEP 1: Load Conversation History

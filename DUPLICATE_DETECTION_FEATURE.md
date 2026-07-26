@@ -1,5 +1,15 @@
 # Smart Duplicate Detection Feature
 
+> **Historical v2.1 design (November 2025).** This page records the original
+> append-only implementation. The current `/api/events/bulk` behavior still
+> never deletes events and preserves non-crew event details, but it may update
+> `crew`, `foh_crew`, `stage_crew`, and `show_group_id` on a matching
+> date/program/venue row. It also groups consecutive multi-date imports and can
+> propagate crew into empty rows. See
+> [README — Crew Availability and Multi-Date Runs](README.md#crew-availability-and-multi-date-runs)
+> and [`context.md`](context.md)
+> for the current workflow and constraints.
+
 ## 🎯 Problem Solved
 
 **User Request:**

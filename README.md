@@ -8,7 +8,7 @@ A comprehensive event management system for NCPA Sound Crew with calendar views,
 - 🚀 **Web App: https://c196ef1d.ncpa-sound.pages.dev**
 - 🌐 **Permanent URL: https://ncpa-sound.pages.dev**
 - API Base: https://c196ef1d.ncpa-sound.pages.dev/api
-- **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics, **Crew Assignment AI Learning Backend (14 valid crew)**
+- **✨ NEW:** Advanced Filtering, Conflict Detection, Bulk Assignment, Dashboard Analytics, and live crew availability from the shared crew roster
 
 **Development (Sandbox):**
 - Web App: https://3000-icrqtba2jsfb6kz8v3mvv-cbeee0f9.sandbox.novita.ai
@@ -50,6 +50,7 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
 1. **📅 Calendar View**
    - Monthly navigation (previous/next month)
    - **Today's date highlighted**: Blue border and background for current day
+   - Click or keyboard-activate a date number to see crew who are on shows, blocked, or available that day
    - Event cards color-coded by status:
      - 🟢 Green: Sound requirements filled
      - 🟡 Peach: Sound requirements pending
@@ -68,9 +69,9 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Drag & drop or click to upload CSV files
    - Automatic parsing with flexible column mapping
    - **Intelligent duplicate detection**: Prevents re-importing existing events
-   - **Preserves manual entries**: Won't overwrite manually-added shows
-   - **Append-only behavior**: New events added alongside existing data
-   - Detailed feedback shows: inserted, skipped (duplicates), invalid
+   - Matching events are skipped unless the import supplies crew or a multi-date group to add
+   - Consecutive same-program, same-venue rows share a group; crew from the first populated row fills only empty rows in that run
+   - Upload feedback combines inserted/updated rows, then reports skipped and invalid rows separately
    - Validates data before import
    - Supports common CSV formats
 
@@ -80,8 +81,8 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - **100% data capture**: No truncation, all events extracted
    - **Intelligent chunking**: Splits large documents, processes each chunk with Claude AI
    - **Automatic deduplication**: Removes duplicate events across chunk boundaries
-   - **Smart duplicate detection**: Preserves manually-added events when re-importing
-   - **Append-only uploads**: New events added alongside existing data, no deletion
+   - **Smart duplicate handling**: Preserves non-crew event details while allowing crew and group metadata to update matching rows
+   - **Non-destructive uploads**: Imports do not delete events
    - **Persistent progress notification**: Shows real-time processing status
    - **Auto-navigation**: Automatically jumps to uploaded month in calendar
    - No strict formatting requirements - works with tables, lists, or any structure
@@ -90,7 +91,7 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
    - Example: 32KB document → 3 chunks → 50 events in ~45 seconds
    - Fallback: CSV upload available for extremely large files (>50KB)
 
-4. **➕ Manual Event Entry (with Smart Autocomplete)**
+4. **➕ Manual Event Entry (with Live Crew Availability)**
    - "Add Show" button on both views
    - Form with all fields:
      - Date (required, dropdown calendar)
@@ -102,8 +103,10 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
        - Common teams: Bruce/Rajeshr, Bruce/Team, Farahnaz & Team, etc.
      - Sound Requirements (optional, textarea)
      - Call Time (optional)
-     - **Crew (optional) - Autocomplete dropdown with custom entry**
-       - Common crew: Ashwin, Team A, Sound 1
+     - **FOH (optional)** - Single-select from crew available on every selected date
+     - **Stage Crew (optional)** - Multi-select from crew available on every selected date
+     - Assigned and blocked crew are shown but excluded from selection
+   - Single-date shows create one event; consecutive date ranges create one row per day with a shared `show_group_id`
    - Tracks creation date in database
 
 5. **🔍 Search Functionality**
@@ -190,6 +193,9 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
   sound_requirements: text (optional)
   call_time: string (optional)
   crew: string (optional)
+  foh_crew: string (optional)
+  stage_crew: string (optional, comma-separated)
+  show_group_id: string (optional, shared by a multi-date run)
   requirements_updated: boolean (auto-calculated)
   created_at: datetime (auto)
   updated_at: datetime (auto)
@@ -198,11 +204,13 @@ The app now works perfectly in Safari 18.6+ with enhanced CORS headers and secur
 
 ### Storage Services
 
-**Primary Database:** Cloudflare D1 (SQLite)
+**Databases:** Cloudflare D1 (SQLite)
 - Globally distributed
 - Automatic replication
 - SQL-based queries
-- Indexed fields: date, program, venue, crew, team
+- `DB` (`ncpa-sound-crew-db`) stores events
+- `DB_CREW` (`ncpa-crew-db`) is the read-only source for the live crew roster and leave/blocked dates
+- Indexed event fields include date, program, venue, crew, team, and `show_group_id`
 
 **Current Status:**
 - ✅ Local D1 database active (.wrangler/state/v3/d1)
@@ -234,6 +242,20 @@ Response to Frontend
 Real-time UI Update
 ```
 
+### Crew Availability and Multi-Date Runs
+
+`GET /api/crew-availability` combines event assignments from `DB` with the live roster and leave records from `DB_CREW`. Names are classified with this precedence:
+
+1. **Assigned** — present in `crew`, `foh_crew`, or `stage_crew` on any requested date.
+2. **Unavailable** — blocked on any requested date and not already assigned.
+3. **Available** — neither assigned nor blocked on any requested date.
+
+The Add Show picker checks the complete date range, so a person assigned or blocked on any day in the range is excluded for the whole run. The calendar date modal calls the same endpoint for one day. Assigned names that are no longer on the live roster are still returned so existing work is not hidden.
+
+Multi-date grouping uses trimmed program plus normalized venue. Program matching remains case-sensitive. `TT` matches `Tata Theatre`, `TET` matches `Experimental Theatre`, and `JBT Museum` prefixes are grouped together. TT and TET are intentionally different venues: a legacy `show_group_id` shared across them does not make the shows siblings.
+
+When editing a grouped or inferred consecutive run, the optional **Apply crew** control overwrites FOH, Stage, and combined crew on every selected sibling. This save is two requests: the current event can save even if propagation fails. The bulk crew API accepts event IDs directly; venue scoping is enforced during sibling discovery, not revalidated by `PUT /api/events/bulk-crew`.
+
 ---
 
 ## 🎯 API Endpoints
@@ -241,13 +263,20 @@ Real-time UI Update
 ### Events
 
 - `GET /api/events` - Get all events
-- `GET /api/events/:id` - Get single event
+- `GET /api/events/:id` - Get one event plus venue-scoped `multi_date_siblings`
 - `GET /api/events/range?start=YYYY-MM-DD&end=YYYY-MM-DD` - Get events by date range
 - `GET /api/events/search?q=query` - Search events
 - `POST /api/events` - Create new event
+- `POST /api/events/multi-date` - Create two or more gapless consecutive dates with one shared `show_group_id`
 - `POST /api/events/bulk` - Bulk upload events with duplicate detection (CSV/Word)
 - `PUT /api/events/:id` - Update event
+- `PUT /api/events/bulk-crew` - Overwrite crew fields for an authenticated list of event IDs
 - `DELETE /api/events/:id` - Delete event
+
+### Crew
+
+- `GET /api/crew-roster` - Get the live roster from `DB_CREW`
+- `GET /api/crew-availability?dates=YYYY-MM-DD,...` - Classify crew across one or more dates and return matching event conflicts
 
 ### AI Services
 
@@ -278,12 +307,15 @@ Real-time UI Update
 
 1. **View Events**
    - Default view: Calendar showing current month
+   - Select a date number to open the read-only daily crew availability summary
    - Switch to Table view using top tabs
 
 2. **Add a New Show**
    - Click "Add Show" button (top right)
    - Fill in required fields: Date, Program, Venue
-   - Optionally add: Team, Sound Requirements, Call Time, Crew
+   - Choose a single date or a consecutive date range
+   - Optionally add: Team, Sound Requirements, Call Time, FOH, and Stage Crew
+   - For a range, crew availability is evaluated across every selected date
    - Click "Add Show" to save
 
 3. **Upload Multiple Events (CSV/Word)**
@@ -292,9 +324,8 @@ Real-time UI Update
    - Required columns: Date, Program, Venue
    - Optional columns: Team, Sound Requirements, Call Time, Crew
    - **Smart duplicate detection**: System checks for existing events
-   - **Preserves manual entries**: Your manually-added shows won't be affected
-   - Events will be imported automatically (only new ones added)
-   - Detailed feedback shows what was added, skipped, or invalid
+   - Matching events keep their existing details; supplied crew and multi-date grouping can be added
+   - Upload feedback counts additions and updates together, then reports skipped and invalid rows
 
 4. **Edit Event Details**
    - Switch to Table view
@@ -353,26 +384,22 @@ Date,Program,Venue,Team,Sound Requirement,Call Time,Crew
 
 ### Duplicate Detection & Data Preservation
 
-**🔒 Your Manual Entries Are Safe!**
-
-The system uses intelligent duplicate detection to protect your data:
-
 **How It Works:**
 - Events are considered duplicates if they have the **same date + program + venue**
 - When uploading CSV or Word files, the system checks every event before inserting
-- If an event already exists, it's skipped (not replaced)
+- A match with no incoming crew or group metadata is skipped
+- A match with crew or multi-date group metadata updates only `crew`, `foh_crew`, `stage_crew`, and/or `show_group_id`
 
 **What This Means:**
-1. ✅ **Manually-added shows are preserved** - They won't be overwritten during uploads
-2. ✅ **Append-only behavior** - New events are added alongside existing ones
-3. ✅ **Re-import protection** - If you upload the same file twice, duplicates are skipped
-4. ✅ **Detailed feedback** - You'll see exactly what was added vs. skipped
+1. ✅ **Non-crew details are preserved** - Program, venue, requirements, call time, rider, and notes are not replaced on a match
+2. ✅ **Crew can be completed from imports** - Supplied crew may update an existing event
+3. ✅ **Multi-date runs can be repaired** - Matching consecutive rows may receive or reuse `show_group_id`
+4. ⚠️ **Feedback combines changes** - The current upload toast reports inserted and updated rows together as events added
 
 **Example:**
 - You manually add: "Romeo and Juliet" on Nov 20 at JBT
-- You upload a Word document containing the same show
-- Result: System skips the duplicate, shows "1 duplicates skipped (already exist)"
-- Your manual entry remains unchanged! ✨
+- You upload a document containing the same show with FOH set to Naren
+- Result: the existing row keeps its event details and its crew fields are updated; no second event is inserted
 
 ### Color Coding
 

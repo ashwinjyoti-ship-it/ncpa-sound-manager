@@ -1,7 +1,7 @@
 # ncpa-sound-manager — Session Context
 
 > Reference file for AI coding sessions. Updated after each significant work block.
-> Last updated: 2026-06-17
+> Last updated: 2026-07-20
 
 ---
 
@@ -28,7 +28,7 @@
 git push origin stable/v1.2:main --force
 ```
 
-> **Note:** Production `main` has moved ahead of `stable/v1.2` with the NCPA warm dark reskin, nav PNG buttons, Crew tab access changes, and notification theming (PR #61, pending merge).
+> **Note:** These rollback markers predate the warm dark reskin, current crew availability workflow, and multi-date grouping safeguards now on `main`.
 
 ---
 
@@ -37,7 +37,6 @@ git push origin stable/v1.2:main --force
 | Branch | State | Purpose |
 |---|---|---|
 | `main` | Production | Cloudflare Pages deploys from here via GitHub Actions |
-| `cursor/ncpa-themed-notifications-cd9e` | In review | PR #61 — NCPA-themed system toasts + inline status messages |
 | `stable/v1.2` | Rollback marker | Post FOH/Stage crew split |
 | `stable/v1.1` | Rollback marker | Post glass UI |
 | `stable/v1.0` | Rollback marker | Pre-glass UI |
@@ -61,13 +60,13 @@ Push to production: `git push origin <branch>:main` (or merge via PR).
 
 **D1 database IDs:**
 - `ncpa-sound-crew-db` (events): `8dd5bac9-26b7-45d7-94b3-7a013ec3e880`
-- `ncpa-crew-db` (crew unavailability): `3bc26aff-d41b-4d7b-bb68-7b768d02dabf`
+- `ncpa-crew-db` (live roster + crew unavailability): `3bc26aff-d41b-4d7b-bb68-7b768d02dabf`
 
 **Cloudflare Pages env vars needed:**
 - `ANTHROPIC_API_KEY` — Claude API key for Word doc parsing
 - `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` — in GitHub Actions secrets
 
-**Important — `DB_CREW` in production:** Ensure the `DB_CREW` binding is added in the Cloudflare Pages dashboard (Settings → Functions → D1 database bindings) pointing to `ncpa-crew-db`. Without it the `/api/crew-availability` endpoint will error.
+**Important — `DB_CREW` in production:** Ensure the `DB_CREW` binding is added in the Cloudflare Pages dashboard (Settings → Functions → D1 database bindings) pointing to `ncpa-crew-db`. Both `/api/crew-availability` and `/api/crew-roster` query it directly and return 500 if the binding or query fails. The static roster fallback applies only when a successful roster query returns zero rows.
 
 ---
 
@@ -89,6 +88,7 @@ npm run dev:sandbox   # build + migrate local D1 + wrangler pages dev on :3000
 | File | Purpose |
 |---|---|
 | `src/index.tsx` | Main Hono server — routes, HTML shell, **all theme CSS** (`:root` tokens + overrides) |
+| `src/multi-date-groups.ts` | Shared server grouping, venue normalization, sibling discovery, and batch crew propagation |
 | `public/static/app.js` | Calendar logic, modals, uploads, **notification toasts**, Add Show UI |
 | `public/static/auth.js` | Login/signup, admin panel, user management, crew stats |
 | `public/static/v41-features.js` | V4.1 features — filters, conflicts, bulk ops, analytics, short notice |
@@ -205,7 +205,8 @@ CREATE TABLE events (
   tags TEXT,
   source TEXT,             -- "manual" (Add Show form) | "import_word" (Word/CSV upload)
   rider TEXT,              -- Comma-separated document URLs (OneDrive etc.)
-  notes TEXT               -- Internal notes — NOT exported to Google Sheet
+  notes TEXT,              -- Internal notes — NOT exported to Google Sheet
+  show_group_id TEXT       -- Shared UUID for rows in a multi-date run
 );
 ```
 
@@ -220,19 +221,57 @@ CREATE TABLE events (
 
 ---
 
-## Add Show — Crew Availability Flow
+## Crew Availability and Live Roster
 
-1. User picks a date (or date range) in the Add Show modal
-2. Frontend calls `GET /api/crew-availability?dates=YYYY-MM-DD,...` (debounced 280ms)
-3. Endpoint queries **two databases**:
-   - `DB` — existing shows on those dates, extracts crew from `crew`, `foh_crew`, `stage_crew`
-   - `DB_CREW` — `crew_unavailability` records from the crew-assignment automation app
-4. Returns: `available`, `assigned` (on another show), `unavailable` (blocked)
-5. UI renders FOH (radio), Stage (checkbox), and excluded crew sections
-6. On submit, `POST /api/events` receives `foh_crew` + `stage_crew`
+`GET /api/crew-availability?dates=YYYY-MM-DD,...` is the shared read path for Add Show and the calendar day modal:
 
-**Valid crew roster** (hardcoded in `/api/crew-availability`):
-`Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3`
+1. `DB.events` supplies assignments from `crew`, `foh_crew`, and `stage_crew`.
+2. `DB_CREW.crew` supplies the current roster maintained by Crew-Assignment-Automation.
+3. `DB_CREW.crew_unavailability` supplies leave/blocked dates.
+4. Assigned names absent from the current roster are appended so real assignments are not hidden.
+5. Exact, case-sensitive names are classified as:
+   - `assigned` if assigned on any requested date;
+   - `unavailable` if blocked on any requested date and not assigned;
+   - `available` otherwise.
+
+For a multi-date Add Show range, classification is the union across all dates: someone busy on one date is excluded for the complete run. The response also includes matching event rows as `conflicts`; Add Show displays them, while the read-only day modal shows only the three name groups.
+
+**Frontend consumers:**
+
+- Add Show debounces date changes by 280 ms, renders available FOH as single-select and Stage as multi-select, and shows assigned/blocked crew as excluded. It does not abort or token-check overlapping requests, so rapid date changes can briefly render an older response.
+- Clicking a desktop calendar day number, or activating a mobile week date with click/Enter/Space, fetches fresh daily availability. A requested-date token suppresses responses after close or after a different date opens; requests are not aborted.
+- Edit Event calls `GET /api/crew-roster` and caches the successful roster for the browser session. Existing assignees no longer in the roster remain selectable with a `(removed)` label.
+
+**Roster fallback:** both crew endpoints use the 13-name static fallback only when `SELECT name FROM crew` succeeds with no rows. A `DB_CREW` failure returns 500.
+
+---
+
+## Multi-Date Grouping and Crew Propagation
+
+One event row is stored per date. Runs created through the multi-date endpoint or grouped during import share `show_group_id`; migration `0009_show_group_id.sql` adds the column and index. Older rows can still be inferred as siblings from consecutive dates even without a group ID.
+
+Grouping key = trimmed `program` + normalized `venue`:
+
+- `TT` and `Tata Theatre` are equivalent.
+- `TET` and `Experimental Theatre` are equivalent.
+- `JBT Museum` and values prefixed with `JBT Museum ` are equivalent.
+- TT and TET remain distinct. Program matching and other venue matching are case-sensitive after trimming.
+
+Example: consecutive `Visiting Company` rows at `TET` and `Experimental Theatre` form one run. A `Visiting Company` row at `TT` does not join that run, even if old data reused the same `show_group_id`.
+
+There are three propagation paths:
+
+1. **Add Show range:** `POST /api/events/multi-date` requires at least two gapless consecutive dates, creates one UUID, and writes the same crew to every date.
+2. **Edit Event:** `GET /api/events/:id` returns `multi_date_siblings`, the union of same-group rows and the current consecutive cluster, always constrained to the same program/normalized venue. The optional Apply Crew control then sends the current row and captured sibling IDs to `PUT /api/events/bulk-crew`.
+3. **CSV/Word import:** `POST /api/events/bulk` finds same-program, same-venue consecutive clusters. The first row containing crew fills only crew-empty rows in its cluster, and adjacent existing group IDs are reused when possible.
+
+**Constraints and failure behavior:**
+
+- `POST /api/events/multi-date` inserts one row at a time without a transaction. A later insert failure leaves earlier dates stored; retry only after checking for partial rows.
+- Edit-time propagation overwrites `foh_crew`, `stage_crew`, and combined `crew` on every supplied ID, including siblings that already have crew.
+- Saving the current event and propagating crew are separate, non-transactional requests. The event can save while propagation fails.
+- `PUT /api/events/bulk-crew` trusts the authenticated caller's IDs and does not recheck program, venue, dates, or group membership. Venue scoping is a sibling-discovery safeguard, not an endpoint invariant.
+- Sibling IDs are captured when the editor opens; concurrent changes use last-write-wins behavior.
 
 ---
 
@@ -241,9 +280,12 @@ CREATE TABLE events (
 | Method | Route | Purpose |
 |---|---|---|
 | `GET` | `/api/crew-availability?dates=...` | Available/assigned/unavailable crew for given dates |
+| `GET` | `/api/crew-roster` | Live roster from `DB_CREW`, with empty-result fallback |
 | `POST` | `/api/events` | Create event — accepts `foh_crew` + `stage_crew` |
+| `POST` | `/api/events/multi-date` | Create a gapless run with shared crew and `show_group_id` |
+| `GET` | `/api/events/:id` | Get one event and its venue-scoped `multi_date_siblings` |
 | `PUT` | `/api/events/:id` | Update event |
-| `PUT` | `/api/events/bulk-crew` | Update crew across multiple event IDs (propagation) |
+| `PUT` | `/api/events/bulk-crew` | Overwrite crew across caller-supplied event IDs |
 | `DELETE` | `/api/events/:id` | Delete event |
 | `GET` | `/api/events` | List events (month filter) |
 | `POST` | `/api/events/bulk` | CSV bulk upload |
@@ -285,17 +327,17 @@ Upload shows a **progress toast** (`createUploadProgressToast`) through extract 
 
 ---
 
-## CSV Bulk Upload Logic (`POST /api/events/bulk`)
+## CSV/Word Bulk Upload Logic (`POST /api/events/bulk`)
 
 **Duplicate check:** compares `event_date + program + venue` as triplet.
 
-| CSV row vs existing record | CSV has crew? | Result |
+| Import row vs existing record | Crew/group data present? | Result |
 |---|---|---|
-| Match found | Yes | **Updates `crew` field** on existing record |
+| Match found | Yes | Update supplied `crew`, `foh_crew`, `stage_crew`, and/or `show_group_id`; preserve other event fields |
 | Match found | No | Skip |
-| No match | Either | Insert as new event with `source = 'import_word'` |
+| No match | Either | Insert a new event |
 
-Invalid rows missing `event_date`, `program`, or `venue` are dropped.
+Before duplicate handling, crew propagates from the first crew-bearing row only into empty rows in each same-program, normalized-venue, consecutive cluster. Each cluster receives a `show_group_id`; a group on an adjacent existing row is reused when available. Invalid rows missing `event_date`, `program`, or `venue` are dropped.
 
 ---
 
@@ -350,11 +392,15 @@ Logic in `public/static/app.js` — `isEventGreen(event)`:
 
 ---
 
-## Recent Work (as of 2026-06-17)
+## Recent Work (as of 2026-07-20)
 
 | PR / Commit | What |
 |---|---|
-| PR #61 (open) | **NCPA notification theming** — Phase 1 floating toasts + Phase 2 inline status messages |
+| `bc901df` | Ignore stale day-availability responses after close or a different date request |
+| `6e389a4`, `a1c1163` | Keep edit-time crew sibling discovery scoped to the same normalized venue |
+| `b7d218e` | Read the live roster from `DB_CREW`; preserve removed crew on existing events |
+| `e0acdbb` | Add the read-only crew availability modal to calendar date controls |
+| PR #61 (merged) | **NCPA notification theming** — Phase 1 floating toasts + Phase 2 inline status messages |
 | PR #59 (merged) | Fix Stage crew assign grid in edit modal |
 | PR #58 (merged) | Remove rectangular background from active nav tab buttons |
 | `e479c44` | Show Crew tab for all users (no login required) |
@@ -366,7 +412,6 @@ Logic in `public/static/app.js` — `isEventGreen(event)`:
 
 ## Next Up
 
-- [ ] **Merge PR #61** — NCPA-themed system notifications
 - [ ] **Update PWA manifest + meta theme-color** to NCPA dark palette (`#1C1917` / `#E0A458`)
 - [ ] **Theme delete confirmations** — wire up `deleteConfirmModal` instead of native `confirm()`
 - [ ] **v4.1 report modals** — update remaining old-palette dynamic HTML in `v41-features.js`

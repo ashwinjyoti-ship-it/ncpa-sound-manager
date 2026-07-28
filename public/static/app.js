@@ -1891,7 +1891,12 @@ function handleCSVUpload(e) {
           team: row['Team'] || row['team'] || row['Curator'] || '',
           sound_requirements: row['Sound Requirements'] || row['sound_requirements'] || row['Sound Requirement'] || row['sound_requirement'] || '',
           call_time: row['Call Time'] || row['call_time'] || row['CallTime'] || '',
-          crew: row['Crew'] || row['crew'] || row['Sound Crew'] || ''
+          crew: row['Crew'] || row['crew'] || row['Sound Crew'] || '',
+          // Explicit FOH/Stage columns (e.g. from the Crew Assignment Automation
+          // export) take priority — the merged Crew column alone is ambiguous
+          // when an event has no FOH assigned, so it's never split automatically.
+          foh_crew: row['FOH'] || row['foh'] || '',
+          stage_crew: row['Stage'] || row['stage'] || ''
         };
         return parsed;
       });
@@ -1919,7 +1924,9 @@ function handleCSVUpload(e) {
         team: e.team,
         sound_requirements: e.sound_requirements,
         call_time: e.call_time,
-        crew: e.crew
+        crew: e.crew,
+        foh_crew: e.foh_crew || null,
+        stage_crew: e.stage_crew || null
       }));
       
       try {

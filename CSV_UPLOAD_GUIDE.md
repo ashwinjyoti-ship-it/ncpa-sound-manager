@@ -22,7 +22,11 @@ Your CSV **must** have these three columns (names are case-insensitive):
 - **Team** (or "Curator") - Team/curator name
 - **Sound Requirement** or **Sound Requirements** - Technical requirements
 - **Call Time** (or "CallTime") - Setup and call times
-- **Crew** (or "Sound Crew") - Assigned crew members
+- **Crew** (or "Sound Crew") - Assigned crew members (unsplit; shown under Stage if FOH/Stage columns aren't provided)
+- **FOH** - The crew member assigned Front of House for this event
+- **Stage** - Crew members assigned Stage (comma-separated for multiple)
+
+**Note:** If your CSV has separate `FOH` and `Stage` columns (e.g. exports from the Crew Assignment Automation tool), they're read directly and take priority — this is the only reliable way to import the FOH/Stage split, since a single merged `Crew` column can't tell whether the first name is FOH or just the first Stage crew member for an event with no FOH assigned.
 
 ### Supported Column Name Variations
 

@@ -12,13 +12,13 @@
 // don't keep this Durable Object billed/running, and `setWebSocketAutoResponse`
 // so client heartbeat pings are answered at the edge without waking it at all.
 //
-// Plain (non-RPC) Durable Object class on purpose: this project's Cloudflare
-// Pages build (@hono/vite-build) bundles the worker through a generated
-// virtual entry module, and Rollup can't externalize the `cloudflare:workers`
-// module that the RPC-style `DurableObject` base class requires. The main
-// worker instead talks to this object with a plain internal `fetch()` call
-// (see broadcastEventSync in src/event-sync.ts) — functionally identical to
-// RPC for a single fire-and-forget broadcast, with none of the build wrinkles.
+// This lives in its own Worker (workers/event-sync/), separate from the main
+// Pages project: Cloudflare Pages' wrangler config doesn't support the
+// "migrations" key that Durable Object classes require, and a Durable Object
+// binding on a Pages project must point at an external Worker via
+// `script_name` rather than defining the class locally (see the main app's
+// wrangler.jsonc `durable_objects` binding and src/event-sync.ts, which talks
+// to this object with a plain internal `fetch()` call rather than RPC).
 const HEARTBEAT_PING = 'ping'
 const HEARTBEAT_PONG = 'pong'
 
@@ -37,7 +37,7 @@ export class EventSyncRoom {
 
     // Internal broadcast call from the main worker. Never reachable from
     // outside — this Durable Object has no public route of its own; the
-    // only way in is the EVENT_SYNC binding on the worker itself.
+    // only way in is the EVENT_SYNC binding on the calling worker.
     if (request.method === 'POST' && url.pathname === '/broadcast') {
       const payload = await request.text()
       const sockets = this.ctx.getWebSockets()

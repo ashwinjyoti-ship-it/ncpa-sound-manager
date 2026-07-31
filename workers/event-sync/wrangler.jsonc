@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "ncpa-event-sync",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-10-24",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "EVENT_SYNC",
+        "class_name": "EventSyncRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "EventSyncRoom"
+      ]
+    }
+  ]
+}

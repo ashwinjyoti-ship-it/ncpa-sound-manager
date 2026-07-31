@@ -31,10 +31,13 @@ import {
   generateShowGroupId,
   programVenueKey,
 } from './multi-date-groups'
-import { EventSyncRoom } from './durable-objects/event-sync-room'
 import { broadcastEventSync, broadcastUpsertByIds } from './event-sync'
 
-export { EventSyncRoom }
+// EVENT_SYNC binds to the EventSyncRoom Durable Object, which lives in a
+// separate Worker (workers/event-sync/) rather than being defined here —
+// Cloudflare Pages projects can't declare Durable Object classes/migrations
+// of their own, only bind to one hosted by another Worker via `script_name`
+// (see wrangler.jsonc). See src/event-sync.ts for how this binding is used.
 
 type Bindings = {
   DB: D1Database;

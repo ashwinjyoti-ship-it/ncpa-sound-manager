@@ -31,16 +31,9 @@
     "bindings": [
       {
         "name": "EVENT_SYNC",
-        "class_name": "EventSyncRoom"
+        "class_name": "EventSyncRoom",
+        "script_name": "ncpa-event-sync"
       }
     ]
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": [
-        "EventSyncRoom"
-      ]
-    }
-  ]
+  }
 }

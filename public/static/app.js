@@ -206,6 +206,7 @@ let realtimeSocket = null;
 let realtimeReconnectAttempts = 0;
 let realtimeReconnectTimer = null;
 let realtimeHeartbeatTimer = null;
+let realtimeHasConnectedBefore = false;
 
 function connectRealtimeSync() {
   if (realtimeSocket &&
@@ -232,6 +233,15 @@ function connectRealtimeSync() {
     realtimeHeartbeatTimer = setInterval(function() {
       if (socket.readyState === WebSocket.OPEN) socket.send('ping');
     }, 30000);
+
+    // The room doesn't replay history, so anything another user changed
+    // while this tab was disconnected would otherwise be silently missed.
+    // Skip it on the very first connect — the initial loadEvents() call
+    // already has fresh data — and only resync on actual reconnects.
+    if (realtimeHasConnectedBefore) {
+      resyncAfterRealtimeReconnect();
+    }
+    realtimeHasConnectedBefore = true;
   });
 
   socket.addEventListener('message', function(event) {
@@ -260,6 +270,34 @@ function scheduleRealtimeReconnect() {
   // network — is briefly unavailable.
   const delay = Math.min(30000, 1000 * Math.pow(2, realtimeReconnectAttempts - 1));
   realtimeReconnectTimer = setTimeout(connectRealtimeSync, delay);
+}
+
+// Full resync after a reconnect: the EventSyncRoom only broadcasts to
+// sockets connected at the time of the change, it doesn't replay a backlog,
+// so anything another user changed during this tab's downtime would
+// otherwise be permanently missed until a manual page refresh.
+async function resyncAfterRealtimeReconnect() {
+  try {
+    const response = await axios.get(`${API_BASE}/events`, { timeout: 60000 });
+    if (!response.data.success) return;
+    allEvents = response.data.data;
+    renderCurrentView();
+
+    if (currentOpenEventId !== null) {
+      const modal = document.getElementById('eventModal');
+      if (modal && modal.classList.contains('active')) {
+        const fresh = allEvents.find(function(e) { return e.id === currentOpenEventId; });
+        if (fresh) {
+          openEventModal(fresh);
+        } else {
+          closeEventModal();
+          showNotification('This event was deleted while you were disconnected', 'warning');
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error resyncing after realtime reconnect:', error);
+  }
 }
 
 function handleRealtimeMessage(msg) {
@@ -1927,6 +1965,16 @@ async function handleEditEvent(e) {
         notes: data.notes || null
       };
 
+      // Snapshot the "apply crew to sibling dates" state before closing the
+      // modal below — closeEditEventModal() resets this checkbox and its
+      // sibling-id dataset, so reading it afterward would always see it
+      // cleared and silently skip propagation.
+      var propagateCbEl = document.getElementById('editPropagateCrew');
+      var shouldPropagate = !!(propagateCbEl && propagateCbEl.checked);
+      var propagateRowEl = document.getElementById('editCrewPropagateRow');
+      var siblingIds = JSON.parse((propagateRowEl && propagateRowEl.dataset.siblingIds) || '[]');
+      var groupId = (propagateRowEl && propagateRowEl.dataset.showGroupId) || '';
+
       // Optimistic update: apply the edit locally and close the modal right
       // away so the UI feels instant, then confirm with the server below.
       if (existingEvent) {
@@ -1943,27 +1991,21 @@ async function handleEditEvent(e) {
 
         // Propagate crew to sibling events if requested — isolated so a
         // propagation failure doesn't leave the modal open / calendar stale
-        var propagateCb = document.getElementById('editPropagateCrew');
-        if (propagateCb && propagateCb.checked) {
-          var propagateRow = document.getElementById('editCrewPropagateRow');
-          var siblingIds = JSON.parse((propagateRow && propagateRow.dataset.siblingIds) || '[]');
-          if (siblingIds.length > 0) {
-            try {
-              var groupId = (propagateRow && propagateRow.dataset.showGroupId) || '';
-              if (!groupId && typeof crypto !== 'undefined' && crypto.randomUUID) {
-                groupId = crypto.randomUUID();
-              }
-              var allIds = [eventIdNum].concat(siblingIds);
-              await axios.put(`${API_BASE}/events/bulk-crew`, {
-                ids: allIds,
-                foh_crew: fohCrew || null,
-                stage_crew: stageCrewString,
-                show_group_id: groupId || undefined,
-              });
-            } catch (propErr) {
-              console.error('Crew propagation failed:', propErr);
-              showNotification('Event saved, but crew propagation to other dates failed', 'warning');
+        if (shouldPropagate && siblingIds.length > 0) {
+          try {
+            if (!groupId && typeof crypto !== 'undefined' && crypto.randomUUID) {
+              groupId = crypto.randomUUID();
             }
+            var allIds = [eventIdNum].concat(siblingIds);
+            await axios.put(`${API_BASE}/events/bulk-crew`, {
+              ids: allIds,
+              foh_crew: fohCrew || null,
+              stage_crew: stageCrewString,
+              show_group_id: groupId || undefined,
+            });
+          } catch (propErr) {
+            console.error('Crew propagation failed:', propErr);
+            showNotification('Event saved, but crew propagation to other dates failed', 'warning');
           }
         }
         showNotification('Event updated successfully', 'success');

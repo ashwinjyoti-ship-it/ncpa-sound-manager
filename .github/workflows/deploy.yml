@@ -36,6 +36,18 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: d1 migrations apply ncpa-sound-crew-db --remote
 
+      # Hosts the EventSyncRoom Durable Object used for realtime sync. Must
+      # be deployed before the Pages project, which binds to it by
+      # script_name (Cloudflare Pages can't declare Durable Object classes
+      # or migrations of its own — see wrangler.jsonc + workers/event-sync/).
+      - name: Deploy Event Sync Worker (Durable Object)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: workers/event-sync
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:

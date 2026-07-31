@@ -451,6 +451,17 @@ function isEventGreen(event) {
   return event.requirements_updated && event.call_time && event.call_time.trim() && event.call_time.toLowerCase() !== 'not specified';
 }
 
+function isEventCancelled(event) {
+  return event.status === 'cancelled';
+}
+
+// Status class for an event card, taking priority over the green/peach
+// ready-vs-attention coloring — a cancelled show is always grey.
+function eventCardStatusClass(event) {
+  if (isEventCancelled(event)) return 'event-card-cancelled';
+  return isEventGreen(event) ? 'event-card-green' : 'event-card-peach';
+}
+
 function appendDesktopEventCrew(card, event) {
   if (event.foh_crew || event.stage_crew) {
     if (event.foh_crew) {
@@ -484,9 +495,10 @@ function appendDesktopEventCrew(card, event) {
 
 function createDesktopEventCard(event, options) {
   const truncateProgram = (options && options.truncateProgram) || 30;
+  const cancelled = isEventCancelled(event);
   const statusComplete = isEventGreen(event);
   const card = document.createElement('div');
-  card.className = 'event-card cursor-pointer ' + (statusComplete ? 'event-card-green' : 'event-card-peach');
+  card.className = 'event-card cursor-pointer ' + eventCardStatusClass(event);
   card.onclick = function() { openEventModal(event); };
 
   if (options && options.showStatus) {
@@ -500,7 +512,7 @@ function createDesktopEventCard(event, options) {
 
     const status = document.createElement('span');
     status.className = 'event-card-status';
-    status.textContent = statusComplete ? 'Complete' : 'Attention';
+    status.textContent = cancelled ? 'Cancelled' : (statusComplete ? 'Complete' : 'Attention');
     header.appendChild(status);
 
     card.appendChild(header);
@@ -1003,7 +1015,7 @@ function scrollMobileAgendaToDate(dateStr) {
 
 function renderMobileEventCard(event) {
   const card = document.createElement('div');
-  card.className = 'mobile-event-card ' + (isEventGreen(event) ? 'event-card-green' : 'event-card-peach');
+  card.className = 'mobile-event-card ' + eventCardStatusClass(event);
   card.setAttribute('role', 'button');
   card.setAttribute('tabindex', '0');
   card.onclick = function() { openEventModal(event); };
@@ -1206,9 +1218,11 @@ function openEventModal(event) {
   modal.classList.remove('active');
 
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
+  const cancelled = isEventCancelled(event);
   const statusComplete = isEventGreen(event);
-  const statusLabel = statusComplete ? 'Ready' : 'Needs Attention';
-  
+  const statusLabel = cancelled ? 'Cancelled' : (statusComplete ? 'Ready' : 'Needs Attention');
+  const statusClass = cancelled ? 'is-cancelled' : (statusComplete ? 'is-complete' : 'is-attention');
+
   const soundReqsFormatted = event.sound_requirements 
     ? formatLinksInText(event.sound_requirements) 
     : 'Not specified';
@@ -1235,7 +1249,7 @@ function openEventModal(event) {
   ` : '';
 
   content.innerHTML = `
-    <div class="event-detail-status ${statusComplete ? 'is-complete' : 'is-attention'}">
+    <div class="event-detail-status ${statusClass}">
       <span></span>${statusLabel}
     </div>
     <div class="event-detail-stack">
@@ -1282,6 +1296,13 @@ function openEventModal(event) {
   `;
 
   if (isAuthenticated) {
+    const cancelRestoreBtn = cancelled
+      ? `<button type="button" onclick="restoreEventFromModal(${event.id})" class="event-status-btn event-status-btn-restore" aria-label="Restore event">
+           <i class="fas fa-rotate-left"></i><span>Restore</span>
+         </button>`
+      : `<button type="button" onclick="cancelEventFromModal(${event.id})" class="event-status-btn event-status-btn-cancel" aria-label="Cancel event">
+           <i class="fas fa-ban"></i><span>Cancel</span>
+         </button>`;
     footer.innerHTML = `
       <button type="button" onclick="deleteEventFromModal(${event.id})" class="event-detail-btn modal-img-btn" aria-label="Delete">
         <img src="/static/images/buttons/delete.png" alt="Delete" class="modal-img">
@@ -1289,6 +1310,7 @@ function openEventModal(event) {
       <button type="button" onclick="editEventFromModal(${event.id})" class="event-detail-btn modal-img-btn" aria-label="Edit">
         <img src="/static/images/buttons/edit.png" alt="Edit" class="modal-img">
       </button>
+      ${cancelRestoreBtn}
     `;
   } else {
     footer.innerHTML = `
@@ -1350,6 +1372,52 @@ async function deleteEventFromModal(eventId) {
     }
     showNotification('❌ Failed to delete event: ' + (error.response?.data?.error || error.message || 'unknown error'), 'error');
   }
+}
+
+// Cancel / Restore — a soft, reversible alternative to deleting: the event
+// stays on the calendar (and in any crew-facing export) but greyed out and
+// marked cancelled, via the existing bulk status-update endpoint. No
+// confirmation prompt, unlike permanent delete — it's a one-click toggle.
+async function setEventStatusFromModal(eventId, newStatus, successMessage) {
+  const event = allEvents.find(e => e.id === eventId);
+  if (!event) return;
+  const previousStatus = event.status;
+
+  // Optimistic update: flip the status locally right away so the card
+  // greys out (or un-greys) and the modal's own button flips to the
+  // opposite action, then confirm with the server.
+  event.status = newStatus;
+  renderCurrentView();
+  if (currentOpenEventId === eventId) {
+    openEventModal(event);
+  }
+
+  try {
+    const response = await axios.post(`${API_BASE}/events/update-status`, {
+      eventIds: [eventId],
+      status: newStatus
+    });
+    if (!response.data.success) {
+      throw new Error(response.data.error || 'Status update failed');
+    }
+    showNotification(successMessage, 'success');
+  } catch (error) {
+    console.error('Error updating event status:', error);
+    event.status = previousStatus;
+    renderCurrentView();
+    if (currentOpenEventId === eventId) {
+      openEventModal(event);
+    }
+    showNotification('Failed to update event: ' + (error.response?.data?.error || error.message || 'unknown error'), 'error');
+  }
+}
+
+function cancelEventFromModal(eventId) {
+  setEventStatusFromModal(eventId, 'cancelled', '✅ Event cancelled');
+}
+
+function restoreEventFromModal(eventId) {
+  setEventStatusFromModal(eventId, 'confirmed', '✅ Event restored');
 }
 
 // ============================================

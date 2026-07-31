@@ -31,6 +31,10 @@ import {
   generateShowGroupId,
   programVenueKey,
 } from './multi-date-groups'
+import { EventSyncRoom } from './durable-objects/event-sync-room'
+import { broadcastEventSync, broadcastUpsertByIds } from './event-sync'
+
+export { EventSyncRoom }
 
 type Bindings = {
   DB: D1Database;
@@ -38,9 +42,29 @@ type Bindings = {
   AI: any;
   VECTORIZE: any; // Vectorize enabled for semantic search
   ANTHROPIC_API_KEY: string;
+  EVENT_SYNC: DurableObjectNamespace;
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
+
+// ============================================
+// REAL-TIME SYNC (WebSocket via Durable Object)
+// ============================================
+// A single shared "room" broadcasts every event create/update/delete to all
+// connected browser tabs, so viewers see changes made by other users without
+// refreshing or polling. See src/durable-objects/event-sync-room.ts and
+// src/event-sync.ts for the broadcast helpers used throughout this file.
+
+// WebSocket endpoint: browsers connect here and receive push notifications
+// for every event change. Forwarded straight through to the Durable Object,
+// which owns the actual socket (see acceptWebSocket in EventSyncRoom).
+app.get('/api/events/stream', async (c) => {
+  if (c.req.header('Upgrade') !== 'websocket') {
+    return c.text('Expected websocket upgrade', 426)
+  }
+  const stub = c.env.EVENT_SYNC.get(c.env.EVENT_SYNC.idFromName('global'))
+  return stub.fetch(c.req.raw)
+})
 
 const nullableText = (value: unknown): string | null => {
   if (value === undefined || value === null) return null
@@ -571,6 +595,8 @@ app.post('/api/events/multi-date', async (c) => {
       })
     }
 
+    await broadcastUpsertByIds(c.env, c.env.DB, created.map(e => e.id as number), c.req.header('X-Client-Id'))
+
     return c.json({ success: true, show_group_id: showGroupId, data: created }, 201)
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -651,10 +677,12 @@ app.post('/api/events', async (c) => {
     } catch (embError) {
       console.warn('⚠️ Embedding generation failed (non-critical):', embError)
     }
-    
-    return c.json({ 
-      success: true, 
-      data: { 
+
+    await broadcastUpsertByIds(c.env, c.env.DB, [eventId as number], c.req.header('X-Client-Id'))
+
+    return c.json({
+      success: true,
+      data: {
         id: eventId,
         event_date,
         program,
@@ -703,6 +731,8 @@ app.put('/api/events/bulk-crew', async (c) => {
          updated_at = CURRENT_TIMESTAMP WHERE id IN (${ph})`
       ).bind(fohCrew || null, stageCrew || null, combined, ...ids).run()
     }
+
+    await broadcastUpsertByIds(c.env, c.env.DB, ids as number[], c.req.header('X-Client-Id'))
 
     return c.json({ success: true, updated: ids.length, show_group_id: show_group_id || null })
   } catch (error: any) {
@@ -777,6 +807,8 @@ app.put('/api/events/:id', async (c) => {
       id
     ).run()
 
+    await broadcastUpsertByIds(c.env, c.env.DB, [Number(id)], c.req.header('X-Client-Id'))
+
     return c.json({ success: true, message: 'Event updated successfully' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -827,7 +859,9 @@ app.delete('/api/events/:id', async (c) => {
     await c.env.DB.prepare(`
       DELETE FROM events WHERE id = ?
     `).bind(id).run()
-    
+
+    await broadcastEventSync(c.env, { type: 'events:delete', ids: [id] }, c.req.header('X-Client-Id'))
+
     return c.json({ success: true, message: 'Event deleted successfully' })
   } catch (error: any) {
     return c.json({ success: false, error: error.message }, 500)
@@ -857,18 +891,25 @@ app.post('/api/events/bulk-delete', async (c) => {
     `).bind(monthKey).first()
     
     const count = countResult?.count || 0
-    
+
     if (count === 0) {
       return c.json({ success: true, deleted: 0, message: 'No events found for this month' })
     }
-    
+
+    const idRows = await c.env.DB.prepare(`
+      SELECT id FROM events WHERE strftime('%Y-%m', event_date) = ?
+    `).bind(monthKey).all()
+    const deletedIds = (idRows.results || []).map((r: any) => r.id as number)
+
     await deleteMonthEventDependencies(c.env.DB, monthKey)
     await c.env.DB.prepare(`
-      DELETE FROM events 
+      DELETE FROM events
       WHERE strftime('%Y-%m', event_date) = ?
     `).bind(monthKey).run()
-    
-    return c.json({ 
+
+    await broadcastEventSync(c.env, { type: 'events:delete', ids: deletedIds }, c.req.header('X-Client-Id'))
+
+    return c.json({
       success: true, 
       deleted: count,
       message: `Deleted ${count} events from ${monthKey}` 
@@ -1046,9 +1087,11 @@ app.post('/api/events/bulk', async (c) => {
     if (invalid.length > 0) {
       message += `, ${invalid.length} invalid entries ignored`
     }
-    
-    return c.json({ 
-      success: true, 
+
+    await broadcastUpsertByIds(c.env, c.env.DB, inserted.map((e: any) => e.id as number), c.req.header('X-Client-Id'))
+
+    return c.json({
+      success: true,
       message,
       data: inserted,
       skipped: skipped.length > 0 ? skipped : undefined,
@@ -5983,7 +6026,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.2.8"></script>
+        <script src="/static/app.js?v=4.3.0"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
         <script src="/static/settings.js?v=1.0.1"></script>

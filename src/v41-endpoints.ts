@@ -5,12 +5,14 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { requireAuthenticatedUser } from './auth-utils'
 import { getActiveVenueCodes } from './settings-endpoints'
+import { broadcastUpsertByIds } from './event-sync'
 
 type Bindings = {
   DB: D1Database;
   AI: any;
   VECTORIZE: any;
   ANTHROPIC_API_KEY: string;
+  EVENT_SYNC: DurableObjectNamespace;
 }
 
 // VALID CREW MEMBERS - Only learn from these crew members
@@ -447,11 +449,13 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
       // Update all events
       const placeholders = eventIds.map(() => '?').join(',')
       await c.env.DB.prepare(`
-        UPDATE events 
+        UPDATE events
         SET crew = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id IN (${placeholders})
       `).bind(crew, ...eventIds).run()
-      
+
+      await broadcastUpsertByIds(c.env, c.env.DB, eventIds as number[], c.req.header('X-Client-Id'))
+
       return c.json({
         success: true,
         message: `Updated ${eventIds.length} events`,
@@ -478,11 +482,13 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
       
       const placeholders = eventIds.map(() => '?').join(',')
       await c.env.DB.prepare(`
-        UPDATE events 
+        UPDATE events
         SET status = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id IN (${placeholders})
       `).bind(status, ...eventIds).run()
-      
+
+      await broadcastUpsertByIds(c.env, c.env.DB, eventIds as number[], c.req.header('X-Client-Id'))
+
       return c.json({
         success: true,
         message: `Updated status to '${status}' for ${eventIds.length} events`

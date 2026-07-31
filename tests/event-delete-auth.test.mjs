@@ -61,6 +61,17 @@ function createDbStub() {
               }
               return null;
             },
+            async all() {
+              if (/SELECT id FROM events WHERE strftime\('%Y-%m', event_date\) = \?/i.test(sql)) {
+                const [monthKey] = params;
+                return {
+                  results: state.events
+                    .filter((event) => event.event_date.startsWith(monthKey))
+                    .map((event) => ({ id: event.id })),
+                };
+              }
+              throw new Error(`Unexpected all SQL: ${sql}`);
+            },
             async run() {
               if (/DELETE FROM event_conflicts WHERE event_id_1 = \?/i.test(sql)) {
                 const [id1, id2] = params;

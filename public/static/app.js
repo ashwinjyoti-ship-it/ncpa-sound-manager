@@ -18,9 +18,23 @@ let currentView = 'calendar';
 let currentDate = new Date();
 let allEvents = [];
 let currentEditingCell = null;
+let currentOpenEventId = null;    // id shown in the read-only event detail modal
+let currentEditingEventId = null; // id open in the edit-event form
 
 // API Base URL
 const API_BASE = '/api';
+
+// Per-tab id sent on every mutating request so this tab can recognize (and
+// skip re-rendering for) the realtime broadcast that echoes its own change.
+const CLIENT_ID = (function() {
+  try {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  } catch (e) { /* fall through to timestamp-based id below */ }
+  return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+})();
+if (typeof window !== 'undefined' && window.axios) {
+  axios.defaults.headers.common['X-Client-Id'] = CLIENT_ID;
+}
 
 // ============================================
 // DISPLAY NORMALIZATION HELPERS
@@ -115,6 +129,7 @@ document.addEventListener('DOMContentLoaded', async () => {
    renderCurrentView();
    await loadEvents();
    renderCurrentView();
+   connectRealtimeSync();
 
    // Scroll to today's date on initial mobile load
    if (isMobileView() && currentView === 'calendar') {
@@ -178,6 +193,128 @@ async function loadEvents() {
   } catch (error) {
     console.error('Error loading events:', error);
     showNotification('Failed to load events', 'error');
+  }
+}
+
+// ============================================
+// REALTIME SYNC (WebSocket via Durable Object)
+// ============================================
+// Keeps every open tab in sync with everyone else's changes, pushed the
+// instant a mutation lands server-side — no polling, no manual refresh.
+
+let realtimeSocket = null;
+let realtimeReconnectAttempts = 0;
+let realtimeReconnectTimer = null;
+let realtimeHeartbeatTimer = null;
+
+function connectRealtimeSync() {
+  if (realtimeSocket &&
+      (realtimeSocket.readyState === WebSocket.OPEN || realtimeSocket.readyState === WebSocket.CONNECTING)) {
+    return;
+  }
+  clearTimeout(realtimeReconnectTimer);
+
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const url = proto + '//' + window.location.host + '/api/events/stream';
+
+  let socket;
+  try {
+    socket = new WebSocket(url);
+  } catch (e) {
+    scheduleRealtimeReconnect();
+    return;
+  }
+  realtimeSocket = socket;
+
+  socket.addEventListener('open', function() {
+    realtimeReconnectAttempts = 0;
+    clearInterval(realtimeHeartbeatTimer);
+    realtimeHeartbeatTimer = setInterval(function() {
+      if (socket.readyState === WebSocket.OPEN) socket.send('ping');
+    }, 30000);
+  });
+
+  socket.addEventListener('message', function(event) {
+    if (event.data === 'pong') return;
+    let msg;
+    try { msg = JSON.parse(event.data); } catch (e) { return; }
+    handleRealtimeMessage(msg);
+  });
+
+  socket.addEventListener('close', function() {
+    clearInterval(realtimeHeartbeatTimer);
+    if (realtimeSocket === socket) realtimeSocket = null;
+    scheduleRealtimeReconnect();
+  });
+
+  socket.addEventListener('error', function() {
+    try { socket.close(); } catch (e) { /* already closing */ }
+  });
+}
+
+function scheduleRealtimeReconnect() {
+  clearTimeout(realtimeReconnectTimer);
+  realtimeReconnectAttempts++;
+  // Capped exponential backoff (1s, 2s, 4s, ... up to 30s) so a dropped
+  // connection doesn't hammer the Durable Object while it — or the
+  // network — is briefly unavailable.
+  const delay = Math.min(30000, 1000 * Math.pow(2, realtimeReconnectAttempts - 1));
+  realtimeReconnectTimer = setTimeout(connectRealtimeSync, delay);
+}
+
+function handleRealtimeMessage(msg) {
+  if (!msg || !msg.type) return;
+  if (msg.originId && msg.originId === CLIENT_ID) return; // this tab's own change, already applied optimistically
+
+  if (msg.type === 'events:upsert' && Array.isArray(msg.events)) {
+    msg.events.forEach(mergeEventIntoLocalState);
+    afterRealtimeEventChange(msg.events.map(function(e) { return e.id; }));
+  } else if (msg.type === 'events:delete' && Array.isArray(msg.ids)) {
+    msg.ids.forEach(removeEventFromLocalState);
+    afterRealtimeEventChange(msg.ids);
+  }
+}
+
+function mergeEventIntoLocalState(event) {
+  const idx = allEvents.findIndex(function(e) { return e.id === event.id; });
+  if (idx === -1) {
+    allEvents.push(event);
+  } else {
+    allEvents[idx] = Object.assign({}, allEvents[idx], event);
+  }
+}
+
+function removeEventFromLocalState(id) {
+  const idx = allEvents.findIndex(function(e) { return e.id === id; });
+  if (idx !== -1) allEvents.splice(idx, 1);
+}
+
+function afterRealtimeEventChange(changedIds) {
+  renderCurrentView();
+
+  // Live-refresh the read-only detail modal if it's showing one of the
+  // changed events, so whoever's looking at it sees the update immediately.
+  if (currentOpenEventId !== null && changedIds.indexOf(currentOpenEventId) !== -1) {
+    const modal = document.getElementById('eventModal');
+    if (modal && modal.classList.contains('active')) {
+      const fresh = allEvents.find(function(e) { return e.id === currentOpenEventId; });
+      if (fresh) {
+        openEventModal(fresh);
+        showNotification('This event was just updated by another user', 'info');
+      } else {
+        closeEventModal();
+        showNotification('This event was deleted by another user', 'warning');
+      }
+    }
+  }
+
+  // The edit form has its own local draft — don't clobber unsaved keystrokes.
+  // Just warn that saving now would overwrite someone else's concurrent edit.
+  if (currentEditingEventId !== null && changedIds.indexOf(currentEditingEventId) !== -1) {
+    const editModal = document.getElementById('editEventModal');
+    if (editModal && editModal.classList.contains('active')) {
+      showNotification('Heads up: another user just changed this event. Saving will overwrite their update.', 'warning');
+    }
   }
 }
 
@@ -981,33 +1118,39 @@ function handleCellEdit(e) {
 async function saveCell(cell) {
   const input = cell.querySelector('input, textarea');
   if (!input) return;
-  
+
   const newValue = input.value;
   const field = cell.dataset.field;
   const id = cell.dataset.id;
-  
+
   // Get the full event data
   const event = allEvents.find(e => e.id == id);
   if (!event) return;
-  
-  // Update the event object
+
+  const previousValue = event[field];
+
+  // Optimistic update: show the new value immediately, before the server
+  // has confirmed it, so the UI feels instant.
   event[field] = newValue;
-  
+  cell.textContent = newValue;
+  currentEditingCell = null;
+
   try {
     const response = await axios.put(`${API_BASE}/events/${id}`, event);
-    
+
     if (response.data.success) {
-      cell.textContent = newValue;
-      currentEditingCell = null;
-      
-      // Reload to get updated requirements_updated flag
+      // Reload to pick up server-computed fields (e.g. requirements_updated)
       await loadEvents();
       showNotification('Updated successfully', 'success');
+    } else {
+      throw new Error(response.data.error || 'Update failed');
     }
   } catch (error) {
     console.error('Error updating event:', error);
-    cell.textContent = event[field]; // Revert to original value
-    showNotification('Failed to update', 'error');
+    // Revert the optimistic change — both the in-memory event and the cell.
+    event[field] = previousValue;
+    cell.textContent = previousValue;
+    showNotification('Failed to update: ' + (error.response?.data?.error || error.message || 'unknown error'), 'error');
   }
 }
 
@@ -1020,7 +1163,8 @@ function openEventModal(event) {
   const content = document.getElementById('eventModalContent');
   const footer = document.getElementById('eventModalFooter');
   if (!modal || !content || !footer) return;
-  
+
+  currentOpenEventId = event.id;
   modal.classList.remove('active');
 
   const isAuthenticated = typeof currentUser !== 'undefined' && currentUser !== null;
@@ -1128,29 +1272,45 @@ function closeEventModal() {
   document.getElementById('eventModal').classList.remove('active');
   const footer = document.getElementById('eventModalFooter');
   if (footer) footer.innerHTML = '';
+  currentOpenEventId = null;
 }
 
 // Delete event from modal with confirmation
 async function deleteEventFromModal(eventId) {
   // Close modal first
   closeEventModal();
-  
+
   // Show confirmation
   if (!confirm('Are you sure you want to delete?')) {
     return;
   }
-  
+
+  // Optimistic update: remove it from the UI immediately, then confirm
+  // with the server. Keep a copy (and its index) so a failure can put it
+  // straight back where it was.
+  const removedIndex = allEvents.findIndex(e => e.id === eventId);
+  const removedEvent = removedIndex !== -1 ? allEvents[removedIndex] : null;
+  if (removedIndex !== -1) {
+    allEvents.splice(removedIndex, 1);
+    renderCurrentView();
+  }
+
   try {
     const response = await axios.delete(`${API_BASE}/events/${eventId}`);
-    
+
     if (response.data.success) {
       showNotification('✅ Event deleted successfully', 'success');
-      await loadEvents();
-      renderCurrentView();
+    } else {
+      throw new Error(response.data.error || 'Delete failed');
     }
   } catch (error) {
     console.error('Error deleting event:', error);
-    showNotification('❌ Failed to delete event', 'error');
+    // Revert: put the event back where it was and re-render.
+    if (removedEvent) {
+      allEvents.splice(removedIndex, 0, removedEvent);
+      renderCurrentView();
+    }
+    showNotification('❌ Failed to delete event: ' + (error.response?.data?.error || error.message || 'unknown error'), 'error');
   }
 }
 
@@ -1625,6 +1785,7 @@ function renderEditCrewControls(roster, fohValue, stageList) {
 async function editEventFromModal(eventId) {
   // Close event detail modal
   closeEventModal();
+  currentEditingEventId = eventId;
 
   // Fetch event details
   try {
@@ -1704,6 +1865,7 @@ async function editEventFromModal(eventId) {
   } catch (error) {
     console.error('Error fetching event:', error);
     showNotification('Failed to load event details', 'error');
+    currentEditingEventId = null;
   }
 }
 
@@ -1720,6 +1882,7 @@ function closeEditEventModal() {
   }
   var propagateCb = document.getElementById('editPropagateCrew');
   if (propagateCb) propagateCb.checked = false;
+  currentEditingEventId = null;
 }
 
 async function handleEditEvent(e) {
@@ -1746,8 +1909,11 @@ async function handleEditEvent(e) {
   
   try {
     if (dateType === 'single') {
-      // Simple update for single date
-      const response = await axios.put(`${API_BASE}/events/${eventId}`, {
+      const eventIdNum = parseInt(eventId, 10);
+      const existingEvent = allEvents.find(ev => ev.id === eventIdNum);
+      const previousEvent = existingEvent ? Object.assign({}, existingEvent) : null;
+
+      const updatedFields = {
         event_date: data.event_date,
         program: data.program,
         venue: data.venue,
@@ -1759,9 +1925,22 @@ async function handleEditEvent(e) {
         stage_crew: stageCrewString,
         rider: data.rider || null,
         notes: data.notes || null
-      });
+      };
 
-      if (response.data.success) {
+      // Optimistic update: apply the edit locally and close the modal right
+      // away so the UI feels instant, then confirm with the server below.
+      if (existingEvent) {
+        Object.assign(existingEvent, updatedFields);
+      }
+      closeEditEventModal();
+      renderCurrentView();
+
+      try {
+        const response = await axios.put(`${API_BASE}/events/${eventId}`, updatedFields);
+        if (!response.data.success) {
+          throw new Error(response.data.error || 'Update failed');
+        }
+
         // Propagate crew to sibling events if requested — isolated so a
         // propagation failure doesn't leave the modal open / calendar stale
         var propagateCb = document.getElementById('editPropagateCrew');
@@ -1774,7 +1953,7 @@ async function handleEditEvent(e) {
               if (!groupId && typeof crypto !== 'undefined' && crypto.randomUUID) {
                 groupId = crypto.randomUUID();
               }
-              var allIds = [parseInt(eventId, 10)].concat(siblingIds);
+              var allIds = [eventIdNum].concat(siblingIds);
               await axios.put(`${API_BASE}/events/bulk-crew`, {
                 ids: allIds,
                 foh_crew: fohCrew || null,
@@ -1788,10 +1967,20 @@ async function handleEditEvent(e) {
           }
         }
         showNotification('Event updated successfully', 'success');
-      closeEditEventModal();
-      await loadEvents();
-      renderCurrentView();
-    }
+        // Resync with the server for canonical fields (requirements_updated,
+        // crew propagated to sibling dates, etc).
+        await loadEvents();
+        renderCurrentView();
+      } catch (err) {
+        // Server rejected (or we never heard back from) the update —
+        // automatically revert the optimistic change and say why.
+        if (existingEvent && previousEvent) {
+          Object.assign(existingEvent, previousEvent);
+        }
+        renderCurrentView();
+        console.error('Error updating event:', err);
+        showNotification('Failed to update event: ' + (err.response?.data?.error || err.message || 'unknown error'), 'error');
+      }
     } else {
       // Multiple dates - update original and create copies for additional dates
       const startDate = new Date(data.start_date);

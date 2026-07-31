@@ -1680,6 +1680,30 @@ app.get('/', (c) => {
             outline: 1px solid rgba(173,179,184,0.12);
           }
 
+          /* Cancelled: fully desaturated, overriding the green/peach status
+             colors — a cancelled show carries no "ready" or "attention" signal. */
+          .event-card-cancelled {
+            background: rgba(243,244,246,0.70) !important;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-left: 4px solid rgba(148,153,160,0.55) !important;
+            box-shadow: 0 2px 12px rgba(45,51,56,0.06);
+            outline: 1px solid rgba(173,179,184,0.12);
+            opacity: 0.72;
+          }
+
+          .event-card-cancelled .event-card-title,
+          .event-card-cancelled .event-card-meta,
+          .event-card-cancelled .event-card-time,
+          .event-card-cancelled .event-card-status {
+            color: #6b7280 !important;
+          }
+
+          .event-card-cancelled .event-card-title {
+            text-decoration: line-through !important;
+            text-decoration-color: rgba(107,114,128,0.6);
+          }
+
           .calendar-day {
             min-height: 120px;
             outline: 1px solid rgba(173,179,184,0.15);
@@ -1792,7 +1816,8 @@ app.get('/', (c) => {
           }
 
           #todaySidebarEvents .event-card-green,
-          #todaySidebarEvents .event-card-peach {
+          #todaySidebarEvents .event-card-peach,
+          #todaySidebarEvents .event-card-cancelled {
             font-size: 0.75rem;
             padding: 6px 8px;
             margin-bottom: 6px;
@@ -1800,7 +1825,8 @@ app.get('/', (c) => {
           }
 
           #todaySidebarEvents .event-card-green:last-child,
-          #todaySidebarEvents .event-card-peach:last-child {
+          #todaySidebarEvents .event-card-peach:last-child,
+          #todaySidebarEvents .event-card-cancelled:last-child {
             margin-bottom: 0;
           }
 
@@ -1816,7 +1842,7 @@ app.get('/', (c) => {
               min-height: 80px;
             }
 
-            #calendarGrid .event-card-green, #calendarGrid .event-card-peach {
+            #calendarGrid .event-card-green, #calendarGrid .event-card-peach, #calendarGrid .event-card-cancelled {
               font-size: 0.7rem;
               padding: 3px 4px;
               margin-bottom: 3px;
@@ -1853,7 +1879,8 @@ app.get('/', (c) => {
             transition: transform 0.12s ease, box-shadow 0.12s ease;
           }
           .mobile-event-card.event-card-green,
-          .mobile-event-card.event-card-peach {
+          .mobile-event-card.event-card-peach,
+          .mobile-event-card.event-card-cancelled {
             border: 1px solid rgba(255,255,255,0.10) !important;
             border-left-width: 4px !important;
             box-shadow: 0 10px 22px rgba(0,0,0,0.16), inset 0 1px 0 rgba(255,255,255,0.08) !important;
@@ -1866,6 +1893,15 @@ app.get('/', (c) => {
           }
           .mobile-event-card.event-card-peach {
             border-left-color: var(--ncpa-terracotta) !important;
+          }
+          .mobile-event-card.event-card-cancelled {
+            border-left-color: #9aa1ab !important;
+            opacity: 0.72;
+          }
+          .mobile-event-card.event-card-cancelled .mobile-event-program {
+            color: #9aa1ab !important;
+            text-decoration: line-through;
+            text-decoration-color: rgba(154,161,171,0.65);
           }
           .mobile-event-card:hover,
           .mobile-event-card:focus {
@@ -1913,13 +1949,13 @@ app.get('/', (c) => {
             }
 
             /* More readable event text on mobile */
-            .event-card-green p, .event-card-peach p {
+            .event-card-green p, .event-card-peach p, .event-card-cancelled p {
               line-height: 1.3;
               margin-bottom: 0.15rem;
             }
 
             /* Better icon spacing on mobile */
-            .event-card-green i, .event-card-peach i {
+            .event-card-green i, .event-card-peach i, .event-card-cancelled i {
               width: 12px;
               text-align: center;
             }
@@ -2445,7 +2481,7 @@ app.get('/', (c) => {
             .calendar-day { min-height: 55px !important; }
 
             /* Tighter event cards */
-            .event-card-green, .event-card-peach {
+            .event-card-green, .event-card-peach, .event-card-cancelled {
               padding: 2px 3px !important;
               margin-bottom: 2px !important;
               font-size: 0.6rem !important;
@@ -3061,6 +3097,12 @@ app.get('/', (c) => {
             border-left: 4px solid var(--ncpa-terracotta) !important;
           }
 
+          .event-card-cancelled {
+            background: linear-gradient(120deg, rgba(120,120,128,0.16), rgba(41,37,36,0.30)) !important;
+            border-left: 4px solid #9aa1ab !important;
+            opacity: 0.72;
+          }
+
           .event-card-header {
             display: flex;
             justify-content: space-between;
@@ -3077,6 +3119,10 @@ app.get('/', (c) => {
 
           .event-card-peach .event-card-time {
             color: var(--ncpa-terracotta-light);
+          }
+
+          .event-card-cancelled .event-card-time {
+            color: #9aa1ab !important;
           }
 
           .event-card-status {
@@ -3096,14 +3142,31 @@ app.get('/', (c) => {
             color: var(--ncpa-terracotta-light);
           }
 
+          .event-card-cancelled .event-card-status {
+            border-color: rgba(154,161,171,0.30) !important;
+            background: rgba(154,161,171,0.20) !important;
+            color: #c2c7ce !important;
+          }
+
           .event-card-title {
             color: var(--ncpa-text-bright);
             font-weight: 800;
           }
 
+          .event-card-cancelled .event-card-title {
+            color: #9aa1ab !important;
+            text-decoration: line-through !important;
+            text-decoration-color: rgba(154,161,171,0.6);
+          }
+
           .event-card-meta {
             color: var(--ncpa-text-secondary);
             margin-top: 3px;
+          }
+
+          .event-card-cancelled .event-card-meta,
+          .event-card-cancelled .event-card-meta i {
+            color: #9aa1ab !important;
           }
 
           .event-card-meta i {
@@ -3303,6 +3366,16 @@ app.get('/', (c) => {
           .event-detail-status.is-attention span {
             background: #e8896a;
             box-shadow: 0 0 8px #e8896a;
+          }
+
+          .event-detail-status.is-cancelled {
+            color: #b7bcc4;
+            background: linear-gradient(135deg, #3a3a3f 0%, #232326 100%);
+          }
+
+          .event-detail-status.is-cancelled span {
+            background: #b7bcc4;
+            box-shadow: 0 0 8px #b7bcc4;
           }
 
           .event-detail-stack {
@@ -3570,6 +3643,40 @@ app.get('/', (c) => {
             height: 44px;
             width: auto;
             display: block;
+          }
+
+          /* Cancel / Restore — plain pill buttons (no bespoke PNG asset for
+             this action), styled to match the dark event-detail modal and
+             sit at the same 44px height as the Delete/Edit image buttons. */
+          .event-status-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            height: 44px;
+            padding: 0 18px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: filter 0.2s ease, transform 0.2s ease;
+          }
+
+          .event-status-btn:hover {
+            filter: brightness(1.12);
+            transform: translateY(-1px);
+          }
+
+          .event-status-btn-cancel {
+            background: linear-gradient(135deg, #4a261c 0%, #2e160f 100%);
+            border: 1px solid rgba(232,137,106,0.35);
+            color: #e8896a;
+          }
+
+          .event-status-btn-restore {
+            background: linear-gradient(135deg, #2d4a32 0%, #1f3324 100%);
+            border: 1px solid rgba(122,199,140,0.35);
+            color: var(--ncpa-green-light);
           }
 
           /* ════════════════════════════════════════════════════════════════
@@ -4742,6 +4849,19 @@ app.get('/', (c) => {
             .mobile-event-card.event-card-peach {
               background: linear-gradient(120deg, rgba(199,91,57,0.30), rgba(47,41,36,0.88)) !important;
               border-left-color: var(--ncpa-terracotta) !important;
+            }
+
+            .mobile-event-card.event-card-cancelled {
+              background: linear-gradient(120deg, rgba(120,120,128,0.30), rgba(47,41,36,0.88)) !important;
+              border-left-color: #9aa1ab !important;
+              opacity: 0.72;
+            }
+
+            .mobile-event-card.event-card-cancelled .mobile-event-program,
+            .mobile-event-card.event-card-cancelled .program {
+              color: #9aa1ab !important;
+              text-decoration: line-through !important;
+              text-decoration-color: rgba(154,161,171,0.6);
             }
 
             .mobile-event-program,
@@ -6029,7 +6149,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.3.0"></script>
+        <script src="/static/app.js?v=4.4.0"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
         <script src="/static/settings.js?v=1.0.1"></script>

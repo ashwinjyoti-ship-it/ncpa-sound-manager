@@ -310,19 +310,31 @@ function validateAllowedTables(sql: string): { ok: true } | { ok: false; error: 
 // the identical assigned/unavailable/available breakdown instead of guessing
 // from the events table alone.
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
 async function executeCrewAvailabilityTool(
   datesInput: unknown,
   db: D1Database,
   dbCrew: D1Database
 ): Promise<{ content: string; isError: boolean }> {
-  const dates = Array.isArray(datesInput)
+  const rawDates = Array.isArray(datesInput)
     ? datesInput.map((d) => String(d).trim()).filter(Boolean)
     : typeof datesInput === 'string'
       ? datesInput.split(',').map((d) => d.trim()).filter(Boolean)
       : []
 
-  if (!dates.length) {
+  if (!rawDates.length) {
     return { content: 'No valid dates provided. Pass one or more YYYY-MM-DD dates.', isError: true }
+  }
+
+  const dates = rawDates.filter((d) => DATE_RE.test(d))
+  const invalidDates = rawDates.filter((d) => !DATE_RE.test(d))
+
+  if (!dates.length) {
+    return {
+      content: `No date in a recognized format. Rejected: ${JSON.stringify(invalidDates)}. Dates must be 'YYYY-MM-DD'.`,
+      isError: true
+    }
   }
 
   const ph = dates.map(() => '?').join(',')
@@ -333,17 +345,23 @@ async function executeCrewAvailabilityTool(
        FROM events WHERE event_date IN (${ph})`
     ).bind(...dates).all()
 
-    const assignedSet = new Set<string>()
-    const parseCSV = (s: string | null) => {
-      if (!s) return
-      s.split(',').map((m) => m.trim())
+    const parseCSV = (s: string | null): string[] => {
+      if (!s) return []
+      return s.split(',').map((m) => m.trim())
         .filter((m) => m && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined')
-        .forEach((m) => assignedSet.add(m))
     }
+
+    const assignedByDate = new Map<string, Set<string>>()
+    const showsByDate = new Map<string, any[]>()
     for (const row of soundRows.results as any[]) {
-      parseCSV(row.crew)
-      parseCSV(row.foh_crew)
-      parseCSV(row.stage_crew)
+      const date = row.event_date as string
+      if (!assignedByDate.has(date)) assignedByDate.set(date, new Set())
+      const set = assignedByDate.get(date)!
+      parseCSV(row.crew).forEach((m) => set.add(m))
+      parseCSV(row.foh_crew).forEach((m) => set.add(m))
+      parseCSV(row.stage_crew).forEach((m) => set.add(m))
+      if (!showsByDate.has(date)) showsByDate.set(date, [])
+      showsByDate.get(date)!.push(row)
     }
 
     const rosterRows = await dbCrew.prepare(`SELECT name FROM crew ORDER BY name`).all()
@@ -357,27 +375,39 @@ async function executeCrewAvailabilityTool(
     }
 
     const crewRows = await dbCrew.prepare(
-      `SELECT DISTINCT c.name
+      `SELECT DISTINCT c.name, cu.unavailable_date
        FROM crew_unavailability cu
        JOIN crew c ON c.id = cu.crew_id
        WHERE cu.unavailable_date IN (${ph})`
     ).bind(...dates).all()
-    const unavailSet = new Set<string>(crewRows.results.map((r: any) => r.name as string))
 
-    const everyone: string[] = [...roster]
-    assignedSet.forEach((n) => { if (!everyone.includes(n)) everyone.push(n) })
+    const unavailByDate = new Map<string, Set<string>>()
+    for (const row of crewRows.results as any[]) {
+      const date = row.unavailable_date as string
+      if (!unavailByDate.has(date)) unavailByDate.set(date, new Set())
+      unavailByDate.get(date)!.add(row.name as string)
+    }
 
-    const available = everyone.filter((m) => !assignedSet.has(m) && !unavailSet.has(m))
-    const assigned = everyone.filter((m) => assignedSet.has(m))
-    const unavailable = everyone.filter((m) => unavailSet.has(m) && !assignedSet.has(m))
+    const byDate: Record<string, any> = {}
+    for (const date of dates) {
+      const assignedSet = assignedByDate.get(date) || new Set<string>()
+      const unavailSet = unavailByDate.get(date) || new Set<string>()
+
+      const everyone: string[] = [...roster]
+      assignedSet.forEach((n) => { if (!everyone.includes(n)) everyone.push(n) })
+
+      byDate[date] = {
+        available: everyone.filter((m) => !assignedSet.has(m) && !unavailSet.has(m)),
+        assigned: everyone.filter((m) => assignedSet.has(m)),
+        unavailable_or_blocked: everyone.filter((m) => unavailSet.has(m) && !assignedSet.has(m)),
+        shows: showsByDate.get(date) || []
+      }
+    }
 
     return {
       content: JSON.stringify({
-        dates,
-        available,
-        assigned,
-        unavailable_or_blocked: unavailable,
-        shows: soundRows.results
+        by_date: byDate,
+        ...(invalidDates.length ? { rejected_dates: invalidDates } : {})
       }),
       isError: false
     }
@@ -546,17 +576,21 @@ export async function handleAIChat(c: Context<{ Bindings: Env }>) {
       {
         name: 'get_crew_availability',
         description:
-          'Get the assigned / unavailable (blocked, on leave, off) / available breakdown for every crew member ' +
-          'on one or more dates - the same data shown by the calendar\'s day-availability popup. ' +
-          'Always use this (not query_database) for questions about who is free, on leave, blocked, or off, ' +
-          'or about a specific person\'s status, on a given date.',
+          'Get the assigned / unavailable (blocked, on leave, off) / available breakdown for every crew member, ' +
+          'computed separately for each date requested - the same data shown by the calendar\'s day-availability ' +
+          'popup. Returns { by_date: { "YYYY-MM-DD": { assigned, unavailable_or_blocked, available, shows } } }, ' +
+          'one entry per date - never assume a status from one date applies to another date in the same call. ' +
+          'Dates must be in exact YYYY-MM-DD format; any date that isn\'t is reported back under rejected_dates ' +
+          'and excluded from by_date rather than silently treated as "everyone available" - resolve those with ' +
+          'the user or from context before re-calling. Always use this (not query_database) for questions about ' +
+          'who is free, on leave, blocked, or off, or about a specific person\'s status, on a given date.',
         input_schema: {
           type: 'object',
           properties: {
             dates: {
               type: 'array',
               items: { type: 'string' },
-              description: "One or more dates in 'YYYY-MM-DD' format."
+              description: "One or more dates in exact 'YYYY-MM-DD' format."
             }
           },
           required: ['dates']

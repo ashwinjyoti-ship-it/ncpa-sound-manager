@@ -26,5 +26,21 @@
       "binding": "VECTORIZE",
       "index_name": "ncpa-events-index"
     }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "EVENT_SYNC",
+        "class_name": "EventSyncRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "EventSyncRoom"
+      ]
+    }
   ]
 }

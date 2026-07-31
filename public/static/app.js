@@ -320,7 +320,7 @@ function createDesktopEventCard(event, options) {
 
     const time = document.createElement('span');
     time.className = 'event-card-time';
-    time.textContent = event.call_time && event.call_time.trim() ? event.call_time : 'Not set';
+    time.textContent = event.call_time && event.call_time.trim() ? ('CT: ' + event.call_time) : 'Call Time: Not set';
     header.appendChild(time);
 
     const status = document.createElement('span');

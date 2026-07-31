@@ -3,6 +3,7 @@
 
 export interface Env {
   DB: D1Database;
+  DB_CREW: D1Database;
   AI: any; // Cloudflare Workers AI
   VECTORIZE: VectorizeIndex;
   ANTHROPIC_API_KEY: string;

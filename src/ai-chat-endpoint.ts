@@ -302,6 +302,90 @@ function validateAllowedTables(sql: string): { ok: true } | { ok: false; error: 
   return { ok: true }
 }
 
+// ============================================
+// Crew availability tool
+// ============================================
+// Mirrors the classification logic behind GET /api/crew-availability (the
+// same data the calendar's day-availability modal shows), so Ask AI can give
+// the identical assigned/unavailable/available breakdown instead of guessing
+// from the events table alone.
+
+async function executeCrewAvailabilityTool(
+  datesInput: unknown,
+  db: D1Database,
+  dbCrew: D1Database
+): Promise<{ content: string; isError: boolean }> {
+  const dates = Array.isArray(datesInput)
+    ? datesInput.map((d) => String(d).trim()).filter(Boolean)
+    : typeof datesInput === 'string'
+      ? datesInput.split(',').map((d) => d.trim()).filter(Boolean)
+      : []
+
+  if (!dates.length) {
+    return { content: 'No valid dates provided. Pass one or more YYYY-MM-DD dates.', isError: true }
+  }
+
+  const ph = dates.map(() => '?').join(',')
+
+  try {
+    const soundRows = await db.prepare(
+      `SELECT crew, foh_crew, stage_crew, program, venue, event_date
+       FROM events WHERE event_date IN (${ph})`
+    ).bind(...dates).all()
+
+    const assignedSet = new Set<string>()
+    const parseCSV = (s: string | null) => {
+      if (!s) return
+      s.split(',').map((m) => m.trim())
+        .filter((m) => m && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined')
+        .forEach((m) => assignedSet.add(m))
+    }
+    for (const row of soundRows.results as any[]) {
+      parseCSV(row.crew)
+      parseCSV(row.foh_crew)
+      parseCSV(row.stage_crew)
+    }
+
+    const rosterRows = await dbCrew.prepare(`SELECT name FROM crew ORDER BY name`).all()
+    let roster = (rosterRows.results as any[]).map((r) => r.name as string).filter(Boolean)
+    if (!roster.length) {
+      roster = [
+        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
+        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
+        'OC1', 'OC2', 'OC3'
+      ]
+    }
+
+    const crewRows = await dbCrew.prepare(
+      `SELECT DISTINCT c.name
+       FROM crew_unavailability cu
+       JOIN crew c ON c.id = cu.crew_id
+       WHERE cu.unavailable_date IN (${ph})`
+    ).bind(...dates).all()
+    const unavailSet = new Set<string>(crewRows.results.map((r: any) => r.name as string))
+
+    const everyone: string[] = [...roster]
+    assignedSet.forEach((n) => { if (!everyone.includes(n)) everyone.push(n) })
+
+    const available = everyone.filter((m) => !assignedSet.has(m) && !unavailSet.has(m))
+    const assigned = everyone.filter((m) => assignedSet.has(m))
+    const unavailable = everyone.filter((m) => unavailSet.has(m) && !assignedSet.has(m))
+
+    return {
+      content: JSON.stringify({
+        dates,
+        available,
+        assigned,
+        unavailable_or_blocked: unavailable,
+        shows: soundRows.results
+      }),
+      isError: false
+    }
+  } catch (error: any) {
+    return { content: `Crew availability lookup error: ${error.message}`, isError: true }
+  }
+}
+
 async function executeQueryTool(sql: string, db: D1Database): Promise<{ content: string; isError: boolean }> {
   const validation = validateReadOnlySql(sql)
   if (!validation.ok) {
@@ -383,7 +467,7 @@ async function buildSystemPrompt(db: D1Database): Promise<string> {
 
 CURRENT DATE: ${today}
 
-You have one tool: query_database. It runs read-only SQLite SELECT queries against the live database. Use it for every factual answer - never answer about events from memory. Run as many queries as you need (you may run several to cross-check or aggregate).
+You have two tools: query_database and get_crew_availability. Use them for every factual answer - never answer about events or crew status from memory. Run as many tool calls as you need (you may call several to cross-check or aggregate).
 
 DATABASE SCHEMA (the "events" table is the main table):
 ${eventsSchema || 'Use standard columns: id, event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id, created_at, updated_at'}
@@ -397,7 +481,8 @@ DATA CONVENTIONS:
 - Teams in the data: ${teams || 'query GROUP BY team to discover'}.
 - Equipment/technical needs live in sound_requirements, rider and notes (free text - search with LIKE, case-insensitively via LOWER()).
 - Event data currently spans: ${dateRange || 'unknown - query MIN/MAX event_date'}.
-- 'Free'/'available' dates for a venue = calendar dates in the range with no event rows for that venue. For a crew member, 'free' = no event rows mentioning them that day.
+- 'Free'/'available' dates for a venue = calendar dates in the range with no event rows for that venue.
+- CREW AVAILABILITY: a crew member's status on a date is NOT just "are they in an events row". There are three possible states: assigned (on a show that day, per events.crew/foh_crew/stage_crew), unavailable/blocked (on leave, off, or otherwise blocked - tracked separately in the crew scheduling system, NOT in the events table), and available (neither of the above). Never infer "available" just because someone isn't on a show - they may be blocked/on leave. ALWAYS use the get_crew_availability tool (not query_database/SQL) to answer any question about who is free, available, on leave, blocked, or off on a given date, or about a specific person's availability/status on a date - it returns the correct three-way breakdown. This is exactly the same data the calendar's day-availability popup shows.
 
 ANSWERING RULES:
 1. Be concise and direct. Lead with the answer (an exact count, a date list, a name), then minimal supporting detail.
@@ -457,6 +542,25 @@ export async function handleAIChat(c: Context<{ Bindings: Env }>) {
           },
           required: ['sql']
         }
+      },
+      {
+        name: 'get_crew_availability',
+        description:
+          'Get the assigned / unavailable (blocked, on leave, off) / available breakdown for every crew member ' +
+          'on one or more dates - the same data shown by the calendar\'s day-availability popup. ' +
+          'Always use this (not query_database) for questions about who is free, on leave, blocked, or off, ' +
+          'or about a specific person\'s status, on a given date.',
+        input_schema: {
+          type: 'object',
+          properties: {
+            dates: {
+              type: 'array',
+              items: { type: 'string' },
+              description: "One or more dates in 'YYYY-MM-DD' format."
+            }
+          },
+          required: ['dates']
+        }
       }
     ]
 
@@ -503,11 +607,22 @@ export async function handleAIChat(c: Context<{ Bindings: Env }>) {
 
         const toolResults: any[] = []
         for (const toolUse of toolUses) {
-          const sql = String(toolUse.input?.sql || '')
-          executedQueries.push(sql)
           toolCallCount++
-          console.log(`AI SQL [${toolCallCount}]: ${sql.slice(0, 200)}`)
-          const { content, isError } = await executeQueryTool(sql, c.env.DB)
+          let content: string
+          let isError: boolean
+
+          if (toolUse.name === 'get_crew_availability') {
+            const dates = toolUse.input?.dates
+            executedQueries.push(`get_crew_availability(${JSON.stringify(dates)})`)
+            console.log(`AI crew-availability [${toolCallCount}]: ${JSON.stringify(dates)}`)
+            ;({ content, isError } = await executeCrewAvailabilityTool(dates, c.env.DB, c.env.DB_CREW))
+          } else {
+            const sql = String(toolUse.input?.sql || '')
+            executedQueries.push(sql)
+            console.log(`AI SQL [${toolCallCount}]: ${sql.slice(0, 200)}`)
+            ;({ content, isError } = await executeQueryTool(sql, c.env.DB))
+          }
+
           toolResults.push({
             type: 'tool_result',
             tool_use_id: toolUse.id,

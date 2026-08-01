@@ -816,17 +816,22 @@ function renderCalendar() {
       });
     }
     
-    // Day number — clickable link that opens the crew availability modal
-    const dayNumber = document.createElement('button');
-    dayNumber.type = 'button';
-    dayNumber.className = (isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number') + ' calendar-day-number-link';
+    // Day number — clickable from Aug 2026 onwards to open crew availability modal
+    const dayAvailEnabled = isDayAvailEnabled(dateStr);
+    const dayNumber = document.createElement(dayAvailEnabled ? 'button' : 'span');
+    if (dayAvailEnabled) {
+      dayNumber.type = 'button';
+      dayNumber.className = (isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number') + ' calendar-day-number-link';
+      dayNumber.title = 'View crew availability';
+      dayNumber.setAttribute('aria-label', 'View crew availability for ' + dateStr);
+      dayNumber.onclick = function(e) {
+        e.stopPropagation();
+        openDayAvailModal(dateStr);
+      };
+    } else {
+      dayNumber.className = isToday ? 'calendar-day-number calendar-day-number-today' : 'calendar-day-number';
+    }
     dayNumber.textContent = day;
-    dayNumber.title = 'View crew availability';
-    dayNumber.setAttribute('aria-label', 'View crew availability for ' + dateStr);
-    dayNumber.onclick = function(e) {
-      e.stopPropagation();
-      openDayAvailModal(dateStr);
-    };
     cell.appendChild(dayNumber);
     
     // Event cards
@@ -957,22 +962,25 @@ function renderMobileWeekEvents(weekStart, weekEnd) {
     daySection.id = 'mobile-day-' + dateStr;
     daySection.dataset.mobileDate = dateStr;
 
-    // Day header — tappable, opens the crew availability modal
+    // Day header — tappable from Aug 2026 onwards to open crew availability modal
+    const dayAvailEnabled = isDayAvailEnabled(dateStr);
     const dayHeader = document.createElement('div');
     dayHeader.className = 'mobile-day-header' + (dateStr === todayStr ? ' today' : '');
     dayHeader.textContent = formatMobileDayHeader(dayDate);
-    const availIco = document.createElement('i');
-    availIco.className = 'fas fa-users davail-mobile-ico';
-    availIco.setAttribute('aria-hidden', 'true');
-    dayHeader.appendChild(availIco);
-    dayHeader.title = 'View crew availability';
-    dayHeader.setAttribute('role', 'button');
-    dayHeader.tabIndex = 0;
-    dayHeader.style.cursor = 'pointer';
-    dayHeader.onclick = function() { openDayAvailModal(dateStr); };
-    dayHeader.onkeydown = function(e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDayAvailModal(dateStr); }
-    };
+    if (dayAvailEnabled) {
+      const availIco = document.createElement('i');
+      availIco.className = 'fas fa-users davail-mobile-ico';
+      availIco.setAttribute('aria-hidden', 'true');
+      dayHeader.appendChild(availIco);
+      dayHeader.title = 'View crew availability';
+      dayHeader.setAttribute('role', 'button');
+      dayHeader.tabIndex = 0;
+      dayHeader.style.cursor = 'pointer';
+      dayHeader.onclick = function() { openDayAvailModal(dateStr); };
+      dayHeader.onkeydown = function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDayAvailModal(dateStr); }
+      };
+    }
     daySection.appendChild(dayHeader);
 
     // Events
@@ -1721,9 +1729,16 @@ function addShowEscHtml(s) {
 // DAY CREW AVAILABILITY MODAL (calendar date link)
 // ============================================
 
+var DAY_AVAIL_START_DATE = '2026-08-01';
+
+function isDayAvailEnabled(dateStr) {
+  return typeof dateStr === 'string' && dateStr >= DAY_AVAIL_START_DATE;
+}
+
 var _dayAvailRequestedDate = null;
 
 function openDayAvailModal(dateStr) {
+  if (!isDayAvailEnabled(dateStr)) return;
   var modal = document.getElementById('dayAvailModal');
   if (!modal) return;
   var title = document.getElementById('dayAvailTitle');

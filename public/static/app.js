@@ -3134,28 +3134,33 @@ function escapeCSVExportField(value) {
 // ============================================
 
 // Parse a call_time value into a validated [hours, minutes] pair.
-// Accepts "HH:MM" (with optional seconds/AM-PM). Returns null when the value
-// is missing or not a real time (e.g. "not specified", "TBD"), so callers can
-// fall back to a sensible default instead of crashing on undefined parts.
+// Accepts "HH:MM" or hour-only AM/PM values, with optional seconds/labels.
+// Returns null when the value is missing or not a real time (e.g. "not
+// specified", "TBD"), so callers can fall back instead of crashing.
 function parseCallTime(callTime) {
   if (!callTime || typeof callTime !== 'string') return null;
-  const trimmed = callTime.trim();
-  if (!trimmed) return null;
+  const normalized = callTime.trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
+  if (!normalized) return null;
 
   // Reject placeholders that are not real times
-  const lower = trimmed.toLowerCase();
+  const lower = normalized.toLowerCase();
   if (lower === 'not specified' || lower === 'tbd' || lower === 'n/a' || lower === 'na') {
     return null;
   }
 
-  const match = trimmed.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?$/i);
+  const match = normalized.match(/^(\d{1,2})(?::(\d{2})(?::\d{2})?)?\s*(am|pm)?$/i);
   if (!match) return null;
 
   let hours = parseInt(match[1], 10);
-  const minutes = match[2];
+  const minutes = match[2] || (match[3] ? '00' : null);
   const meridiem = match[3];
 
+  if (!minutes) return null;
+  const minuteValue = parseInt(minutes, 10);
+  if (minuteValue < 0 || minuteValue > 59) return null;
+
   if (meridiem) {
+    if (hours < 1 || hours > 12) return null;
     const isPM = meridiem.toLowerCase() === 'pm';
     if (hours === 12) hours = isPM ? 12 : 0;
     else if (isPM) hours += 12;

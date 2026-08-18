@@ -1,25 +1,18 @@
 import { Hono } from 'hono'
+import { getAiEligibleCrewNameSet } from './crew-endpoints'
 
 type Bindings = {
   DB: D1Database
 }
 
-// Valid crew members (from crew assignment engine)
-const VALID_CREW_MEMBERS = new Set([
-  'Viraj', 'Omkar', 'Akshay', 'Nazar', 'NS', 'Sandeep', 
-  'Shridhar', 'OC1', 'Aditya', 'Nikhil', 'Naren', 
-  'OC3', 'Coni', 'OC2'
-])
-
-function isValidCrewMember(member: string): boolean {
-  return VALID_CREW_MEMBERS.has(member)
-}
-
 export function setupCrewStatsEndpoints(app: Hono<{ Bindings: Bindings }>) {
-  
+
   // Get crew statistics for current month
   app.get('/api/crew/stats', async (c) => {
     try {
+      const validCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (member: string): boolean => validCrewSet.has(member)
+
       // Get month parameter (default to current month)
       const monthParam = c.req.query('month')
       

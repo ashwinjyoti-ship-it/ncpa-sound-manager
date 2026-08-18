@@ -21,6 +21,7 @@ import {
   resolveAnthropicApiKey,
   setupSettingsEndpoints,
 } from './settings-endpoints'
+import { getActiveCrewNames, setupCrewEndpoints } from './crew-endpoints'
 import {
   addDaysUtc,
   applyCrewPropagationInBatch,
@@ -117,24 +118,13 @@ app.get('/api/crew-availability', async (c) => {
       parseCSV(row.stage_crew)
     }
 
-    // Live roster from the shared crew DB — the source of truth maintained in
-    // the Crew-Assignment-Automation app. Reading it here (instead of a
-    // hardcoded list) means adding/removing crew there flows through
-    // automatically, so this view never goes stale.
-    const rosterRows = await c.env.DB_CREW.prepare(`SELECT name FROM crew ORDER BY name`).all()
-    let roster = (rosterRows.results as any[]).map(r => r.name as string).filter(Boolean)
+    // Crew roster is local to this app (Settings > Crew) — independent of
+    // the Crew-Assignment-Automation app's own roster.
+    const roster = await getActiveCrewNames(c.env.DB)
 
-    // Defensive fallback: if the roster query ever returns nothing (e.g. the
-    // crew DB is unreachable), fall back to a static list so the Add Show crew
-    // picker never breaks. Not hit in normal operation.
-    if (!roster.length) {
-      roster = [
-        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
-        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
-        'OC1', 'OC2', 'OC3'
-      ]
-    }
-
+    // Day-off / unavailability data still lives in the shared crew DB
+    // (marked there via Crew-Assignment-Automation); we only cross-reference
+    // it by name here, so it works regardless of which app owns the roster.
     const crewRows = await c.env.DB_CREW.prepare(
       `SELECT DISTINCT c.name
        FROM crew_unavailability cu
@@ -164,26 +154,8 @@ app.get('/api/crew-availability', async (c) => {
 })
 
 
-// ─── GET /api/crew-roster ─────────────────────────────────────────────────────
-// Live crew roster from the shared crew DB (the Crew-Assignment-Automation
-// source of truth). Used to populate crew pickers so they never go stale.
-app.get('/api/crew-roster', async (c) => {
-  try {
-    const rosterRows = await c.env.DB_CREW.prepare(`SELECT name FROM crew ORDER BY name`).all()
-    let roster = (rosterRows.results as any[]).map(r => r.name as string).filter(Boolean)
-    if (!roster.length) {
-      roster = [
-        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
-        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
-        'OC1', 'OC2', 'OC3'
-      ]
-    }
-    return c.json({ success: true, roster })
-  } catch (err: any) {
-    return c.json({ success: false, error: err.message }, 500)
-  }
-})
-
+// GET /api/crew-roster and /api/admin/crew* — see setupCrewEndpoints() below.
+setupCrewEndpoints(app)
 
 // ============================================
 // API ROUTES
@@ -5677,24 +5649,11 @@ app.get('/', (c) => {
                                     <span class="text-sm font-semibold text-blue-800">FOH</span>
                                     <span class="text-xs text-blue-400 ml-2">single assign</span>
                                 </div>
+                                <!-- Options are populated at runtime from the live crew roster
+                                     (renderEditCrewControls in app.js) — see /api/crew-roster. -->
                                 <select id="editFohCrew" name="foh_crew"
                                         class="w-full px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm bg-white">
                                     <option value="">— none —</option>
-                                    <option value="Ashwin">Ashwin</option>
-                                    <option value="Naren">Naren</option>
-                                    <option value="Sandeep">Sandeep</option>
-                                    <option value="Coni">Coni</option>
-                                    <option value="Nikhil">Nikhil</option>
-                                    <option value="NS">NS</option>
-                                    <option value="Aditya">Aditya</option>
-                                    <option value="Viraj">Viraj</option>
-                                    <option value="Shridhar">Shridhar</option>
-                                    <option value="Nazar">Nazar</option>
-                                    <option value="Omkar">Omkar</option>
-                                    <option value="Akshay">Akshay</option>
-                                    <option value="OC1">OC1</option>
-                                    <option value="OC2">OC2</option>
-                                    <option value="OC3">OC3</option>
                                 </select>
                             </div>
 
@@ -5705,68 +5664,9 @@ app.get('/', (c) => {
                                     <span class="text-sm font-semibold text-green-800">Stage</span>
                                     <span class="text-xs text-green-400 ml-2">multi assign</span>
                                 </div>
-                                <div class="stage-crew-grid">
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Ashwin" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Ashwin</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Naren" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Naren</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Sandeep" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Sandeep</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Coni" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Coni</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Nikhil" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Nikhil</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="NS" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">NS</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Aditya" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Aditya</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Viraj" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Viraj</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Shridhar" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Shridhar</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Nazar" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Nazar</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Omkar" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Omkar</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="Akshay" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">Akshay</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="OC1" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">OC1</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="OC2" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">OC2</span>
-                                    </label>
-                                    <label class="flex items-center space-x-2 cursor-pointer hover:bg-white/70 p-1 rounded">
-                                        <input type="checkbox" value="OC3" class="crew-checkbox stage-checkbox">
-                                        <span class="text-sm">OC3</span>
-                                    </label>
-                                </div>
+                                <!-- Checkboxes are populated at runtime from the live crew roster
+                                     (renderEditCrewControls in app.js) — see /api/crew-roster. -->
+                                <div class="stage-crew-grid"></div>
                             </div>
                         </div>
                     </div>

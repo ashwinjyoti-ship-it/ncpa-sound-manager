@@ -52,16 +52,17 @@ async function loadSettingsPage() {
   `;
 
   try {
-    const [venuesRes, settingsRes] = await Promise.all([
+    const [venuesRes, crewRes, settingsRes] = await Promise.all([
       axios.get(`${API_BASE}/admin/venues`, { withCredentials: true }),
+      axios.get(`${API_BASE}/admin/crew`, { withCredentials: true }),
       axios.get(`${API_BASE}/admin/settings`, { withCredentials: true }),
     ]);
 
-    if (!venuesRes.data.success || !settingsRes.data.success) {
-      throw new Error(venuesRes.data.error || settingsRes.data.error || 'Failed to load settings');
+    if (!venuesRes.data.success || !crewRes.data.success || !settingsRes.data.success) {
+      throw new Error(venuesRes.data.error || crewRes.data.error || settingsRes.data.error || 'Failed to load settings');
     }
 
-    renderSettingsPage(venuesRes.data.venues || [], settingsRes.data.settings || {});
+    renderSettingsPage(venuesRes.data.venues || [], crewRes.data.crew || [], settingsRes.data.settings || {});
   } catch (error) {
     content.innerHTML = `
       <div class="text-center py-12">
@@ -72,7 +73,7 @@ async function loadSettingsPage() {
   }
 }
 
-function renderSettingsPage(venues, settings) {
+function renderSettingsPage(venues, crew, settings) {
   const content = document.getElementById('settingsContent');
   if (!content) return;
 
@@ -140,6 +141,60 @@ function renderSettingsPage(venues, settings) {
       </section>
 
       <section>
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800">Crew</h3>
+            <p class="text-sm text-gray-500 mt-1">These appear as FOH / Stage checkboxes in Add and Edit Show. This roster is specific to Sound Manager and is managed separately from the crew-scheduling app. "Include in AI/Stats" controls whether a name is used by auto-suggestions and workload stats (e.g. the team head is a valid pick but excluded from those).</p>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto rounded-xl" style="outline:1px solid rgba(173,179,184,0.18);">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-gray-600" style="background:rgba(255,255,255,0.55);">
+                <th class="px-3 py-2 font-semibold">Name</th>
+                <th class="px-3 py-2 font-semibold w-24">Order</th>
+                <th class="px-3 py-2 font-semibold w-24">Active</th>
+                <th class="px-3 py-2 font-semibold w-32">Include in AI/Stats</th>
+                <th class="px-3 py-2 font-semibold w-40">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="settingsCrewBody">
+              ${crew.map((m) => renderCrewRow(m)).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="mt-4 p-4 rounded-xl" style="background:rgba(255,255,255,0.55);outline:1px solid rgba(173,179,184,0.15);">
+          <h4 class="text-sm font-semibold text-gray-700 mb-3">Add crew member</h4>
+          <form id="addCrewForm" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end" onsubmit="handleAddCrew(event)">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+              <input id="newCrewName" required placeholder="e.g. Rohan"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Sort order</label>
+              <input id="newCrewOrder" type="number" value="100"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#A8C3A0]">
+            </div>
+            <div>
+              <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+                <input id="newCrewIncludeInAi" type="checkbox" checked>
+                Include in AI/Stats
+              </label>
+            </div>
+            <div>
+              <button type="submit" class="btn-primary px-4 py-2 text-sm w-full md:w-auto">
+                <i class="fas fa-plus mr-1"></i>Add crew member
+              </button>
+            </div>
+          </form>
+          <p id="addCrewError" class="text-sm text-red-600 mt-2" style="display:none;"></p>
+        </div>
+      </section>
+
+      <section>
         <h3 class="text-lg font-semibold text-gray-800 mb-1">Word document / AI API key</h3>
         <p class="text-sm text-gray-500 mb-3">Anthropic API key used for Word (.docx) schedule parsing and Ask AI. A key saved here overrides the Cloudflare environment secret.</p>
 
@@ -202,6 +257,45 @@ function renderVenueRow(venue) {
             Save
           </button>
           <button type="button" onclick="handleDeleteVenue(${venue.id}, '${escapeHtml(venue.code)}')"
+                  class="px-3 py-1.5 text-xs text-red-600 rounded-lg border border-red-200 hover:bg-red-50">
+            Remove
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderCrewRow(member) {
+  const inactive = !member.active;
+  return `
+    <tr data-crew-id="${member.id}" class="${inactive ? 'opacity-60' : ''}" style="border-top:1px solid rgba(173,179,184,0.12);">
+      <td class="px-3 py-2">
+        <input data-field="name" value="${escapeHtml(member.name)}"
+               class="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white">
+      </td>
+      <td class="px-3 py-2">
+        <input data-field="sort_order" type="number" value="${Number(member.sort_order) || 0}"
+               class="w-20 px-2 py-1.5 border border-gray-200 rounded-lg text-sm bg-white">
+      </td>
+      <td class="px-3 py-2">
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+          <input data-field="active" type="checkbox" ${member.active ? 'checked' : ''}>
+          On
+        </label>
+      </td>
+      <td class="px-3 py-2">
+        <label class="inline-flex items-center gap-2 text-sm text-gray-700">
+          <input data-field="include_in_ai" type="checkbox" ${member.include_in_ai ? 'checked' : ''}>
+        </label>
+      </td>
+      <td class="px-3 py-2">
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="handleSaveCrew(${member.id})"
+                  class="px-3 py-1.5 text-xs text-white rounded-lg" style="background:#A8C3A0;">
+            Save
+          </button>
+          <button type="button" onclick="handleDeleteCrew(${member.id}, '${escapeHtml(member.name)}')"
                   class="px-3 py-1.5 text-xs text-red-600 rounded-lg border border-red-200 hover:bg-red-50">
             Remove
           </button>
@@ -296,6 +390,92 @@ async function handleAddVenue(event) {
       errorEl.style.display = 'block';
     } else {
       alert(error.response?.data?.error || error.message || 'Failed to add venue');
+    }
+  }
+}
+
+function getCrewRowValues(id) {
+  const row = document.querySelector(`tr[data-crew-id="${id}"]`);
+  if (!row) return null;
+  return {
+    name: row.querySelector('[data-field="name"]').value.trim(),
+    sort_order: Number(row.querySelector('[data-field="sort_order"]').value) || 0,
+    active: row.querySelector('[data-field="active"]').checked ? 1 : 0,
+    include_in_ai: row.querySelector('[data-field="include_in_ai"]').checked ? 1 : 0,
+  };
+}
+
+// Any crew admin change invalidates the Edit-Event modal's cached roster
+// (see fetchCrewRoster in app.js) so the next edit picks up fresh names.
+function invalidateCrewRosterCache() {
+  if (typeof window !== 'undefined') window._crewRosterCache = null;
+}
+
+async function handleSaveCrew(id) {
+  const payload = getCrewRowValues(id);
+  if (!payload || !payload.name) {
+    alert('Crew name is required');
+    return;
+  }
+
+  try {
+    const response = await axios.put(`${API_BASE}/admin/crew/${id}`, payload, {
+      withCredentials: true,
+    });
+    if (!response.data.success) throw new Error(response.data.error || 'Save failed');
+    invalidateCrewRosterCache();
+    await loadSettingsPage();
+  } catch (error) {
+    alert(error.response?.data?.error || error.message || 'Failed to save crew member');
+  }
+}
+
+async function handleDeleteCrew(id, name) {
+  if (!confirm(`Remove "${name}" from the crew list?\n\nThey will be deactivated (existing events are kept).`)) {
+    return;
+  }
+
+  try {
+    const response = await axios.delete(`${API_BASE}/admin/crew/${id}`, {
+      withCredentials: true,
+    });
+    if (!response.data.success) throw new Error(response.data.error || 'Remove failed');
+    invalidateCrewRosterCache();
+    await loadSettingsPage();
+  } catch (error) {
+    alert(error.response?.data?.error || error.message || 'Failed to remove crew member');
+  }
+}
+
+async function handleAddCrew(event) {
+  event.preventDefault();
+  const errorEl = document.getElementById('addCrewError');
+  if (errorEl) {
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+  }
+
+  const name = document.getElementById('newCrewName').value.trim();
+  const sort_order = Number(document.getElementById('newCrewOrder').value) || 100;
+  const include_in_ai = document.getElementById('newCrewIncludeInAi').checked ? 1 : 0;
+
+  try {
+    const response = await axios.post(`${API_BASE}/admin/crew`, {
+      name,
+      sort_order,
+      active: 1,
+      include_in_ai,
+    }, { withCredentials: true });
+
+    if (!response.data.success) throw new Error(response.data.error || 'Add failed');
+    invalidateCrewRosterCache();
+    await loadSettingsPage();
+  } catch (error) {
+    if (errorEl) {
+      errorEl.textContent = error.response?.data?.error || error.message || 'Failed to add crew member';
+      errorEl.style.display = 'block';
+    } else {
+      alert(error.response?.data?.error || error.message || 'Failed to add crew member');
     }
   }
 }

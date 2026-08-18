@@ -5,6 +5,7 @@
 
 import type { Context } from 'hono'
 import type { Env } from './types'
+import { getActiveCrewNames } from './crew-endpoints'
 
 const CLAUDE_MODEL = 'claude-opus-4-8'
 const MAX_TOOL_ITERATIONS = 10
@@ -364,15 +365,10 @@ async function executeCrewAvailabilityTool(
       showsByDate.get(date)!.push(row)
     }
 
-    const rosterRows = await dbCrew.prepare(`SELECT name FROM crew ORDER BY name`).all()
-    let roster = (rosterRows.results as any[]).map((r) => r.name as string).filter(Boolean)
-    if (!roster.length) {
-      roster = [
-        'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
-        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay',
-        'OC1', 'OC2', 'OC3'
-      ]
-    }
+    // Crew roster is local to this app (Settings > Crew), independent of the
+    // Crew-Assignment-Automation app's roster. Day-off/unavailability data
+    // still lives in the shared crew DB, cross-referenced below by name.
+    const roster = await getActiveCrewNames(db)
 
     const crewRows = await dbCrew.prepare(
       `SELECT DISTINCT c.name, cu.unavailable_date
@@ -461,6 +457,11 @@ async function buildSystemPrompt(db: D1Database): Promise<string> {
   let venues = ''
   let teams = ''
   let dateRange = ''
+  let crewNames = ''
+
+  try {
+    crewNames = (await getActiveCrewNames(db)).join(', ')
+  } catch { /* best-effort */ }
 
   try {
     const schemaRow = await db.prepare(
@@ -507,7 +508,7 @@ Other useful table: venue_aliases(canonical_name, alias) - maps short names like
 DATA CONVENTIONS:
 - event_date is 'YYYY-MM-DD'. Use date ranges or strftime('%Y-%m', event_date) for months.
 - Venue names in events.venue are inconsistent (e.g. 'Tata Theatre', 'TATA', 'TT' may all appear). Known venues by event count: ${venues || 'query venue_aliases and GROUP BY venue to discover them'}. When filtering by venue, match ALL aliases: venue LIKE patterns for each alias from venue_aliases (or use OR of LIKEs). Main venues: Tata Theatre (TT), Jamshed Bhabha Theatre (JBT), Experimental Theatre (ET/TET), Godrej Dance Theatre (GDT), Little Theatre (LT), Sea View Room (SVR), JBT Museum.
-- Crew columns: 'crew' (legacy comma-separated list), 'foh_crew' (front-of-house, usually one name), 'stage_crew' (comma-separated). Some months use only 'crew', others use foh_crew/stage_crew. To find a person's events, check all three with LIKE: (COALESCE(crew,'') LIKE '%Name%' OR COALESCE(foh_crew,'') LIKE '%Name%' OR COALESCE(stage_crew,'') LIKE '%Name%'). Known crew members: Ashwin, Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3.
+- Crew columns: 'crew' (legacy comma-separated list), 'foh_crew' (front-of-house, usually one name), 'stage_crew' (comma-separated). Some months use only 'crew', others use foh_crew/stage_crew. To find a person's events, check all three with LIKE: (COALESCE(crew,'') LIKE '%Name%' OR COALESCE(foh_crew,'') LIKE '%Name%' OR COALESCE(stage_crew,'') LIKE '%Name%'). Known crew members: ${crewNames || 'query DISTINCT crew/foh_crew/stage_crew to discover them'}.
 - Teams in the data: ${teams || 'query GROUP BY team to discover'}.
 - Equipment/technical needs live in sound_requirements, rider and notes (free text - search with LIKE, case-insensitively via LOWER()).
 - Event data currently spans: ${dateRange || 'unknown - query MIN/MAX event_date'}.

@@ -5,6 +5,7 @@ import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { requireAuthenticatedUser } from './auth-utils'
 import { getActiveVenueCodes } from './settings-endpoints'
+import { getAiEligibleCrewNameSet } from './crew-endpoints'
 import { broadcastUpsertByIds } from './event-sync'
 
 type Bindings = {
@@ -13,33 +14,6 @@ type Bindings = {
   VECTORIZE: any;
   ANTHROPIC_API_KEY: string;
   EVENT_SYNC: DurableObjectNamespace;
-}
-
-// VALID CREW MEMBERS - Only learn from these crew members
-// 11 In-House Crew (excluding Ashwin who is team head) + 3 Outside Crew (OC)
-const VALID_CREW_MEMBERS = new Set([
-  // In-House Crew (11)
-  'Naren',
-  'Sandeep', 
-  'Coni',
-  'Nikhil',
-  'NS',
-  'Aditya',
-  'Viraj',
-  'Shridhar',
-  'Nazar',
-  'Omkar',
-  'Akshay',
-  // Outside Crew - Hired on Need Basis (3)
-  'OC1',
-  'OC2',
-  'OC3'
-])
-
-// Filter crew member to only include valid crew
-function isValidCrewMember(name: string): boolean {
-  const trimmedName = name.trim()
-  return VALID_CREW_MEMBERS.has(trimmedName)
 }
 
 // ============================================
@@ -190,10 +164,12 @@ export function setupFilteringEndpoints(app: Hono<{ Bindings: Bindings }>) {
     try {
       // Configurable venues from Settings (falls back to defaults)
       const MAIN_VENUES = await getActiveVenueCodes(c.env.DB)
-      
+      const eligibleCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => eligibleCrewSet.has(name.trim())
+
       // Get all crews and filter to only valid crew members
       const crews = await c.env.DB.prepare('SELECT DISTINCT crew FROM events WHERE crew IS NOT NULL AND crew != "" ORDER BY crew').all()
-      
+
       // Parse comma-separated crew and filter to valid crew only
       const validCrewSet = new Set<string>()
       crews.results.forEach((row: any) => {
@@ -379,7 +355,10 @@ export function setupBulkAssignment(app: Hono<{ Bindings: Bindings }>) {
       if (!venue) {
         return c.json({ success: false, error: 'Venue required' }, 400)
       }
-      
+
+      const eligibleCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => eligibleCrewSet.has(name.trim())
+
       // Get historical crew assignments for this venue
       const { results: history } = await c.env.DB.prepare(`
         SELECT crew, COUNT(*) as count
@@ -510,7 +489,9 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
     try {
       const dateFrom = c.req.query('from') || new Date().toISOString().split('T')[0]
       const dateTo = c.req.query('to') || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      
+      const eligibleCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => eligibleCrewSet.has(name.trim())
+
       // Total events
       const totalResult = await c.env.DB.prepare(`
         SELECT COUNT(*) as total FROM events
@@ -818,11 +799,8 @@ export function setupDashboardEndpoints(app: Hono<{ Bindings: Bindings }>) {
   // Get AI confidence levels by venue
   app.get('/api/crew/ai-confidence', async (c) => {
     try {
-      const VALID_CREW_MEMBERS = new Set([
-        'Naren', 'Sandeep', 'Coni', 'Nikhil', 'NS', 'Aditya', 
-        'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'
-      ])
-      
+      const VALID_CREW_MEMBERS = await getAiEligibleCrewNameSet(c.env.DB)
+
       // Get all events with crew assignments
       const allEvents = await c.env.DB.prepare(`
         SELECT venue, crew, event_date FROM events

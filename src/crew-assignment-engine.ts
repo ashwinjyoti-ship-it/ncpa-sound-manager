@@ -4,34 +4,10 @@
 
 import { Hono } from 'hono'
 import type { Context } from 'hono'
+import { getAiEligibleCrewNameSet } from './crew-endpoints'
 
 type Bindings = {
   DB: D1Database;
-}
-
-// VALID CREW MEMBERS - Only learn from these crew members
-// Ashwin is team head and assigned selectively - excluded from auto-suggestions
-const VALID_CREW_MEMBERS = new Set([
-  'Naren',
-  'Sandeep', 
-  'Coni',
-  'Nikhil',
-  'NS',
-  'Aditya',
-  'Viraj',
-  'Shridhar',
-  'Nazar',
-  'Omkar',
-  'Akshay',
-  'OC1',
-  'OC2',
-  'OC3'
-])
-
-// Filter crew member to only include valid crew
-function isValidCrewMember(name: string): boolean {
-  const trimmedName = name.trim()
-  return VALID_CREW_MEMBERS.has(trimmedName)
 }
 
 export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
@@ -50,11 +26,14 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
         event_type, // Optional: Classical, Dance, Theatre, etc.
         crew_size = 2 // How many crew members needed
       } = body
-      
+
       if (!event_date || !venue) {
         return c.json({ success: false, error: 'Event date and venue required' }, 400)
       }
-      
+
+      const validCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => validCrewSet.has(name.trim())
+
       // Step 1: Get crew expertise at this venue
       // Parse comma-separated crew field and get expertise per crew member
       const { results: venueEvents } = await c.env.DB.prepare(`
@@ -199,7 +178,9 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
   app.get('/api/crew/workload-balance', async (c) => {
     try {
       const month = c.req.query('month') || new Date().toISOString().substring(0, 7)
-      
+      const validCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => validCrewSet.has(name.trim())
+
       // Get all crew members and their workload
       const { results: rawWorkloadData } = await c.env.DB.prepare(`
         SELECT 
@@ -264,6 +245,9 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
   
   app.get('/api/crew/expertise-report', async (c) => {
     try {
+      const validCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => validCrewSet.has(name.trim())
+
       // Get crew expertise by venue
       const { results: expertiseData } = await c.env.DB.prepare(`
         SELECT 
@@ -339,11 +323,14 @@ export function setupCrewAssignmentEngine(app: Hono<{ Bindings: Bindings }>) {
   
   app.get('/api/crew/learning-stats', async (c) => {
     try {
+      const validCrewSet = await getAiEligibleCrewNameSet(c.env.DB)
+      const isValidCrewMember = (name: string): boolean => validCrewSet.has(name.trim())
+
       // Get all events with crew
       const { results: allEvents } = await c.env.DB.prepare(`
         SELECT crew, event_date FROM events WHERE crew IS NOT NULL AND crew != ""
       `).all()
-      
+
       // Count only valid crew assignments
       let totalValidAssignments = 0
       allEvents.forEach((event: any) => {

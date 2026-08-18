@@ -41,7 +41,7 @@ export async function getActiveCrew(db: D1Database): Promise<CrewRow[]> {
   try {
     const { results } = await db.prepare(`
       SELECT id, name, active, sort_order, include_in_ai, created_at, updated_at
-      FROM crew
+      FROM sound_crew
       WHERE active = 1
       ORDER BY sort_order ASC, name ASC
     `).all()
@@ -97,7 +97,7 @@ export function setupCrewEndpoints(app: Hono<{ Bindings: Bindings }>) {
     try {
       const { results } = await c.env.DB.prepare(`
         SELECT id, name, active, sort_order, include_in_ai, created_at, updated_at
-        FROM crew
+        FROM sound_crew
         ORDER BY sort_order ASC, name ASC
       `).all()
 
@@ -122,7 +122,7 @@ export function setupCrewEndpoints(app: Hono<{ Bindings: Bindings }>) {
       }
 
       const result = await c.env.DB.prepare(`
-        INSERT INTO crew (name, sort_order, active, include_in_ai, updated_at)
+        INSERT INTO sound_crew (name, sort_order, active, include_in_ai, updated_at)
         VALUES (?, ?, ?, ?, datetime('now'))
       `).bind(name, sortOrder, active, includeInAi).run()
 
@@ -147,7 +147,7 @@ export function setupCrewEndpoints(app: Hono<{ Bindings: Bindings }>) {
       }
 
       const existing = await c.env.DB.prepare(
-        `SELECT id, name, active, sort_order, include_in_ai FROM crew WHERE id = ?`
+        `SELECT id, name, active, sort_order, include_in_ai FROM sound_crew WHERE id = ?`
       ).bind(id).first() as CrewRow | null
 
       if (!existing) {
@@ -171,7 +171,7 @@ export function setupCrewEndpoints(app: Hono<{ Bindings: Bindings }>) {
       }
 
       await c.env.DB.prepare(`
-        UPDATE crew
+        UPDATE sound_crew
         SET name = ?, sort_order = ?, active = ?, include_in_ai = ?, updated_at = datetime('now')
         WHERE id = ?
       `).bind(name, sortOrder, active, includeInAi, id).run()
@@ -202,10 +202,10 @@ export function setupCrewEndpoints(app: Hono<{ Bindings: Bindings }>) {
       const hard = c.req.query('hard') === '1'
 
       if (hard) {
-        await c.env.DB.prepare(`DELETE FROM crew WHERE id = ?`).bind(id).run()
+        await c.env.DB.prepare(`DELETE FROM sound_crew WHERE id = ?`).bind(id).run()
       } else {
         await c.env.DB.prepare(`
-          UPDATE crew SET active = 0, updated_at = datetime('now') WHERE id = ?
+          UPDATE sound_crew SET active = 0, updated_at = datetime('now') WHERE id = ?
         `).bind(id).run()
       }
 

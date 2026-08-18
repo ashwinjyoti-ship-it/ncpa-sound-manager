@@ -14,6 +14,10 @@ type AuthSession = {
   status: string
 }
 
+function isResponse(value: AuthSession | Response): value is Response {
+  return value instanceof Response
+}
+
 async function getAuthenticatedSession(c: AuthContext): Promise<AuthSession | Response> {
   const token = getCookie(c, 'session_token')
 
@@ -42,11 +46,10 @@ async function getAuthenticatedSession(c: AuthContext): Promise<AuthSession | Re
   return session
 }
 
-function isResponse(value: AuthSession | Response): value is Response {
-  return value instanceof Response
-}
-
-export async function requireAuthenticatedUser(c: AuthContext): Promise<Response | null> {
+/** Approved session with CSRF/origin check, or an error Response. */
+export async function requireApprovedSession(
+  c: AuthContext
+): Promise<AuthSession | Response> {
   const session = await getAuthenticatedSession(c)
   if (isResponse(session)) return session
 
@@ -54,20 +57,29 @@ export async function requireAuthenticatedUser(c: AuthContext): Promise<Response
     return c.json({ success: false, error: 'Account is not approved' }, 403)
   }
 
-  return null
+  return session
 }
 
-export async function requireAdminUser(c: AuthContext): Promise<Response | null> {
-  const session = await getAuthenticatedSession(c)
+/** Admin session with CSRF/origin check, or an error Response. */
+export async function requireAdminSession(
+  c: AuthContext
+): Promise<AuthSession | Response> {
+  const session = await requireApprovedSession(c)
   if (isResponse(session)) return session
-
-  if (session.status !== 'approved') {
-    return c.json({ success: false, error: 'Account is not approved' }, 403)
-  }
 
   if (session.role !== 'admin') {
     return c.json({ success: false, error: 'Admin access required' }, 403)
   }
 
-  return null
+  return session
+}
+
+export async function requireAuthenticatedUser(c: AuthContext): Promise<Response | null> {
+  const session = await requireApprovedSession(c)
+  return isResponse(session) ? session : null
+}
+
+export async function requireAdminUser(c: AuthContext): Promise<Response | null> {
+  const session = await requireAdminSession(c)
+  return isResponse(session) ? session : null
 }

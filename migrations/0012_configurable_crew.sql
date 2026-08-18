@@ -2,14 +2,8 @@
 -- rather than the external ncpa-crew-db used by the separate
 -- Crew-Assignment-Automation app. Sound Manager's crew list is intentionally
 -- independent from that app's roster from this point on — see Settings > Crew.
---
--- Named sound_crew (not "crew") because ncpa-sound-crew-db already has an
--- unrelated, unused "crew" table (matching Crew-Assignment-Automation's
--- schema — level/venue_capabilities/etc. — apparently seeded there by
--- mistake at some point; no code in this repo reads it). Avoid colliding
--- with it rather than touching a table of unknown origin/purpose.
 
-CREATE TABLE IF NOT EXISTS sound_crew (
+CREATE TABLE IF NOT EXISTS crew (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL UNIQUE,
   active INTEGER NOT NULL DEFAULT 1,
@@ -27,7 +21,7 @@ CREATE TABLE IF NOT EXISTS sound_crew (
 -- (the fallback list baked into index.tsx / ai-chat-endpoint.ts, plus
 -- Ashwin as team head). Adjust freely via Settings > Crew after this lands —
 -- this table is now the single source of truth for crew names in this app.
-INSERT OR IGNORE INTO sound_crew (name, active, sort_order, include_in_ai) VALUES
+INSERT OR IGNORE INTO crew (name, active, sort_order, include_in_ai) VALUES
   ('Ashwin', 1, 5, 0),
   ('Naren', 1, 10, 1),
   ('Sandeep', 1, 20, 1),

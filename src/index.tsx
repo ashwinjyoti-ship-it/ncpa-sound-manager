@@ -5379,7 +5379,7 @@ app.get('/', (c) => {
                 <div id="settingsView" class="glass-card rounded-2xl p-6" style="display: none;">
                     <div class="mb-5">
                         <h2 class="text-xl font-semibold text-gray-800">Settings</h2>
-                        <p class="text-sm text-gray-500 mt-1">Manage venues and the Word document AI API key.</p>
+                        <p class="text-sm text-gray-500 mt-1">Manage venues, crew, and the Word document AI API key.</p>
                     </div>
                     <div id="settingsContent">
                         <div class="text-center py-12">
@@ -6052,7 +6052,7 @@ app.get('/', (c) => {
         <script src="/static/app.js?v=4.4.0"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
-        <script src="/static/settings.js?v=1.0.1"></script>
+        <script src="/static/settings.js?v=1.0.2"></script>
     </body>
     </html>
   `)

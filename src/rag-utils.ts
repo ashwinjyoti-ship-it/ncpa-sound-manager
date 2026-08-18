@@ -17,12 +17,19 @@ import type {
 // 1. ENTITY EXTRACTION with Claude Sonnet 4
 // ============================================
 
+const DEFAULT_CREW_NAMES = [
+  'Ashwin', 'Naren', 'Sandeep', 'Coni', 'NS', 'Aditya',
+  'Viraj', 'Shridhar', 'Nazar', 'Omkar', 'Akshay', 'OC1', 'OC2', 'OC3'
+]
+
 export async function extractEntities(
   query: string,
   apiKey: string,
-  conversationHistory?: Array<{user: string; assistant: string}>
+  conversationHistory?: Array<{user: string; assistant: string}>,
+  crewNames?: string[]
 ): Promise<ExtractedEntities> {
 
+  const crewList = (crewNames && crewNames.length ? crewNames : DEFAULT_CREW_NAMES).join(', ')
   const shouldUseHistory = shouldUseConversationHistory(query)
   const historyContext = shouldUseHistory && conversationHistory?.length
     ? `\n\nCONVERSATION HISTORY:\n${conversationHistory.map(h => 
@@ -43,7 +50,7 @@ VENUE NAMES (be flexible with variations):
 - Sea View Room (SVR, Sea View)
 
 CREW MEMBERS:
-Ashwin, Naren, Sandeep, Coni, Nikhil, NS, Aditya, Viraj, Shridhar, Nazar, Omkar, Akshay, OC1, OC2, OC3
+${crewList}
 
 CURRENT DATE: ${new Date().toISOString().split('T')[0]}
 

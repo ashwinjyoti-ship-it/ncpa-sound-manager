@@ -21,6 +21,7 @@ import {
   resolveVenueName,
   expandVenueQuery
 } from './rag-utils'
+import { getActiveCrewNames } from './crew-endpoints'
 
 export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
   const startTime = Date.now()
@@ -90,10 +91,12 @@ export async function handleRAGQuery(c: Context<{ Bindings: Env }>) {
     // STEP 2: Extract Entities with Claude Sonnet 4
     // ============================================
     console.log('🧠 Extracting entities...')
+    const crewNames = await getActiveCrewNames(c.env.DB)
     const entities: ExtractedEntities = await extractEntities(
       queryText,
       apiKey,
-      conversationHistory
+      conversationHistory,
+      crewNames
     )
     console.log('✅ Entities:', JSON.stringify(entities))
     

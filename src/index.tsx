@@ -767,10 +767,15 @@ app.put('/api/events/:id', async (c) => {
 
     // Build combined crew string from FOH + Stage for backward-compat columns,
     // unless the caller sent the legacy `crew` field directly and touched
-    // neither foh_crew nor stage_crew.
-    const combinedCrew = (has('crew') && !has('foh_crew') && !has('stage_crew'))
-      ? ((body as any).crew || null)
-      : ([normFohCrew, normStageCrew].filter(Boolean).join(', ') || null)
+    // neither foh_crew nor stage_crew. If the request touches none of the
+    // three crew fields, leave `crew` exactly as stored — recomputing it from
+    // foh_crew/stage_crew here would erase crew that only ever lived in the
+    // legacy column (e.g. rows written by the bulk-assign COALESCE path).
+    const combinedCrew = (!has('crew') && !has('foh_crew') && !has('stage_crew'))
+      ? existing.crew
+      : (has('crew') && !has('foh_crew') && !has('stage_crew'))
+        ? ((body as any).crew || null)
+        : ([normFohCrew, normStageCrew].filter(Boolean).join(', ') || null)
 
     const requirements_updated = sound_requirements && String(sound_requirements).trim() !== '' ? 1 : 0
 

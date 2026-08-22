@@ -29,6 +29,15 @@ const existingEventRow = {
   show_group_id: null,
 }
 
+// Mirrors a row produced by the bulk-assign COALESCE path: crew lives only
+// in the legacy `crew` column, foh_crew/stage_crew were never populated.
+const legacyCrewOnlyEventRow = {
+  ...existingEventRow,
+  crew: 'Legacy Crew Name',
+  foh_crew: null,
+  stage_crew: null,
+}
+
 function createDbRecorder() {
   const calls = []
   let nextId = 100
@@ -50,7 +59,9 @@ function createDbRecorder() {
                 return null
               }
               if (/SELECT event_date, program, venue,[\s\S]*FROM events WHERE id = \?/i.test(sql)) {
-                return args[0] === '999' ? null : existingEventRow
+                if (args[0] === '999') return null
+                if (args[0] === '77') return legacyCrewOnlyEventRow
+                return existingEventRow
               }
               return null
             },
@@ -236,6 +247,21 @@ test('event updates can set a single foh_crew field without dropping stage_crew'
   assert.equal(update.args[6], `New FOH, ${existingEventRow.stage_crew}`)
   assert.equal(update.args[7], 'New FOH')
   assert.equal(update.args[8], existingEventRow.stage_crew)
+})
+
+test('event updates untouched crew fields preserve a legacy crew-only value', async () => {
+  const { response, body, db } = await routeRequest('/api/events/77', {
+    method: 'PUT',
+    body: JSON.stringify({
+      rider: 'https://example.com/agent-uploaded-rider.pdf',
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(body.success, true)
+
+  const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
+  assert.equal(update.args[6], legacyCrewOnlyEventRow.crew)
 })
 
 test('event update returns 404 for a nonexistent event instead of throwing a D1 type error', async () => {

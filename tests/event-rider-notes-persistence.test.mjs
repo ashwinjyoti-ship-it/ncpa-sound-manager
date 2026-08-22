@@ -14,6 +14,21 @@ const approvedSession = {
   status: 'approved',
 }
 
+const existingEventRow = {
+  event_date: '2026-01-01',
+  program: 'Original Program',
+  venue: 'Original Venue',
+  team: 'Original Team',
+  sound_requirements: 'Original requirements',
+  call_time: '18:00',
+  crew: 'Original Crew',
+  foh_crew: 'Original FOH',
+  stage_crew: 'Original Stage',
+  rider: 'https://example.com/original-rider.pdf',
+  notes: 'Original notes',
+  show_group_id: null,
+}
+
 function createDbRecorder() {
   const calls = []
   let nextId = 100
@@ -33,6 +48,9 @@ function createDbRecorder() {
               }
               if (/SELECT id, show_group_id FROM events/i.test(sql)) {
                 return null
+              }
+              if (/SELECT event_date, program, venue,[\s\S]*FROM events WHERE id = \?/i.test(sql)) {
+                return args[0] === '999' ? null : existingEventRow
               }
               return null
             },
@@ -160,12 +178,8 @@ test('event updates preserve rider and notes when omitted', async () => {
   assert.equal(body.success, true)
 
   const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
-  assert.match(update.sql, /rider = CASE WHEN \? THEN \? ELSE rider END/i)
-  assert.match(update.sql, /notes = CASE WHEN \? THEN \? ELSE notes END/i)
-  assert.equal(update.args[9], 0)
-  assert.equal(update.args[10], null)
-  assert.equal(update.args[11], 0)
-  assert.equal(update.args[12], null)
+  assert.equal(update.args[9], existingEventRow.rider)
+  assert.equal(update.args[10], existingEventRow.notes)
 })
 
 test('event updates can still explicitly clear rider and notes', async () => {
@@ -184,8 +198,53 @@ test('event updates can still explicitly clear rider and notes', async () => {
   assert.equal(body.success, true)
 
   const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
-  assert.equal(update.args[9], 1)
+  assert.equal(update.args[9], null)
   assert.equal(update.args[10], null)
-  assert.equal(update.args[11], 1)
-  assert.equal(update.args[12], null)
+})
+
+test('event updates can set rider alone without resending the rest of the event', async () => {
+  const { response, body, db } = await routeRequest('/api/events/42', {
+    method: 'PUT',
+    body: JSON.stringify({
+      rider: 'https://example.com/agent-uploaded-rider.pdf',
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(body.success, true)
+
+  const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
+  assert.equal(update.args[0], existingEventRow.event_date)
+  assert.equal(update.args[1], existingEventRow.program)
+  assert.equal(update.args[2], existingEventRow.venue)
+  assert.equal(update.args[9], 'https://example.com/agent-uploaded-rider.pdf')
+  assert.equal(update.args[10], existingEventRow.notes)
+})
+
+test('event updates can set a single foh_crew field without dropping stage_crew', async () => {
+  const { response, body, db } = await routeRequest('/api/events/42', {
+    method: 'PUT',
+    body: JSON.stringify({
+      foh_crew: 'New FOH',
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(body.success, true)
+
+  const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
+  assert.equal(update.args[6], `New FOH, ${existingEventRow.stage_crew}`)
+  assert.equal(update.args[7], 'New FOH')
+  assert.equal(update.args[8], existingEventRow.stage_crew)
+})
+
+test('event update returns 404 for a nonexistent event instead of throwing a D1 type error', async () => {
+  const db = createDbRecorder()
+  const { response, body } = await routeRequest('/api/events/999', {
+    method: 'PUT',
+    body: JSON.stringify({ rider: 'https://example.com/rider.pdf' }),
+  }, db)
+
+  assert.equal(response.status, 404)
+  assert.equal(body.success, false)
 })

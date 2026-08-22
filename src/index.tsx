@@ -715,7 +715,10 @@ app.put('/api/events/bulk-crew', async (c) => {
   }
 })
 
-// Update event
+// Update event. Supports partial updates: any subset of the editable fields
+// may be sent — fields omitted from the body keep their existing DB value.
+// This lets a caller (e.g. an agent attaching a rider link) PUT just
+// { rider: "..." } without needing to know/resend the rest of the event.
 app.put('/api/events/:id', async (c) => {
   try {
     const authError = await requireAuthenticatedUser(c)
@@ -723,12 +726,33 @@ app.put('/api/events/:id', async (c) => {
 
     const id = c.req.param('id')
     const body = await c.req.json()
-    const { event_date, program, venue, team, sound_requirements, call_time, crew, foh_crew, stage_crew, rider, notes, show_group_id } = body
-    const hasRider = Object.prototype.hasOwnProperty.call(body, 'rider')
-    const hasNotes = Object.prototype.hasOwnProperty.call(body, 'notes')
+    const has = (key: string) => Object.prototype.hasOwnProperty.call(body, key)
 
-    // Check if sound_requirements is filled
-    const requirements_updated = sound_requirements && sound_requirements.trim() !== '' ? 1 : 0
+    const existing = await c.env.DB.prepare(`
+      SELECT event_date, program, venue, team, sound_requirements, call_time,
+             crew, foh_crew, stage_crew, rider, notes, show_group_id
+      FROM events WHERE id = ?
+    `).bind(id).first<Record<string, unknown>>()
+
+    if (!existing) {
+      return c.json({ success: false, error: 'Event not found' }, 404)
+    }
+
+    // Merge: a field present in the request body overrides the existing
+    // column value; an absent field falls back to what's already stored.
+    const pick = (key: string) => (has(key) ? (body as any)[key] : existing[key])
+
+    const event_date = pick('event_date')
+    const program = pick('program')
+    const venue = pick('venue')
+    const team = pick('team')
+    const sound_requirements = pick('sound_requirements')
+    const call_time = pick('call_time')
+    const rider = pick('rider')
+    const notes = pick('notes')
+    // show_group_id keeps its historical "only overwrite on a truthy value"
+    // semantics (grouping can't be cleared through this endpoint).
+    const show_group_id = (body as any).show_group_id || existing.show_group_id
 
     // Normalise crew strings: convert arrays (empty or otherwise) to string/null
     // so D1 never receives a raw JS array and stores an empty BLOB
@@ -736,15 +760,19 @@ app.put('/api/events/:id', async (c) => {
       if (Array.isArray(v)) return v.filter(Boolean).join(', ') || null
       return (v as string) || null
     }
+    const foh_crew = pick('foh_crew')
+    const stage_crew = pick('stage_crew')
+    const normFohCrew = normStr(foh_crew)
     const normStageCrew = normStr(stage_crew)
-    const normFohCrew   = normStr(foh_crew)
 
-    // Build combined crew string from FOH + Stage for backward-compat columns
-    let combinedCrew = crew || null
-    if (foh_crew !== undefined || stage_crew !== undefined) {
-      const parts = [normFohCrew, normStageCrew].filter(Boolean).join(', ')
-      combinedCrew = parts || null
-    }
+    // Build combined crew string from FOH + Stage for backward-compat columns,
+    // unless the caller sent the legacy `crew` field directly and touched
+    // neither foh_crew nor stage_crew.
+    const combinedCrew = (has('crew') && !has('foh_crew') && !has('stage_crew'))
+      ? ((body as any).crew || null)
+      : ([normFohCrew, normStageCrew].filter(Boolean).join(', ') || null)
+
+    const requirements_updated = sound_requirements && String(sound_requirements).trim() !== '' ? 1 : 0
 
     await c.env.DB.prepare(`
       UPDATE events
@@ -757,28 +785,26 @@ app.put('/api/events/:id', async (c) => {
           crew = ?,
           foh_crew = ?,
           stage_crew = ?,
-          rider = CASE WHEN ? THEN ? ELSE rider END,
-          notes = CASE WHEN ? THEN ? ELSE notes END,
+          rider = ?,
+          notes = ?,
           requirements_updated = ?,
-          show_group_id = COALESCE(?, show_group_id),
+          show_group_id = ?,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).bind(
-      event_date,
-      program,
-      venue,
-      team || null,
-      sound_requirements || null,
-      call_time || null,
+      nullableText(event_date),
+      nullableText(program),
+      nullableText(venue),
+      nullableText(team),
+      nullableText(sound_requirements),
+      nullableText(call_time),
       combinedCrew,
       normFohCrew,
       normStageCrew,
-      hasRider ? 1 : 0,
       nullableText(rider),
-      hasNotes ? 1 : 0,
       nullableText(notes),
       requirements_updated,
-      show_group_id || null,
+      nullableText(show_group_id),
       id
     ).run()
 

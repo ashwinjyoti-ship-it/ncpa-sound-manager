@@ -50,11 +50,11 @@ test('cleared rider stays in the edit payload as an empty string, not null', () 
 test('rider chip list ignores empty comma-separated leftover URLs', () => {
   const { riderUrls } = loadHelpers()
 
-  assert.deepEqual(riderUrls(null), [])
-  assert.deepEqual(riderUrls(''), [])
-  assert.deepEqual(riderUrls('   '), [])
-  assert.deepEqual(
-    riderUrls('https://example.com/a.pdf, , https://example.com/b.pdf,'),
-    ['https://example.com/a.pdf', 'https://example.com/b.pdf'],
+  assert.equal(JSON.stringify(riderUrls(null)), '[]')
+  assert.equal(JSON.stringify(riderUrls('')), '[]')
+  assert.equal(JSON.stringify(riderUrls('   ')), '[]')
+  assert.equal(
+    JSON.stringify(riderUrls('https://example.com/a.pdf, , https://example.com/b.pdf,')),
+    JSON.stringify(['https://example.com/a.pdf', 'https://example.com/b.pdf']),
   )
 })

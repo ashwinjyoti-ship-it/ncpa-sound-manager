@@ -20,6 +20,9 @@ let allEvents = [];
 let currentEditingCell = null;
 let currentOpenEventId = null;    // id shown in the read-only event detail modal
 let currentEditingEventId = null; // id open in the edit-event form
+// Invalidates the delayed .active class add in openEventModal() so clicking
+// Edit cannot race with that rAF and leave the stale detail card on screen.
+let eventModalOpenGeneration = 0;
 
 // API Base URL
 const API_BASE = '/api';
@@ -39,6 +42,41 @@ if (typeof window !== 'undefined' && window.axios) {
 // ============================================
 // DISPLAY NORMALIZATION HELPERS
 // ============================================
+
+// Empty rider/notes must stay in the JSON body as "" — not `null`.
+// PUT /api/events/:id is a partial update: omitted keys keep the stored
+// value. Clients that drop null fields would otherwise "successfully"
+// save an edit that deleted a rider URL, then show the old chip again.
+function formTextValue(value) {
+  if (value == null) return '';
+  return String(value);
+}
+
+function buildEventMutationFields(data, crew) {
+  return {
+    event_date: data.event_date,
+    program: data.program,
+    venue: data.venue,
+    team: data.team || null,
+    sound_requirements: data.sound_requirements || null,
+    call_time: data.call_time || null,
+    crew: crew.crew,
+    foh_crew: crew.foh_crew || null,
+    stage_crew: crew.stage_crew,
+    rider: formTextValue(data.rider),
+    notes: formTextValue(data.notes)
+  };
+}
+
+function riderUrls(rider) {
+  if (!rider) return [];
+  return String(rider).split(',').map(function(url) { return url.trim(); }).filter(Boolean);
+}
+
+function reopenEventDetail(eventId) {
+  const fresh = allEvents.find(function(e) { return e.id === eventId; });
+  if (fresh) openEventModal(fresh);
+}
 
 // Normalize venue display (Tata Theatre → TT)
 function displayVenue(venue) {
@@ -1217,6 +1255,7 @@ async function saveCell(cell) {
 // ============================================
 
 function openEventModal(event) {
+  const generation = ++eventModalOpenGeneration;
   const modal = document.getElementById('eventModal');
   const content = document.getElementById('eventModalContent');
   const footer = document.getElementById('eventModalFooter');
@@ -1243,9 +1282,10 @@ function openEventModal(event) {
     ${event.foh_crew ? `<p class="event-detail-value" style="margin-top:2px"><span class="event-detail-crew-role"><i class="fas fa-headphones mr-1 text-xs"></i>FOH:</span> ${event.foh_crew}</p>` : ''}
   ` : `<p class="event-detail-value">${event.crew || 'Not assigned'}</p>`;
 
-  const riderHtml = event.rider ? `
+  const riderLinks = riderUrls(event.rider);
+  const riderHtml = riderLinks.length ? `
     <div class="event-detail-rider">
-      ${event.rider.split(',').map((url, i) => `<a href="${url.trim()}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join(' ')}
+      ${riderLinks.map((url, i) => `<a href="${escHtml(url)}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt mr-1 text-xs"></i>Rider ${i + 1}</a>`).join(' ')}
     </div>
   ` : '';
 
@@ -1331,12 +1371,14 @@ function openEventModal(event) {
   
   requestAnimationFrame(function() {
     requestAnimationFrame(function() {
+      if (generation !== eventModalOpenGeneration) return;
       modal.classList.add('active');
     });
   });
 }
 
 function closeEventModal() {
+  eventModalOpenGeneration += 1;
   document.getElementById('eventModal').classList.remove('active');
   const footer = document.getElementById('eventModalFooter');
   if (footer) footer.innerHTML = '';
@@ -1511,8 +1553,8 @@ async function handleAddShow(e) {
         call_time: data.call_time || null,
         foh_crew: fohCrew,
         stage_crew: stageCrew,
-        rider: data.rider || null,
-        notes: data.notes || null
+        rider: formTextValue(data.rider),
+        notes: formTextValue(data.notes)
       });
       
       if (response.data.success) {
@@ -1556,8 +1598,8 @@ async function handleAddShow(e) {
         call_time: data.call_time || null,
         foh_crew: fohCrewSelected,
         stage_crew: stageCrewSelected,
-        rider: data.rider || null,
-        notes: data.notes || null,
+        rider: formTextValue(data.rider),
+        notes: formTextValue(data.notes),
       });
 
       if (!response.data.success) {
@@ -2034,19 +2076,15 @@ async function handleEditEvent(e) {
       const existingEvent = allEvents.find(ev => ev.id === eventIdNum);
       const previousEvent = existingEvent ? Object.assign({}, existingEvent) : null;
 
-      const updatedFields = {
-        event_date: data.event_date,
-        program: data.program,
-        venue: data.venue,
-        team: data.team || null,
-        sound_requirements: data.sound_requirements || null,
-        call_time: data.call_time || null,
+      const formValues = Object.assign({}, data, {
+        rider: (document.getElementById('editRider') || {}).value,
+        notes: (document.getElementById('editNotes') || {}).value,
+      });
+      const updatedFields = buildEventMutationFields(formValues, {
         crew: crewString,
-        foh_crew: fohCrew || null,
-        stage_crew: stageCrewString,
-        rider: data.rider || null,
-        notes: data.notes || null
-      };
+        foh_crew: fohCrew,
+        stage_crew: stageCrewString
+      });
 
       // Snapshot the "apply crew to sibling dates" state before closing the
       // modal below — closeEditEventModal() resets this checkbox and its
@@ -2096,6 +2134,7 @@ async function handleEditEvent(e) {
         // crew propagated to sibling dates, etc).
         await loadEvents();
         renderCurrentView();
+        reopenEventDetail(eventIdNum);
       } catch (err) {
         // Server rejected (or we never heard back from) the update —
         // automatically revert the optimistic change and say why.
@@ -2122,21 +2161,20 @@ async function handleEditEvent(e) {
         groupIdExtend = crypto.randomUUID();
       }
 
-      // Update original event to start date
-      await axios.put(`${API_BASE}/events/${eventId}`, {
+      const extendFields = buildEventMutationFields(Object.assign({}, data, {
         event_date: data.start_date,
-        program: data.program,
-        venue: data.venue,
-        team: data.team || null,
-        sound_requirements: data.sound_requirements || null,
-        call_time: data.call_time || null,
+        rider: (document.getElementById('editRider') || {}).value,
+        notes: (document.getElementById('editNotes') || {}).value,
+      }), {
         crew: crewString,
-        foh_crew: fohCrew || null,
-        stage_crew: stageCrewString,
-        rider: data.rider || null,
-        notes: data.notes || null,
-        show_group_id: groupIdExtend || null,
+        foh_crew: fohCrew,
+        stage_crew: stageCrewString
       });
+
+      // Update original event to start date
+      await axios.put(`${API_BASE}/events/${eventId}`, Object.assign({}, extendFields, {
+        show_group_id: groupIdExtend || null,
+      }));
 
       // Create copies for remaining dates
       const events = [];
@@ -2144,20 +2182,10 @@ async function handleEditEvent(e) {
       currentDateIter.setDate(currentDateIter.getDate() + 1);
 
       while (currentDateIter <= endDate) {
-        events.push({
+        events.push(Object.assign({}, extendFields, {
           event_date: currentDateIter.toISOString().split('T')[0],
-          program: data.program,
-          venue: data.venue,
-          team: data.team || null,
-          sound_requirements: data.sound_requirements || null,
-          call_time: data.call_time || null,
-          crew: crewString,
-          foh_crew: fohCrew || null,
-          stage_crew: stageCrewString,
-          rider: data.rider || null,
-          notes: data.notes || null,
           show_group_id: groupIdExtend || null,
-        });
+        }));
         currentDateIter.setDate(currentDateIter.getDate() + 1);
       }
       

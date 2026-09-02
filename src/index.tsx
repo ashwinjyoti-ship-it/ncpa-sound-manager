@@ -740,6 +740,8 @@ app.put('/api/events/:id', async (c) => {
 
     // Merge: a field present in the request body overrides the existing
     // column value; an absent field falls back to what's already stored.
+    // Empty string / null still count as present — that is how the edit
+    // form clears rider and notes. Only a missing key preserves the row.
     const pick = (key: string) => (has(key) ? (body as any)[key] : existing[key])
 
     const event_date = pick('event_date')
@@ -6080,7 +6082,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.4.0"></script>
+        <script src="/static/app.js?v=4.4.1"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
         <script src="/static/settings.js?v=1.0.2"></script>

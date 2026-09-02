@@ -55,3 +55,9 @@ are non-obvious caveats discovered while setting up the cloud environment.
 - There is no lint or typecheck script and TypeScript is not a dependency; `npm run
   build` (vite) is the de-facto compile check. The `test-*.sh` shell scripts exercise
   the RAG/analytics endpoints and require the AI bindings + `ANTHROPIC_API_KEY`.
+
+### Testing (keep it short)
+- Do not run long browser walkthroughs, extra recordings, or repeated end-to-end
+  passes by default. Prefer a targeted unit/API check (or one short UI pass if the
+  change is visual). Full demos only when explicitly asked.
+- `/no-test` skips testing entirely.

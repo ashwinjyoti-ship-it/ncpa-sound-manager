@@ -58,3 +58,32 @@ test('rider chip list ignores empty comma-separated leftover URLs', () => {
     JSON.stringify(['https://example.com/a.pdf', 'https://example.com/b.pdf']),
   )
 })
+
+test('reopen after save is skipped when a newer modal opened or edit is in progress', () => {
+  const context = {
+    console,
+    eventModalOpenGeneration: 4,
+    currentEditingEventId: null,
+    allEvents: [{ id: 11, program: 'A' }],
+    openedIds: [],
+  }
+  context.openEventModal = function openEventModal(event) {
+    context.openedIds.push(event.id)
+  }
+  vm.createContext(context)
+  vm.runInContext(helperSource, context, { filename: 'public/static/app.js' })
+
+  assert.equal(context.canReopenSavedEventDetail(4), true)
+  context.reopenEventDetail(11, 4)
+  assert.equal(JSON.stringify(context.openedIds), '[11]')
+
+  context.openedIds.length = 0
+  context.eventModalOpenGeneration = 5
+  assert.equal(context.canReopenSavedEventDetail(4), false)
+  context.reopenEventDetail(11, 4)
+  assert.equal(JSON.stringify(context.openedIds), '[]')
+
+  context.eventModalOpenGeneration = 4
+  context.currentEditingEventId = 99
+  assert.equal(context.canReopenSavedEventDetail(4), false)
+})

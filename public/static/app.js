@@ -20,8 +20,9 @@ let allEvents = [];
 let currentEditingCell = null;
 let currentOpenEventId = null;    // id shown in the read-only event detail modal
 let currentEditingEventId = null; // id open in the edit-event form
-// Invalidates the delayed .active class add in openEventModal() so clicking
-// Edit cannot race with that rAF and leave the stale detail card on screen.
+// Bumped on detail/edit/add-show modal activity. Invalidates the delayed
+// .active class add in openEventModal(), and lets a finishing save skip
+// reopening if the user already opened another modal.
 let eventModalOpenGeneration = 0;
 
 // API Base URL
@@ -73,7 +74,14 @@ function riderUrls(rider) {
   return String(rider).split(',').map(function(url) { return url.trim(); }).filter(Boolean);
 }
 
-function reopenEventDetail(eventId) {
+function canReopenSavedEventDetail(expectedGeneration) {
+  if (expectedGeneration !== eventModalOpenGeneration) return false;
+  if (currentEditingEventId !== null) return false;
+  return true;
+}
+
+function reopenEventDetail(eventId, expectedGeneration) {
+  if (!canReopenSavedEventDetail(expectedGeneration)) return;
   const fresh = allEvents.find(function(e) { return e.id === eventId; });
   if (fresh) openEventModal(fresh);
 }
@@ -1485,6 +1493,7 @@ function openAddShowModal() {
     return;
   }
   
+  eventModalOpenGeneration += 1;
   document.getElementById('addShowModal').classList.add('active');
   document.getElementById('addShowForm').reset();
   // Hide crew card on open (will show when date is picked)
@@ -2023,6 +2032,7 @@ async function editEventFromModal(eventId) {
       }
 
       // Open edit modal
+      eventModalOpenGeneration += 1;
       document.getElementById('editEventModal').classList.add('active');
     }
   } catch (error) {
@@ -2033,6 +2043,7 @@ async function editEventFromModal(eventId) {
 }
 
 function closeEditEventModal() {
+  eventModalOpenGeneration += 1;
   document.getElementById('editEventModal').classList.remove('active');
   const fohSelect = document.getElementById('editFohCrew');
   if (fohSelect) fohSelect.value = '';
@@ -2103,6 +2114,7 @@ async function handleEditEvent(e) {
       }
       closeEditEventModal();
       renderCurrentView();
+      var saveModalGeneration = eventModalOpenGeneration;
 
       try {
         const response = await axios.put(`${API_BASE}/events/${eventId}`, updatedFields);
@@ -2134,7 +2146,7 @@ async function handleEditEvent(e) {
         // crew propagated to sibling dates, etc).
         await loadEvents();
         renderCurrentView();
-        reopenEventDetail(eventIdNum);
+        reopenEventDetail(eventIdNum, saveModalGeneration);
       } catch (err) {
         // Server rejected (or we never heard back from) the update —
         // automatically revert the optimistic change and say why.

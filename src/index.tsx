@@ -6082,7 +6082,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.4.1"></script>
+        <script src="/static/app.js?v=4.4.2"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
         <script src="/static/settings.js?v=1.0.2"></script>

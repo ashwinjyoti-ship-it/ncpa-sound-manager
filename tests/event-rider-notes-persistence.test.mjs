@@ -193,6 +193,26 @@ test('event updates preserve rider and notes when omitted', async () => {
   assert.equal(update.args[10], existingEventRow.notes)
 })
 
+test('event updates clear rider when the edit form sends an empty string', async () => {
+  const { response, body, db } = await routeRequest('/api/events/42', {
+    method: 'PUT',
+    body: JSON.stringify({
+      event_date: '2026-04-10',
+      program: 'Clear Rider From Form',
+      venue: 'Tata Theatre',
+      rider: '',
+      notes: '   ',
+    }),
+  })
+
+  assert.equal(response.status, 200)
+  assert.equal(body.success, true)
+
+  const update = db.calls.find((call) => /UPDATE events\s+SET/i.test(call.sql))
+  assert.equal(update.args[9], null)
+  assert.equal(update.args[10], null)
+})
+
 test('event updates can still explicitly clear rider and notes', async () => {
   const { response, body, db } = await routeRequest('/api/events/42', {
     method: 'PUT',

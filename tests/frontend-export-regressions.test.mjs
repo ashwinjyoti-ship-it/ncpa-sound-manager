@@ -160,3 +160,35 @@ test('iCalendar export rolls two-hour duration across midnight for late call tim
   assert.match(ics, /DTEND:20260201T013000/);
   assert.doesNotMatch(ics, /DTEND:20260131T253000/);
 });
+
+test('iCalendar export escapes RFC 5545 text without creating orphan lines', () => {
+  const { convertEventsToICalendar } = loadBrowserScript('public/static/app.js');
+
+  const ics = convertEventsToICalendar([
+    {
+      id: 9251,
+      event_date: '2026-07-23',
+      program: 'Gala, Part 1; Main\\Stage\r\nSecond title line',
+      venue: 'Tata, Theatre; West\\Wing',
+      sound_requirements: 'Patch, list; stage\\left\r\nMonitor notes\nBackup mic',
+      call_time: '19:30'
+    }
+  ]);
+  const lines = ics.split(/\r\n|\r|\n/);
+
+  assert.ok(lines.includes('SUMMARY:Gala\\, Part 1\\; Main\\\\Stage\\nSecond title line'));
+  assert.ok(lines.includes(
+    'DESCRIPTION:Venue: Tata\\, Theatre\\; West\\\\Wing' +
+    '\\nSound Requirements: Patch\\, list\\; stage\\\\left' +
+    '\\nMonitor notes\\nBackup mic\\nCall Time: 19:30'
+  ));
+  assert.ok(lines.includes('LOCATION:Tata\\, Theatre\\; West\\\\Wing'));
+  assert.deepEqual(
+    lines.filter(line => [
+      'Second title line',
+      'Monitor notes',
+      'Backup mic\\nCall Time: 19:30'
+    ].includes(line)),
+    []
+  );
+});

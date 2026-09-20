@@ -3202,6 +3202,14 @@ function formatICalendarDateTime(date) {
   return `${year}${month}${day}T${hours}${minutes}00`;
 }
 
+function escapeICalendarText(value) {
+  return String(value ?? '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,');
+}
+
 function convertEventsToICalendar(events) {
   // iCalendar header
   const icsLines = [
@@ -3260,7 +3268,7 @@ function convertEventsToICalendar(events) {
     if (event.sound_requirements) description.push(`Sound Requirements: ${event.sound_requirements}`);
     if (event.call_time) description.push(`Call Time: ${event.call_time}`);
     
-    const descText = description.join('\\n').replace(/,/g, '\\,');
+    const descText = escapeICalendarText(description.join('\n'));
     
     // Build VEVENT
     icsLines.push(
@@ -3269,9 +3277,9 @@ function convertEventsToICalendar(events) {
       `DTSTAMP:${timestamp}`,
       `DTSTART:${dtStart}`,
       `DTEND:${dtEnd}`,
-      `SUMMARY:${event.program.replace(/,/g, '\\,')}`,
+      `SUMMARY:${escapeICalendarText(event.program)}`,
       `DESCRIPTION:${descText}`,
-      `LOCATION:${(event.venue || '').replace(/,/g, '\\,')}`,
+      `LOCATION:${escapeICalendarText(event.venue)}`,
       'STATUS:CONFIRMED',
       'TRANSP:OPAQUE',
       'END:VEVENT'

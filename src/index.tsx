@@ -1734,13 +1734,16 @@ app.get('/', (c) => {
           }
 
           #todaySidebar {
-            flex-shrink: 0;
-            width: 280px;
-            max-width: 30%;
-            min-width: 260px;
+            flex: 0 1 auto;
+            flex-shrink: 1;
+            /* Fluid width — shrinks on mid desktops so the month grid gets room */
+            width: clamp(152px, 14vw, 260px);
+            min-width: 152px;
+            max-width: min(260px, 26%);
             display: flex;
             flex-direction: column;
             align-self: stretch;
+            overflow-x: hidden;
             overflow-y: auto;
             position: relative;
             top: 0;
@@ -2911,9 +2914,10 @@ app.get('/', (c) => {
           }
 
           #todaySidebar {
-            width: 280px;
-            min-width: 260px;
-            max-width: 32%;
+            width: clamp(152px, 14vw, 260px);
+            min-width: 152px;
+            max-width: min(260px, 26%);
+            flex: 0 1 auto;
             padding: 16px 14px;
             background: rgba(28,25,23,0.14) !important;
             backdrop-filter: blur(26px) saturate(140%) !important;
@@ -3134,12 +3138,46 @@ app.get('/', (c) => {
             }
           }
 
-          /* Give the month grid more horizontal room on laptop widths */
+          /* Today pane shrinks on laptop widths so the month grid stays usable */
           @media (min-width: 768px) and (max-width: 1100px) {
             #todaySidebar {
-              width: 220px;
-              min-width: 200px;
-              max-width: 28%;
+              width: clamp(140px, 18vw, 180px);
+              min-width: 140px;
+              max-width: 22%;
+              padding: 10px 8px;
+            }
+
+            #todaySidebarClock {
+              min-height: 96px;
+              padding: 12px 12px 10px;
+              margin-bottom: 8px;
+              border-radius: 16px;
+            }
+
+            #todaySidebarDayNumber {
+              font-size: 36px;
+            }
+
+            #todaySidebarTime {
+              font-size: 16px;
+            }
+
+            #todaySidebarEventsPanel {
+              padding: 8px;
+              border-radius: 14px;
+            }
+
+            #todaySidebarEventsPanel::before {
+              font-size: 12px;
+              margin-bottom: 6px;
+            }
+          }
+
+          @media (min-width: 1101px) and (max-width: 1439px) {
+            #todaySidebar {
+              width: clamp(160px, 13vw, 220px);
+              min-width: 160px;
+              max-width: 24%;
             }
           }
 

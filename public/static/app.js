@@ -201,40 +201,27 @@ document.addEventListener('DOMContentLoaded', async () => {
      });
    }
 
-   // Resize listener: switch mobile/desktop renderers, and re-sync large-grid heights
+   // Resize listener: switch mobile/desktop renderers, and re-fit day chips
    var lastMobile = isMobileView();
    var lastLargeCalendar = isLargeCalendarViewport();
-   var lastCompactEventCap = maxVisibleEventsForViewport();
    var resizeTimer = null;
    window.addEventListener('resize', function() {
      clearTimeout(resizeTimer);
      resizeTimer = setTimeout(function() {
        var nowMobile = isMobileView();
        var nowLarge = isLargeCalendarViewport();
-       var nowCap = maxVisibleEventsForViewport();
        if (currentView === 'calendar') {
-         if (nowMobile !== lastMobile) {
+         if (nowMobile !== lastMobile || (!nowMobile && nowLarge !== lastLargeCalendar)) {
            lastMobile = nowMobile;
            lastLargeCalendar = nowLarge;
-           lastCompactEventCap = nowCap;
            renderCurrentView();
            return;
          }
-         // Crossing the large/compact boundary (or compact event-cap) needs a re-render
-         // so "+N more" vs full event lists stay correct.
-         if (!nowMobile && (nowLarge !== lastLargeCalendar || nowCap !== lastCompactEventCap)) {
-           lastLargeCalendar = nowLarge;
-           lastCompactEventCap = nowCap;
-           renderCalendar();
-           return;
-         }
-         if (!nowMobile && nowLarge) {
-           syncLargeCalendarRowHeights();
-         }
+         if (!nowMobile && nowLarge) syncLargeCalendarRowHeights();
+         else if (!nowMobile) collapseOverflowingCalendarEvents();
        }
        lastMobile = nowMobile;
        lastLargeCalendar = nowLarge;
-       lastCompactEventCap = nowCap;
      }, 200);
   });
 });
@@ -894,37 +881,21 @@ function renderCalendar() {
     }
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
-    
-    // Event cards — on compact widths collapse overflow into "+N more"
-    const maxVisible = maxVisibleEventsForViewport();
-    const visibleEvents = dayEvents.slice(0, Number.isFinite(maxVisible) ? maxVisible : dayEvents.length);
-    const hiddenCount = dayEvents.length - visibleEvents.length;
 
-    visibleEvents.forEach(event => {
+    // Render every event; compact widths hide only what does not fit the cell.
+    cell._dayEvents = dayEvents;
+    cell.dataset.date = dateStr;
+    dayEvents.forEach(event => {
       cell.appendChild(createDesktopEventCard(event));
     });
 
-    if (hiddenCount > 0) {
-      const more = document.createElement('button');
-      more.type = 'button';
-      more.className = 'calendar-day-more';
-      more.textContent = '+' + hiddenCount + ' more';
-      more.title = 'View all ' + dayEvents.length + ' events on this day';
-      more.setAttribute('aria-label', 'View all ' + dayEvents.length + ' events on ' + dateStr);
-      more.onclick = function(e) {
-        e.stopPropagation();
-        openDayEventsModal(dateStr, dayEvents);
-      };
-      cell.appendChild(more);
-    }
-    
     grid.appendChild(cell);
   }
 
   renderTodaySidebar();
-  // Equalize day heights on large screens so every event fits and rows stay even
   requestAnimationFrame(function() {
-    syncLargeCalendarRowHeights();
+    if (isLargeCalendarViewport()) syncLargeCalendarRowHeights();
+    else collapseOverflowingCalendarEvents();
   });
   } catch (err) {
     console.error('renderCalendar failed:', err);
@@ -948,16 +919,74 @@ function isMobileView() {
   return window.innerWidth < 768;
 }
 
-/** Large desktops show every event; smaller widths collapse extras to "+N more". */
+/** Large desktops grow rows so every event shows; narrower desktops fit chips to the cell. */
 function isLargeCalendarViewport() {
   return window.innerWidth >= 1440;
 }
 
-function maxVisibleEventsForViewport() {
-  if (isLargeCalendarViewport()) return Infinity;
-  // Compact grids are short — keep only what typically fits, rest as "+N more"
-  if (window.innerWidth >= 1024) return 2;
-  return 1;
+/**
+ * On compact desktops, keep compressed chips and show as many as the day cell
+ * can hold. "+N more" is only for events that would overflow the cell.
+ */
+function collapseOverflowingCalendarEvents() {
+  if (isMobileView() || isLargeCalendarViewport()) return;
+  const grid = document.getElementById('calendarGrid');
+  if (!grid) return;
+
+  grid.querySelectorAll('.calendar-day').forEach(function(cell) {
+    const cards = [...cell.querySelectorAll(':scope > .event-card')];
+    const previousMore = cell.querySelector(':scope > .calendar-day-more');
+    if (previousMore) previousMore.remove();
+    cards.forEach(function(card) { card.hidden = false; });
+    if (!cards.length || cell.clientHeight < 48) return;
+
+    const padBottom = parseFloat(getComputedStyle(cell).paddingBottom) || 0;
+    const limit = cell.getBoundingClientRect().bottom - padBottom;
+    const moreReserve = 28;
+
+    const allFit = cards.every(function(card) {
+      return card.getBoundingClientRect().bottom <= limit + 0.5;
+    });
+    if (allFit) return;
+
+    let showCount = 0;
+    for (let i = 0; i < cards.length; i++) {
+      if (cards[i].getBoundingClientRect().bottom + moreReserve <= limit) showCount = i + 1;
+      else break;
+    }
+
+    cards.forEach(function(card, index) { card.hidden = index >= showCount; });
+
+    const events = cell._dayEvents || [];
+    const dateStr = cell.dataset.date || '';
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'calendar-day-more';
+
+    function hiddenCount() {
+      return cards.filter(function(card) { return card.hidden; }).length;
+    }
+    function label() {
+      const n = hiddenCount();
+      more.textContent = '+' + n + ' more';
+      more.title = 'View all ' + (events.length || n) + ' events on this day';
+      more.setAttribute('aria-label', 'View all ' + (events.length || n) + ' events' + (dateStr ? ' on ' + dateStr : ''));
+    }
+    label();
+    more.onclick = function(e) {
+      e.stopPropagation();
+      openDayEventsModal(dateStr, events);
+    };
+    cell.appendChild(more);
+
+    let guard = 0;
+    while (more.getBoundingClientRect().bottom > limit + 0.5 && guard++ < cards.length) {
+      const visible = cards.filter(function(card) { return !card.hidden; });
+      if (!visible.length) break;
+      visible[visible.length - 1].hidden = true;
+      label();
+    }
+  });
 }
 
 /**

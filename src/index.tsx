@@ -3138,18 +3138,21 @@ app.get('/', (c) => {
             }
           }
 
-          /* Today pane shrinks on laptop widths so the month grid stays usable */
-          @media (min-width: 768px) and (max-width: 1100px) {
+          /* Today pane shrinks below 1440 so the month grid stays usable.
+             Keep compact clock type across the whole range — otherwise mid
+             widths (e.g. 1280) get a narrow pane with the full 22px clock and clip. */
+          @media (min-width: 768px) and (max-width: 1439px) {
             #todaySidebar {
-              width: clamp(140px, 18vw, 180px);
-              min-width: 140px;
-              max-width: 22%;
+              width: clamp(152px, 16vw, 220px);
+              min-width: 152px;
+              max-width: 24%;
               padding: 10px 8px;
+              overflow-x: visible;
             }
 
             #todaySidebarClock {
               min-height: 96px;
-              padding: 12px 12px 10px;
+              padding: 12px 10px 10px;
               margin-bottom: 8px;
               border-radius: 16px;
             }
@@ -3158,8 +3161,14 @@ app.get('/', (c) => {
               font-size: 36px;
             }
 
+            #todaySidebarDateLabel {
+              font-size: 11px;
+            }
+
             #todaySidebarTime {
-              font-size: 16px;
+              font-size: 14px;
+              letter-spacing: 0.02em;
+              white-space: nowrap;
             }
 
             #todaySidebarEventsPanel {
@@ -3170,14 +3179,6 @@ app.get('/', (c) => {
             #todaySidebarEventsPanel::before {
               font-size: 12px;
               margin-bottom: 6px;
-            }
-          }
-
-          @media (min-width: 1101px) and (max-width: 1439px) {
-            #todaySidebar {
-              width: clamp(160px, 13vw, 220px);
-              min-width: 160px;
-              max-width: 24%;
             }
           }
 

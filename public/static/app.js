@@ -217,8 +217,11 @@ document.addEventListener('DOMContentLoaded', async () => {
            renderCurrentView();
            return;
          }
-         if (!nowMobile && nowLarge) syncLargeCalendarRowHeights();
-         else if (!nowMobile) collapseOverflowingCalendarEvents();
+        if (!nowMobile && nowLarge) syncLargeCalendarRowHeights();
+        else if (!nowMobile) {
+          clearLargeCalendarInlineRows();
+          collapseOverflowingCalendarEvents();
+        }
        }
        lastMobile = nowMobile;
        lastLargeCalendar = nowLarge;
@@ -893,6 +896,7 @@ function renderCalendar() {
   }
 
   renderTodaySidebar();
+  if (!isLargeCalendarViewport()) clearLargeCalendarInlineRows();
   requestAnimationFrame(function() {
     if (isLargeCalendarViewport()) syncLargeCalendarRowHeights();
     else collapseOverflowingCalendarEvents();
@@ -927,11 +931,25 @@ function isLargeCalendarViewport() {
 /**
  * On compact desktops, keep compressed chips and show as many as the day cell
  * can hold. "+N more" is only for events that would overflow the cell.
+ * Drop pixel row tracks left by the large-screen layout so equal 1fr rows apply.
  */
+function clearLargeCalendarInlineRows() {
+  const grid = document.getElementById('calendarGrid');
+  if (!grid) return;
+  grid.style.gridTemplateRows = '';
+  grid.style.gridAutoRows = '';
+  grid.querySelectorAll('.calendar-day').forEach(function(day) {
+    day.style.minHeight = '';
+    day.style.height = '';
+    day.style.overflow = '';
+  });
+}
+
 function collapseOverflowingCalendarEvents() {
   if (isMobileView() || isLargeCalendarViewport()) return;
   const grid = document.getElementById('calendarGrid');
   if (!grid) return;
+  clearLargeCalendarInlineRows();
 
   grid.querySelectorAll('.calendar-day').forEach(function(cell) {
     const cards = [...cell.querySelectorAll(':scope > .event-card')];

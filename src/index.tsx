@@ -3107,6 +3107,53 @@ app.get('/', (c) => {
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            max-width: 100%;
+            font-family: inherit;
+            line-height: 1.3;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+          }
+
+          #calendarGrid .calendar-day-more:hover,
+          #calendarGrid .calendar-day-more:focus-visible {
+            background: rgba(224,164,88,0.22);
+            border-color: rgba(224,164,88,0.45);
+            color: var(--ncpa-amber-light, var(--ncpa-amber));
+            outline: none;
+          }
+
+          .day-events-modal {
+            display: flex;
+            flex-direction: column;
+            width: 440px;
+            max-width: min(440px, 92vw);
+            max-height: min(640px, 88vh);
+            padding: 0;
+            overflow: hidden;
+            border-radius: 28px;
+          }
+
+          .day-events-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 14px 16px 18px;
+          }
+
+          .day-events-body .event-card {
+            margin-bottom: 8px;
+          }
+
+          .day-events-body .event-card:last-child {
+            margin-bottom: 0;
+          }
+
+          .day-events-empty {
+            color: var(--ncpa-text-muted);
+            font-size: 0.9rem;
+            padding: 0.75rem 0.25rem;
           }
 
           /* Compact widths: denser chips so the visible ones + "+N more" fit the equal rows */
@@ -3138,18 +3185,21 @@ app.get('/', (c) => {
             }
           }
 
-          /* Today pane shrinks on laptop widths so the month grid stays usable */
-          @media (min-width: 768px) and (max-width: 1100px) {
+          /* Today pane shrinks below 1440 so the month grid stays usable.
+             Keep compact clock type across the whole range — otherwise mid
+             widths (e.g. 1280) get a narrow pane with the full 22px clock and clip. */
+          @media (min-width: 768px) and (max-width: 1439px) {
             #todaySidebar {
-              width: clamp(140px, 18vw, 180px);
-              min-width: 140px;
-              max-width: 22%;
+              width: clamp(152px, 16vw, 220px);
+              min-width: 152px;
+              max-width: 24%;
               padding: 10px 8px;
+              overflow-x: visible;
             }
 
             #todaySidebarClock {
               min-height: 96px;
-              padding: 12px 12px 10px;
+              padding: 12px 10px 10px;
               margin-bottom: 8px;
               border-radius: 16px;
             }
@@ -3158,8 +3208,14 @@ app.get('/', (c) => {
               font-size: 36px;
             }
 
+            #todaySidebarDateLabel {
+              font-size: 11px;
+            }
+
             #todaySidebarTime {
-              font-size: 16px;
+              font-size: 14px;
+              letter-spacing: 0.02em;
+              white-space: nowrap;
             }
 
             #todaySidebarEventsPanel {
@@ -3170,14 +3226,6 @@ app.get('/', (c) => {
             #todaySidebarEventsPanel::before {
               font-size: 12px;
               margin-bottom: 6px;
-            }
-          }
-
-          @media (min-width: 1101px) and (max-width: 1439px) {
-            #todaySidebar {
-              width: clamp(160px, 13vw, 220px);
-              min-width: 160px;
-              max-width: 24%;
             }
           }
 
@@ -5629,6 +5677,17 @@ app.get('/', (c) => {
             </div>
         </div>
 
+        <!-- Day events list (opened from calendar "+N more" on compact widths) -->
+        <div id="dayEventsModal" class="modal">
+            <div class="modal-content day-events-modal">
+                <div class="event-detail-header">
+                    <h2 id="dayEventsTitle">Shows</h2>
+                    <button type="button" onclick="closeDayEventsModal()" class="event-detail-close" aria-label="Close">&times;</button>
+                </div>
+                <div id="dayEventsBody" class="day-events-body"></div>
+            </div>
+        </div>
+
         <!-- Add Show Modal -->
         <div id="addShowModal" class="modal">
             <div class="modal-content">
@@ -6264,7 +6323,7 @@ app.get('/', (c) => {
         <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js" crossorigin="anonymous"></script>
         <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js" crossorigin="anonymous"></script>
-        <script src="/static/app.js?v=4.4.1"></script>
+        <script src="/static/app.js?v=4.4.3"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
         <script src="/static/settings.js?v=1.0.2"></script>

@@ -1710,7 +1710,6 @@ app.get('/', (c) => {
           }
 
           .calendar-day {
-            min-height: 120px;
             outline: 1px solid rgba(173,179,184,0.15);
             background: rgba(255,255,255,0.68);
             backdrop-filter: blur(6px);
@@ -1718,17 +1717,20 @@ app.get('/', (c) => {
           }
 
           #desktopCalendarLayout {
-            align-items: flex-start;
+            align-items: stretch;
             flex: 1;
             min-height: 0;
+            height: 100%;
           }
 
           #desktopCalendarMain {
             flex: 1;
             min-width: 0;
             min-height: 0;
-            overflow-y: auto;
-            max-height: calc(100vh - 180px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            height: 100%;
           }
 
           #todaySidebar {
@@ -1738,8 +1740,9 @@ app.get('/', (c) => {
             min-width: 260px;
             display: flex;
             flex-direction: column;
-            align-self: flex-start;
-            position: sticky;
+            align-self: stretch;
+            overflow-y: auto;
+            position: relative;
             top: 0;
             z-index: 6;
             padding: 0.75rem 0.75rem 0.5rem;
@@ -2249,13 +2252,14 @@ app.get('/', (c) => {
             display: block;
           }
 
-          /* Desktop: scroll calendar grid only; keep Today sidebar fixed */
+          /* Desktop: fill viewport height; keep Today sidebar fixed beside grid */
           @media (min-width: 768px) {
             #calendarView {
-              overflow: visible;
+              overflow: hidden !important;
               display: flex;
               flex-direction: column;
-              max-height: none !important;
+              max-height: calc(100vh - 180px) !important;
+              height: calc(100vh - 180px);
             }
           }
 
@@ -2706,6 +2710,12 @@ app.get('/', (c) => {
             overflow-y: auto !important;
           }
 
+          @media (min-width: 768px) {
+            #calendarView {
+              overflow: hidden !important;
+            }
+          }
+
           .glass-header > *,
           #todaySidebar > *,
           #calendarView > * {
@@ -2975,10 +2985,38 @@ app.get('/', (c) => {
           }
 
           #desktopCalendarChrome {
+            flex: 0 0 auto;
             background: rgba(41,37,36,0.24) !important;
             backdrop-filter: blur(26px) saturate(140%) !important;
             -webkit-backdrop-filter: blur(26px) saturate(140%) !important;
             border-bottom: 1px solid var(--ncpa-border);
+          }
+
+          #desktopCalendarChrome .grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+          }
+
+          #desktopCalendarGridWrap {
+            flex: 1 1 auto;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+            background: transparent;
+          }
+
+          #calendarGrid {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            height: 100%;
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            /* Compact view (<1440): equal rows that fill the viewport */
+            grid-auto-rows: minmax(80px, 1fr);
+            align-content: stretch;
           }
 
           #currentMonthYear {
@@ -3009,27 +3047,141 @@ app.get('/', (c) => {
             color: var(--ncpa-text-muted) !important;
             font-size: 11px !important;
             letter-spacing: 0.08em;
+            min-width: 0;
           }
 
           #desktopCalendarChrome .grid > div:nth-child(6) {
             color: var(--ncpa-amber) !important;
           }
 
-          #desktopCalendarGridWrap {
-            background: transparent;
-          }
-
           .calendar-day {
-            min-height: 132px;
+            min-width: 0;
+            min-height: 0;
+            height: 100%;
             padding: 8px;
             border-radius: 16px;
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
             outline: none !important;
             border: 1px solid var(--ncpa-border);
             background: rgba(28,25,23,0.18);
             backdrop-filter: blur(22px) saturate(140%);
             -webkit-backdrop-filter: blur(22px) saturate(140%);
             transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+          }
+
+          #calendarGrid .event-card {
+            flex: 0 0 auto;
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            padding: 5px 6px;
+            margin-bottom: 3px;
+          }
+
+          #calendarGrid .event-card-title,
+          #calendarGrid .event-card-meta {
+            min-width: 0;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+
+          #calendarGrid .calendar-day-more {
+            flex: 0 0 auto;
+            margin-top: 2px;
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--ncpa-amber);
+            background: rgba(224,164,88,0.12);
+            border: 1px solid rgba(224,164,88,0.28);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Compact widths: denser chips so the visible ones + "+N more" fit the equal rows */
+          @media (max-width: 1439px) {
+            #calendarGrid .event-card {
+              padding: 3px 5px;
+              margin-bottom: 2px;
+              font-size: 9px;
+              line-height: 1.2;
+            }
+
+            #calendarGrid .event-card-meta {
+              display: none;
+            }
+
+            #calendarGrid .event-card-title {
+              font-size: 9px;
+              line-height: 1.25;
+            }
+
+            .calendar-day {
+              padding: 6px;
+            }
+
+            .calendar-day-number {
+              font-size: 11px;
+              line-height: 18px;
+              margin-bottom: 3px;
+            }
+          }
+
+          /* Give the month grid more horizontal room on laptop widths */
+          @media (min-width: 768px) and (max-width: 1100px) {
+            #todaySidebar {
+              width: 220px;
+              min-width: 200px;
+              max-width: 28%;
+            }
+          }
+
+          /*
+           * Large desktop (1440+): never clip events.
+           * Each week-row grows to fit its busiest day; columns stay equal;
+           * the month scrolls if needed. Compact "+N more" is hidden here.
+           */
+          @media (min-width: 1440px) {
+            #calendarGrid {
+              height: auto;
+              min-height: 100%;
+              grid-auto-rows: minmax(120px, auto);
+              align-content: start;
+            }
+
+            .calendar-day {
+              height: auto;
+              min-height: 120px;
+              overflow: visible;
+            }
+
+            #calendarGrid .event-card {
+              overflow: visible;
+            }
+
+            #calendarGrid .event-card-meta {
+              display: block;
+            }
+
+            #calendarGrid .calendar-day-more {
+              display: none !important;
+            }
+          }
+
+          .calendar-day-number {
+            flex: 0 0 auto;
+            color: var(--ncpa-text-secondary);
+            font-size: 12px;
+            line-height: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
           }
 
           .calendar-day-active:hover {
@@ -3048,14 +3200,6 @@ app.get('/', (c) => {
             border-color: rgba(224,164,88,0.60);
             background: linear-gradient(135deg, rgba(224,164,88,0.22), rgba(41,37,36,0.30));
             box-shadow: 0 8px 16px rgba(224,164,88,0.10);
-          }
-
-          .calendar-day-number {
-            color: var(--ncpa-text-secondary);
-            font-size: 12px;
-            line-height: 24px;
-            font-weight: 700;
-            margin-bottom: 5px;
           }
 
           .calendar-day-number-today {

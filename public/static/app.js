@@ -201,17 +201,40 @@ document.addEventListener('DOMContentLoaded', async () => {
      });
    }
 
-   // Resize listener to switch between desktop and mobile renderers
+   // Resize listener: switch mobile/desktop renderers, and re-sync large-grid heights
    var lastMobile = isMobileView();
+   var lastLargeCalendar = isLargeCalendarViewport();
+   var lastCompactEventCap = maxVisibleEventsForViewport();
    var resizeTimer = null;
    window.addEventListener('resize', function() {
      clearTimeout(resizeTimer);
      resizeTimer = setTimeout(function() {
        var nowMobile = isMobileView();
-       if (nowMobile !== lastMobile && currentView === 'calendar') {
-         lastMobile = nowMobile;
-         renderCurrentView();
+       var nowLarge = isLargeCalendarViewport();
+       var nowCap = maxVisibleEventsForViewport();
+       if (currentView === 'calendar') {
+         if (nowMobile !== lastMobile) {
+           lastMobile = nowMobile;
+           lastLargeCalendar = nowLarge;
+           lastCompactEventCap = nowCap;
+           renderCurrentView();
+           return;
+         }
+         // Crossing the large/compact boundary (or compact event-cap) needs a re-render
+         // so "+N more" vs full event lists stay correct.
+         if (!nowMobile && (nowLarge !== lastLargeCalendar || nowCap !== lastCompactEventCap)) {
+           lastLargeCalendar = nowLarge;
+           lastCompactEventCap = nowCap;
+           renderCalendar();
+           return;
+         }
+         if (!nowMobile && nowLarge) {
+           syncLargeCalendarRowHeights();
+         }
        }
+       lastMobile = nowMobile;
+       lastLargeCalendar = nowLarge;
+       lastCompactEventCap = nowCap;
      }, 200);
   });
 });
@@ -872,15 +895,31 @@ function renderCalendar() {
     dayNumber.textContent = day;
     cell.appendChild(dayNumber);
     
-    // Event cards
-    dayEvents.forEach(event => {
+    // Event cards — on compact widths collapse overflow into "+N more"
+    const maxVisible = maxVisibleEventsForViewport();
+    const visibleEvents = dayEvents.slice(0, Number.isFinite(maxVisible) ? maxVisible : dayEvents.length);
+    const hiddenCount = dayEvents.length - visibleEvents.length;
+
+    visibleEvents.forEach(event => {
       cell.appendChild(createDesktopEventCard(event));
     });
+
+    if (hiddenCount > 0) {
+      const more = document.createElement('div');
+      more.className = 'calendar-day-more';
+      more.textContent = '+' + hiddenCount + ' more';
+      more.title = hiddenCount + ' more event' + (hiddenCount === 1 ? '' : 's');
+      cell.appendChild(more);
+    }
     
     grid.appendChild(cell);
   }
 
   renderTodaySidebar();
+  // Equalize day heights on large screens so every event fits and rows stay even
+  requestAnimationFrame(function() {
+    syncLargeCalendarRowHeights();
+  });
   } catch (err) {
     console.error('renderCalendar failed:', err);
   }
@@ -901,6 +940,65 @@ function changeMonth(delta) {
 
 function isMobileView() {
   return window.innerWidth < 768;
+}
+
+/** Large desktops show every event; smaller widths collapse extras to "+N more". */
+function isLargeCalendarViewport() {
+  return window.innerWidth >= 1440;
+}
+
+function maxVisibleEventsForViewport() {
+  if (isLargeCalendarViewport()) return Infinity;
+  // Compact grids are short — keep only what typically fits, rest as "+N more"
+  if (window.innerWidth >= 1024) return 2;
+  return 1;
+}
+
+/**
+ * Large screens: grow each week-row to fit its busiest day so every event shows.
+ * Compact widths clear inline sizes and use CSS equal-rows + "+N more".
+ */
+function syncLargeCalendarRowHeights() {
+  const grid = document.getElementById('calendarGrid');
+  if (!grid) return;
+
+  const days = [...grid.querySelectorAll('.calendar-day')];
+  days.forEach(function(day) {
+    day.style.minHeight = '';
+    day.style.height = '';
+  });
+  grid.style.gridTemplateRows = '';
+  grid.style.gridAutoRows = '';
+
+  if (!isLargeCalendarViewport() || !days.length) return;
+
+  // Measure natural content height with height unlocked
+  days.forEach(function(day) {
+    day.style.height = 'auto';
+    day.style.minHeight = '0';
+    day.style.overflow = 'visible';
+  });
+
+  const rowCount = Math.ceil(days.length / 7);
+  const rowHeights = [];
+  for (var r = 0; r < rowCount; r++) {
+    var maxH = 120;
+    for (var c = 0; c < 7; c++) {
+      var day = days[r * 7 + c];
+      if (day) maxH = Math.max(maxH, day.scrollHeight);
+    }
+    rowHeights.push(maxH + 'px');
+  }
+
+  // Explicit row tracks — CSS minmax(auto) was not expanding for flex day-cells
+  grid.style.gridAutoRows = 'unset';
+  grid.style.gridTemplateRows = rowHeights.join(' ');
+
+  days.forEach(function(day) {
+    day.style.height = '100%';
+    day.style.minHeight = '0';
+    day.style.overflow = 'hidden'; // clip within the grown row; content already fits
+  });
 }
 
 function formatDateKeyLocal(date) {

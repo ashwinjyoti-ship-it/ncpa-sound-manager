@@ -905,10 +905,16 @@ function renderCalendar() {
     });
 
     if (hiddenCount > 0) {
-      const more = document.createElement('div');
+      const more = document.createElement('button');
+      more.type = 'button';
       more.className = 'calendar-day-more';
       more.textContent = '+' + hiddenCount + ' more';
-      more.title = hiddenCount + ' more event' + (hiddenCount === 1 ? '' : 's');
+      more.title = 'View all ' + dayEvents.length + ' events on this day';
+      more.setAttribute('aria-label', 'View all ' + dayEvents.length + ' events on ' + dateStr);
+      more.onclick = function(e) {
+        e.stopPropagation();
+        openDayEventsModal(dateStr, dayEvents);
+      };
       cell.appendChild(more);
     }
     
@@ -999,6 +1005,49 @@ function syncLargeCalendarRowHeights() {
     day.style.minHeight = '0';
     day.style.overflow = 'hidden'; // clip within the grown row; content already fits
   });
+}
+
+// ============================================
+// DAY EVENTS LIST (compact calendar "+N more")
+// ============================================
+
+function openDayEventsModal(dateStr, events) {
+  const modal = document.getElementById('dayEventsModal');
+  const title = document.getElementById('dayEventsTitle');
+  const body = document.getElementById('dayEventsBody');
+  if (!modal || !title || !body) return;
+
+  const list = Array.isArray(events) ? events.slice() : [];
+  title.textContent = list.length
+    ? (list.length + ' show' + (list.length === 1 ? '' : 's') + ' · ' + formatDate(dateStr))
+    : ('Shows · ' + formatDate(dateStr));
+
+  body.innerHTML = '';
+  if (!list.length) {
+    const empty = document.createElement('p');
+    empty.className = 'day-events-empty';
+    empty.textContent = 'No events on this day.';
+    body.appendChild(empty);
+  } else {
+    list.forEach(function(event) {
+      const card = createDesktopEventCard(event, { truncateProgram: 48, showStatus: true });
+      // Opening a show detail closes the day list so the detail modal isn't buried
+      const prevOnClick = card.onclick;
+      card.onclick = function(e) {
+        closeDayEventsModal();
+        if (typeof prevOnClick === 'function') prevOnClick.call(card, e);
+        else openEventModal(event);
+      };
+      body.appendChild(card);
+    });
+  }
+
+  modal.classList.add('active');
+}
+
+function closeDayEventsModal() {
+  const modal = document.getElementById('dayEventsModal');
+  if (modal) modal.classList.remove('active');
 }
 
 function formatDateKeyLocal(date) {
@@ -2945,6 +2994,7 @@ window.onclick = function(event) {
   const csvModal = document.getElementById('csvExportModal');
   const aiModal = document.getElementById('aiAssistantModal');
   const dayAvailModal = document.getElementById('dayAvailModal');
+  const dayEventsModal = document.getElementById('dayEventsModal');
 
   if (event.target === eventModal) {
     closeEventModal();
@@ -2969,6 +3019,9 @@ window.onclick = function(event) {
   }
   if (event.target === dayAvailModal) {
     closeDayAvailModal();
+  }
+  if (event.target === dayEventsModal) {
+    closeDayEventsModal();
   }
 }
 

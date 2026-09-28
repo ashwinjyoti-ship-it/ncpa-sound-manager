@@ -894,8 +894,8 @@ function renderCalendar() {
 
   renderTodaySidebar();
   requestAnimationFrame(function() {
-    if (isLargeCalendarViewport()) syncLargeCalendarRowHeights();
-    else collapseOverflowingCalendarEvents();
+    syncLargeCalendarRowHeights();
+    if (!isLargeCalendarViewport()) collapseOverflowingCalendarEvents();
   });
   } catch (err) {
     console.error('renderCalendar failed:', err);

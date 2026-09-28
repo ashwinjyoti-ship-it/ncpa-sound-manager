@@ -3014,7 +3014,7 @@ app.get('/', (c) => {
             height: 100%;
             display: grid;
             grid-template-columns: repeat(7, minmax(0, 1fr));
-            /* Equal rows that grow with the viewport; floor keeps chips readable */
+            /* Compact view (<1440): equal rows that fill the viewport */
             grid-auto-rows: minmax(80px, 1fr);
             align-content: stretch;
           }
@@ -3089,12 +3089,89 @@ app.get('/', (c) => {
             white-space: nowrap;
           }
 
+          #calendarGrid .calendar-day-more {
+            flex: 0 0 auto;
+            margin-top: 2px;
+            padding: 3px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            color: var(--ncpa-amber);
+            background: rgba(224,164,88,0.12);
+            border: 1px solid rgba(224,164,88,0.28);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          /* Compact widths: denser chips so the visible ones + "+N more" fit the equal rows */
+          @media (max-width: 1439px) {
+            #calendarGrid .event-card {
+              padding: 3px 5px;
+              margin-bottom: 2px;
+              font-size: 9px;
+              line-height: 1.2;
+            }
+
+            #calendarGrid .event-card-meta {
+              display: none;
+            }
+
+            #calendarGrid .event-card-title {
+              font-size: 9px;
+              line-height: 1.25;
+            }
+
+            .calendar-day {
+              padding: 6px;
+            }
+
+            .calendar-day-number {
+              font-size: 11px;
+              line-height: 18px;
+              margin-bottom: 3px;
+            }
+          }
+
           /* Give the month grid more horizontal room on laptop widths */
           @media (min-width: 768px) and (max-width: 1100px) {
             #todaySidebar {
               width: 220px;
               min-width: 200px;
               max-width: 28%;
+            }
+          }
+
+          /*
+           * Large desktop (1440+): never clip events.
+           * Each week-row grows to fit its busiest day; columns stay equal;
+           * the month scrolls if needed. Compact "+N more" is hidden here.
+           */
+          @media (min-width: 1440px) {
+            #calendarGrid {
+              height: auto;
+              min-height: 100%;
+              grid-auto-rows: minmax(120px, auto);
+              align-content: start;
+            }
+
+            .calendar-day {
+              height: auto;
+              min-height: 120px;
+              overflow: visible;
+            }
+
+            #calendarGrid .event-card {
+              overflow: visible;
+            }
+
+            #calendarGrid .event-card-meta {
+              display: block;
+            }
+
+            #calendarGrid .calendar-day-more {
+              display: none !important;
             }
           }
 

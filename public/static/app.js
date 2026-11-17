@@ -3886,3 +3886,41 @@ function downloadShortNoticeReport() {
   showNotification('Downloading Short Notice Report...', 'success');
   closeShortNoticeModal();
 }
+
+
+// ============================================
+// FIT CALENDAR TO VIEWPORT (desktop/tablet)
+// Sizes the calendar card to the space left under the sticky header and
+// toolbar, so the page doesn't scroll (which hid the top buttons under the
+// header and cut off the Today panel). The Today panel scrolls internally.
+// ============================================
+(function () {
+  function fitCalendarHeight() {
+    var el = document.getElementById('calendarView');
+    if (!el || window.innerWidth < 768 || el.offsetParent === null) return;
+    var top = el.getBoundingClientRect().top + window.pageYOffset;
+    var h = Math.max(320, Math.floor(window.innerHeight - top - 16));
+    document.documentElement.style.setProperty('--cal-h', h + 'px');
+  }
+  window.fitCalendarHeight = fitCalendarHeight;
+  window.addEventListener('resize', fitCalendarHeight);
+  window.addEventListener('orientationchange', fitCalendarHeight);
+  window.addEventListener('load', function () {
+    fitCalendarHeight();
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(fitCalendarHeight);
+      var hdr = document.querySelector('header');
+      var main = document.getElementById('mainContent');
+      if (hdr) ro.observe(hdr);
+      if (main) ro.observe(main);
+    }
+  });
+  var origShowTab = window.showTab;
+  if (typeof origShowTab === 'function') {
+    window.showTab = function () {
+      var r = origShowTab.apply(this, arguments);
+      fitCalendarHeight();
+      return r;
+    };
+  }
+})();

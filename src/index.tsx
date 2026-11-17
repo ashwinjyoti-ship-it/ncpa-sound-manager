@@ -5140,6 +5140,36 @@ app.get('/', (c) => {
             }
           }
 
+          /* Today sidebar must scroll when its content is taller than the card
+             (an earlier "overflow: hidden" rule was clipping the agenda). */
+          @media (min-width: 768px) {
+            #todaySidebar {
+              overflow-x: hidden !important;
+              overflow-y: auto !important;
+              min-height: 0;
+              overscroll-behavior: contain;
+              scrollbar-width: thin;
+              scrollbar-color: rgba(224,164,88,0.55) transparent;
+            }
+            #todaySidebar::-webkit-scrollbar { width: 6px; }
+            #todaySidebar::-webkit-scrollbar-thumb {
+              background: rgba(224,164,88,0.5);
+              border-radius: 3px;
+            }
+          }
+
+          /* Short windows: shrink the clock card so more of the agenda fits */
+          @media (min-width: 768px) and (max-height: 820px) {
+            #todaySidebarClock {
+              min-height: 0 !important;
+              padding: 10px 12px 8px !important;
+              margin-bottom: 6px !important;
+            }
+            #todaySidebarDayNumber { font-size: 34px !important; line-height: 1.05 !important; }
+            #todaySidebarDateLabel { font-size: 11px !important; }
+            #todaySidebarTime { font-size: 14px !important; }
+          }
+
           /* System toast notifications (Phase 1) */
           .ncpa-toast {
             position: fixed;

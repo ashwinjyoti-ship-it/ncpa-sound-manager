@@ -49,7 +49,6 @@ type Bindings = {
   VECTORIZE: any; // Vectorize enabled for semantic search
   ANTHROPIC_API_KEY: string;
   EVENT_SYNC: DurableObjectNamespace;
-  AGENT_API_KEY?: string; // secret for /api/agent/* (set in Cloudflare, never committed)
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -112,7 +111,7 @@ app.get('/api/crew-availability', async (c) => {
   }
 })
 
-// ─── Agent API (read-only, API-key protected) ─────────────────────────────────
+// ─── Agent API (read-only, open like other reads) ─────────────────────────────────
 setupAgentApi(app)
 
 // GET /api/crew-roster and /api/admin/crew* — see setupCrewEndpoints() below.

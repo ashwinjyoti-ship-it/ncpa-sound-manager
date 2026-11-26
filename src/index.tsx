@@ -33,7 +33,6 @@ import {
   programVenueKey,
 } from './multi-date-groups'
 import { classifyDates, loadAvailabilityData } from './crew-availability'
-import { setupAgentApi } from './agent-api'
 import { broadcastEventSync, broadcastUpsertByIds } from './event-sync'
 
 // EVENT_SYNC binds to the EventSyncRoom Durable Object, which lives in a
@@ -91,7 +90,9 @@ app.use('*', cors({
 // Serve static files
 app.use('/static/*', serveStatic({ root: './public' }))
 
-// ─── GET /api/crew-availability ───────────────────────────────────────────────
+// ─── GET /api/crew-availability?dates=YYYY-MM-DD[,YYYY-MM-DD] ─────────────────
+// Open read endpoint (like /api/events). Used by the calendar's day modal and
+// by agents: returns available / assigned / unavailable crew plus that day's shows.
 app.get('/api/crew-availability', async (c) => {
   const datesParam = c.req.query('dates')
   if (!datesParam) return c.json({ success: false, error: 'dates param required' }, 400)
@@ -110,9 +111,6 @@ app.get('/api/crew-availability', async (c) => {
     return c.json({ success: false, error: err.message }, 500)
   }
 })
-
-// ─── Agent API (read-only, open like other reads) ─────────────────────────────────
-setupAgentApi(app)
 
 // GET /api/crew-roster and /api/admin/crew* — see setupCrewEndpoints() below.
 setupCrewEndpoints(app)

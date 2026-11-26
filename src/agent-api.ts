@@ -1,13 +1,12 @@
-// Read-only API for AI agents. Protected by a Bearer API key stored as the
-// AGENT_API_KEY secret in Cloudflare (never committed).
+// Read-only API for AI agents. Open like the other read endpoints (events,
+// call times, sound requirements) — no key needed.
 import type { Hono } from 'hono'
 import { classifyDates, loadAvailabilityData } from './crew-availability'
 
 type Bindings = {
   DB: D1Database
   DB_CREW: D1Database
-  AGENT_API_KEY?: string
-}
+  }
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const MAX_RANGE_DAYS = 31
@@ -29,33 +28,7 @@ function datesBetween(start: string, end: string): string[] {
   return out
 }
 
-// Constant-time string compare (hash-free, length-independent loop).
-function safeEqual(a: string, b: string): boolean {
-  const enc = new TextEncoder()
-  const x = enc.encode(a)
-  const y = enc.encode(b)
-  let diff = x.length ^ y.length
-  const n = Math.max(x.length, y.length)
-  for (let i = 0; i < n; i++) diff |= (x[i] ?? 0) ^ (y[i] ?? 0)
-  return diff === 0
-}
-
 export function setupAgentApi(app: Hono<{ Bindings: Bindings }>) {
-  app.use('/api/agent/*', async (c, next) => {
-    if (c.req.method !== 'GET' && c.req.method !== 'OPTIONS') {
-      return c.json({ success: false, error: 'Read-only API: GET only' }, 405)
-    }
-    if (c.req.method === 'OPTIONS') return next()
-    const key = c.env.AGENT_API_KEY
-    if (!key) return c.json({ success: false, error: 'Agent API not configured' }, 503)
-    const header = c.req.header('Authorization') || ''
-    const token = header.startsWith('Bearer ') ? header.slice(7).trim() : ''
-    if (!token || !safeEqual(token, key)) {
-      return c.json({ success: false, error: 'Invalid or missing API key' }, 401)
-    }
-    await next()
-  })
-
   // GET /api/agent/crew-availability?date=YYYY-MM-DD
   // GET /api/agent/crew-availability?start=YYYY-MM-DD&end=YYYY-MM-DD  (max 31 days)
   app.get('/api/agent/crew-availability', async (c) => {

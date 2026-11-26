@@ -23,20 +23,18 @@ function stubDb() {
   };
 }
 
-const env = (extra = {}) => ({ DB: stubDb(), DB_CREW: stubDb(), AGENT_API_KEY: 'secret', ...extra });
+const env = (extra = {}) => ({ DB: stubDb(), DB_CREW: stubDb(), ...extra });
 const get = (path, headers = {}, e = env()) =>
   app.fetch(new Request('https://x.test' + path, { headers }), e);
-const auth = { Authorization: 'Bearer secret' };
+const auth = {};
 
-test('rejects missing / wrong key, 503 when unconfigured', async () => {
-  assert.equal((await get('/api/agent/crew-availability?date=2026-09-01')).status, 401);
-  assert.equal((await get('/api/agent/crew-availability?date=2026-09-01', { Authorization: 'Bearer nope' })).status, 401);
-  assert.equal((await get('/api/agent/crew-availability?date=2026-09-01', auth, env({ AGENT_API_KEY: undefined }))).status, 503);
+test('works without any key', async () => {
+  assert.equal((await get('/api/agent/crew-availability?date=2026-09-01')).status, 200);
 });
 
 test('POST is refused', async () => {
-  const r = await app.fetch(new Request('https://x.test/api/agent/crew-availability', { method: 'POST', headers: auth }), env());
-  assert.equal(r.status, 405);
+  const r = await app.fetch(new Request('https://x.test/api/agent/crew-availability', { method: 'POST' }), env());
+  assert.equal(r.status, 404);
 });
 
 test('validates dates', async () => {

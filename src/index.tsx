@@ -32,6 +32,8 @@ import {
   generateShowGroupId,
   programVenueKey,
 } from './multi-date-groups'
+import { classifyDates, loadAvailabilityData } from './crew-availability'
+import { setupAgentApi } from './agent-api'
 import { broadcastEventSync, broadcastUpsertByIds } from './event-sync'
 
 // EVENT_SYNC binds to the EventSyncRoom Durable Object, which lives in a
@@ -47,6 +49,7 @@ type Bindings = {
   VECTORIZE: any; // Vectorize enabled for semantic search
   ANTHROPIC_API_KEY: string;
   EVENT_SYNC: DurableObjectNamespace;
+  AGENT_API_KEY?: string; // secret for /api/agent/* (set in Cloudflare, never committed)
 }
 
 const app = new Hono<{ Bindings: Bindings }>()
@@ -97,62 +100,20 @@ app.get('/api/crew-availability', async (c) => {
   const dates = datesParam.split(',').map(d => d.trim()).filter(Boolean)
   if (!dates.length) return c.json({ success: false, error: 'no valid dates' }, 400)
 
-  const ph = dates.map(() => '?').join(',')
-
   try {
-    const soundRows = await c.env.DB.prepare(
-      `SELECT crew, foh_crew, stage_crew, program, venue, event_date
-       FROM events WHERE event_date IN (${ph})`
-    ).bind(...dates).all()
-
-    const assignedSet = new Set<string>()
-    const parseCSV = (s: string | null) => {
-      if (!s) return
-      s.split(',').map(m => m.trim())
-        .filter(m => m && m.toLowerCase() !== 'null' && m.toLowerCase() !== 'undefined')
-        .forEach(m => assignedSet.add(m))
-    }
-    for (const row of soundRows.results as any[]) {
-      parseCSV(row.crew)
-      parseCSV(row.foh_crew)
-      parseCSV(row.stage_crew)
-    }
-
-    // Crew roster is local to this app (Settings > Crew) — independent of
-    // the Crew-Assignment-Automation app's own roster.
-    const roster = await getActiveCrewNames(c.env.DB)
-
-    // Day-off / unavailability data still lives in the shared crew DB
-    // (marked there via Crew-Assignment-Automation); we only cross-reference
-    // it by name here, so it works regardless of which app owns the roster.
-    const crewRows = await c.env.DB_CREW.prepare(
-      `SELECT DISTINCT c.name
-       FROM crew_unavailability cu
-       JOIN crew c ON c.id = cu.crew_id
-       WHERE cu.unavailable_date IN (${ph})`
-    ).bind(...dates).all()
-
-    const unavailSet = new Set<string>(crewRows.results.map((r: any) => r.name as string))
-
-    // Names to classify: the live roster plus anyone actually assigned on a
-    // show that day (so an ad-hoc/outside name on a real show is never hidden),
-    // de-duplicated while preserving roster (alphabetical) order first.
-    const everyone: string[] = [...roster]
-    assignedSet.forEach(n => { if (!everyone.includes(n)) everyone.push(n) })
-
-    const available   = everyone.filter(m => !assignedSet.has(m) && !unavailSet.has(m))
-    const assigned    = everyone.filter(m => assignedSet.has(m))
-    const unavailable = everyone.filter(m => unavailSet.has(m) && !assignedSet.has(m))
-
+    const data = await loadAvailabilityData(c.env.DB, c.env.DB_CREW, dates)
+    const { available, assigned, unavailable } = classifyDates(data, dates)
     return c.json({
       success: true, available, assigned, unavailable,
-      conflicts: soundRows.results, dates
+      conflicts: data.shows, dates
     })
   } catch (err: any) {
     return c.json({ success: false, error: err.message }, 500)
   }
 })
 
+// ─── Agent API (read-only, API-key protected) ─────────────────────────────────
+setupAgentApi(app)
 
 // GET /api/crew-roster and /api/admin/crew* — see setupCrewEndpoints() below.
 setupCrewEndpoints(app)

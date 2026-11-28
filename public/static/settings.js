@@ -63,6 +63,7 @@ async function loadSettingsPage() {
     }
 
     renderSettingsPage(venuesRes.data.venues || [], crewRes.data.crew || [], settingsRes.data.settings || {});
+    await loadAgentAccess();
   } catch (error) {
     content.innerHTML = `
       <div class="text-center py-12">
@@ -533,3 +534,72 @@ document.addEventListener('DOMContentLoaded', () => {
   showSettingsTab();
   loadVenuesForDropdowns();
 });
+
+async function loadAgentAccess() {
+  const root = document.querySelector('#settingsContent > div');
+  if (!root) return;
+  let section = document.getElementById('agentAccess');
+  if (!section) {
+    section = document.createElement('section');
+    section.id = 'agentAccess';
+    root.appendChild(section);
+  }
+
+  let data;
+  try {
+    data = (await axios.get(`${API_BASE}/admin/agent-links`, { withCredentials: true })).data;
+  } catch (error) {
+    section.innerHTML = `<p class="text-red-600">${escapeHtml(error.response?.data?.error || error.message)}</p>`;
+    return;
+  }
+
+  const crewText = (json) => escapeHtml((json && JSON.parse(json).crew) || 'open');
+  const links = data.links.map((link) => `
+    <li class="flex flex-wrap items-center justify-between gap-2 py-1">
+      <span class="text-sm text-gray-700">${escapeHtml(link.label)} · last used ${escapeHtml(link.last_used_at || 'never')}</span>
+      <button type="button" class="text-sm text-red-600" onclick="handleRevokeAgentLink(${Number(link.id)})">Switch off</button>
+    </li>`).join('') || '<li class="text-sm text-gray-500">No agent links yet.</li>';
+  const changes = data.changes.map((change) => `
+    <li class="text-sm text-gray-600">${escapeHtml(change.event_date)} ${escapeHtml(change.program)}: ${crewText(change.before_json)} → ${crewText(change.after_json)}</li>`).join('')
+    || '<li class="text-sm text-gray-500">None.</li>';
+
+  section.innerHTML = `
+    <h3 class="text-lg font-semibold text-gray-800">Agent access</h3>
+    <p class="text-sm text-gray-500 mt-1">A link lets one agent read shows, set crew and add maintenance days. It cannot change anything else. Treat it like a password.</p>
+    <ul class="mt-3">${links}</ul>
+    <form class="mt-3 flex flex-wrap gap-2" onsubmit="handleCreateAgentLink(event)">
+      <input id="agentLinkLabel" required maxlength="60" placeholder="Agent name, e.g. Claude" class="px-3 py-2 rounded-lg border border-gray-300 text-sm">
+      <button type="submit" class="px-4 py-2 rounded-lg text-sm font-semibold text-white" style="background:#8B6F47;">Create agent link</button>
+    </form>
+    <div id="agentLinkResult" class="mt-3"></div>
+    <h4 class="text-sm font-semibold text-gray-700 mt-4">Recent agent changes</h4>
+    <ul class="mt-1">${changes}</ul>`;
+}
+
+async function handleCreateAgentLink(event) {
+  event.preventDefault();
+  const label = document.getElementById('agentLinkLabel').value.trim();
+  try {
+    const { data } = await axios.post(`${API_BASE}/admin/agent-links`, { label }, { withCredentials: true });
+    await loadAgentAccess();
+    document.getElementById('agentLinkResult').innerHTML = `
+      <p class="text-sm text-gray-700">Copy this now. It is shown only once.</p>
+      <div class="flex gap-2 mt-1">
+        <input id="agentLinkUrl" readonly class="flex-1 px-3 py-2 rounded-lg border border-gray-300 text-xs">
+        <button type="button" class="px-3 py-2 rounded-lg text-sm border border-gray-300" onclick="navigator.clipboard.writeText(document.getElementById('agentLinkUrl').value)">Copy</button>
+      </div>`;
+    document.getElementById('agentLinkUrl').value = data.url;
+  } catch (error) {
+    alert(error.response?.data?.error || error.message);
+  }
+}
+
+async function handleRevokeAgentLink(id) {
+  if (!confirm('Switch off this agent link? The agent using it will stop being able to write.')) return;
+  try {
+    await axios.delete(`${API_BASE}/admin/agent-links/${id}`, { withCredentials: true });
+    await loadAgentAccess();
+  } catch (error) {
+    alert(error.response?.data?.error || error.message);
+  }
+}

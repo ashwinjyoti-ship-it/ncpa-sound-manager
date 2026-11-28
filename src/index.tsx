@@ -21,6 +21,7 @@ import {
   resolveAnthropicApiKey,
   setupSettingsEndpoints,
 } from './settings-endpoints'
+import { setupAgentConnector } from './agent-connector'
 import { getActiveCrewNames, setupCrewEndpoints } from './crew-endpoints'
 import {
   addDaysUtc,
@@ -425,6 +426,7 @@ setupCrewAssignmentEngine(app)
 setupAuthEndpoints(app)
 setupCrewStatsEndpoints(app)
 setupSettingsEndpoints(app)
+setupAgentConnector(app)
 
 // Get single event (This must be AFTER specific routes like /filter-options)
 app.get('/api/events/:id', async (c) => {
@@ -6316,7 +6318,7 @@ app.get('/', (c) => {
         <script src="/static/app.js?v=4.4.6"></script>
         <script src="/static/v41-features.js?v=4.2.1"></script>
         <script src="/static/auth.js?v=1.0.2"></script>
-        <script src="/static/settings.js?v=1.0.2"></script>
+        <script src="/static/settings.js?v=1.1.0"></script>
     </body>
     </html>
   `)
